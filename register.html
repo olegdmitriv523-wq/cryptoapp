@@ -83,7 +83,6 @@ const { data, error } = await supabase
   .select()
   .maybeSingle();
 
-// 🔥 ГОЛОВНИЙ ФІКС
 if (error || !data) {
   console.log("INSERT ERROR:", error);
   return res.json({ success: false, message: "Insert error" });
