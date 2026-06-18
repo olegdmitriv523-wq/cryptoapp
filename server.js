@@ -39,7 +39,7 @@ function auth(req, res, next) {
   }
 }
 
-// ===== REGISTER (З ФІКСАМИ) =====
+// ===== REGISTER =====
 app.post("/register", async (req, res) => {
   try {
 
@@ -61,8 +61,14 @@ app.post("/register", async (req, res) => {
 
     // ===== IP =====
     let ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "";
+
     if (ip.includes(",")) {
       ip = ip.split(",")[0].trim();
+    }
+
+    // 🔥 FIX (Render IPv6)
+    if (ip.includes("::ffff:")) {
+      ip = ip.replace("::ffff:", "");
     }
 
     // ===== АНТИ-АБУЗ =====
@@ -118,7 +124,7 @@ app.post("/register", async (req, res) => {
         ip: ip
       }])
       .select()
-      .single();
+      .maybeSingle(); // ✅ FIX
 
     if (error) {
       console.log(error);
