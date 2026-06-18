@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>Deposit</title>
+
+<style>
+body {
+margin:0;
+background:#0b0f1a;
+color:white;
+font-family:Arial;
+text-align:center;
+}
+
+.container {
+padding:20px;
+}
+
+input {
+width:90%;
+padding:12px;
+margin:10px 0;
+background:#111;
+border:none;
+color:white;
+border-radius:8px;
+}
+
+.btn {
+background:lime;
+padding:12px;
+border-radius:10px;
+cursor:pointer;
+margin-top:10px;
+}
+
+.back {
+margin-top:20px;
+display:inline-block;
+color:orange;
+cursor:pointer;
+}
+</style>
+
+</head>
+
+<body>
+
+<script>
+// ===== CONFIG =====
+const API_URL = "https://cryptoapp-eqc5.onrender.com";
+
+// 🔐 AUTH CHECK
+let token = localStorage.getItem("token");
+
+if(!token){
+location.href = "login.html";
+}
+</script>
+
+<div class="container">
+
+<h2>Поповнення</h2>
+
+<input id="amount" placeholder="Введи суму $" />
+
+<div class="btn" onclick="deposit()">Поповнити</div>
+
+<div class="back" onclick="goBack()">← Назад</div>
+
+</div>
+
+<script>
+
+// ===== ДЕПОЗИТ =====
+async function deposit(){
+
+let amount = parseFloat(document.getElementById("amount").value);
+
+if(!amount || amount <= 0){
+alert("Введи нормальну суму");
+return;
+}
+
+try {
+
+let res = await fetch(API_URL + "/deposit", {
+method: "POST",
+headers: {
+"Content-Type": "application/json",
+"Authorization": token
+},
+body: JSON.stringify({
+amount: amount
+})
+});
+
+// 🔥 перевірка статусу
+if(!res.ok){
+throw new Error("server error");
+}
+
+// 🔥 безпечний парс
+let data;
+try {
+data = await res.json();
+} catch(e){
+throw new Error("not json");
+}
+
+if(data.success){
+alert("Поповнено на $" + amount);
+window.location.href = "index.html";
+}else{
+alert(data.message || "Помилка депозиту");
+}
+
+} catch(e){
+
+// 🔥 якщо токен помер
+if(e.message === "server error"){
+localStorage.removeItem("token");
+location.href = "login.html";
+return;
+}
+
+alert("Сервер не відповідає");
+
+}
+
+}
+
+// ===== НАЗАД =====
+function goBack(){
+window.location.href = "index.html";
+}
+
+</script>
+
+</body>
+</html>

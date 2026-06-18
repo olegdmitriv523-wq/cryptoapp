@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>Логін</title>
+
+<style>
+body {
+margin:0;
+height:100vh;
+display:flex;
+justify-content:center;
+align-items:center;
+background:#0b0f1a;
+font-family:Arial;
+color:white;
+}
+
+.box {
+background:#111;
+padding:30px;
+border-radius:15px;
+width:300px;
+text-align:center;
+}
+
+input {
+width:100%;
+padding:10px;
+margin:10px 0;
+border:none;
+border-radius:8px;
+background:#222;
+color:white;
+}
+
+button {
+width:100%;
+padding:10px;
+margin-top:10px;
+background:orange;
+border:none;
+border-radius:10px;
+cursor:pointer;
+}
+
+.switch {
+margin-top:10px;
+color:#aaa;
+cursor:pointer;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="box">
+
+<h2>Логін</h2>
+
+<input id="email" placeholder="Email">
+<input id="password" type="password" placeholder="Пароль">
+
+<button onclick="login()">Увійти</button>
+
+<div class="switch" onclick="goRegister()">Нема акаунта? Реєстрація</div>
+
+</div>
+
+<script>
+
+const API_URL = "https://cryptoapp-eqc5.onrender.com";
+
+// 🔐 якщо вже залогінений
+let token = localStorage.getItem("token");
+if(token){
+location.href = "index.html";
+}
+
+// 🔥 LOGIN
+async function login(){
+
+let email = document.getElementById("email").value.trim();
+let password = document.getElementById("password").value.trim();
+
+if(!email || !password){
+alert("Заповни всі поля");
+return;
+}
+
+try {
+
+let res = await fetch(API_URL + "/login", {
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({email,password})
+});
+
+let data = await res.json();
+
+if(data.success){
+
+// 🔥 зберігаємо токен
+localStorage.setItem("token", data.token);
+
+// 🔥 редірект
+location.href = "index.html";
+
+}else{
+alert("Невірний email або пароль");
+}
+
+}catch(err){
+alert("Сервер не працює");
+}
+
+}
+
+// 👉 перехід на реєстрацію
+function goRegister(){
+location.href = "register.html";
+}
+
+</script>
+
+</body>
+</html>

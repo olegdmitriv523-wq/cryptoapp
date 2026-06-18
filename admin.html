@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>Admin Panel</title>
+
+<style>
+body {
+  background:#0b0f1a;
+  color:white;
+  font-family:Arial;
+  padding:20px;
+}
+
+.user {
+  background:#111;
+  padding:15px;
+  margin:10px 0;
+  border-radius:10px;
+}
+
+input {
+  padding:5px;
+  margin-top:5px;
+  width:100px;
+}
+
+button {
+  margin:5px;
+  padding:5px 10px;
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<h2>👑 Admin Panel</h2>
+
+<div id="users"></div>
+
+<script>
+
+async function loadUsers(){
+
+  let res = await fetch("/admin/users");
+  let users = await res.json();
+
+  let html = "";
+
+  users.forEach(u => {
+
+    html += `
+    <div class="user">
+      <b>ID:</b> ${u.id}<br>
+      <b>Email:</b> ${u.email}<br>
+      <b>Name:</b> ${u.fullname}<br>
+      <b>Nick:</b> ${u.nickname}<br>
+      <b>Country:</b> ${u.country}<br>
+      <b>Phone:</b> ${u.phone}<br>
+      <b>Wallet:</b> ${u.wallet_address}<br>
+      <b>Balance:</b> $${u.balance}<br>
+
+      <input id="input_${u.id}" placeholder="Сума">
+
+      <br>
+
+      <button onclick="add(${u.id},100)">+100</button>
+      <button onclick="add(${u.id},-100)">-100</button>
+
+      <button onclick="custom(${u.id})">ДОДАТИ</button>
+      <button onclick="setBalance(${u.id})">SET</button>
+    </div>
+    `;
+
+  });
+
+  document.getElementById("users").innerHTML = html;
+}
+
+async function add(id, amount){
+
+  await fetch("/admin/add-balance", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      user_id: id,
+      amount
+    })
+  });
+
+  loadUsers();
+}
+
+async function custom(id){
+
+  let amount = document.getElementById("input_" + id).value;
+
+  await fetch("/admin/add-balance", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      user_id: id,
+      amount: Number(amount)
+    })
+  });
+
+  loadUsers();
+}
+
+async function setBalance(id){
+
+  let amount = document.getElementById("input_" + id).value;
+
+  await fetch("/admin/set-balance", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      user_id: id,
+      amount: Number(amount)
+    })
+  });
+
+  loadUsers();
+}
+
+loadUsers();
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>Withdraw</title>
+
+<style>
+body {background:#0b0f1a;color:white;font-family:Arial;text-align:center;}
+.box {margin-top:50px;}
+
+input {
+    display:block;
+    margin:10px auto;
+    padding:10px;
+    width:250px;
+    background:#111;
+    color:white;
+    border:none;
+    border-radius:6px;
+}
+
+.btn {
+    padding:10px;
+    background:red;
+    border-radius:10px;
+    cursor:pointer;
+}
+
+.back {
+    position:absolute;
+    top:10px;
+    left:10px;
+    cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<script>
+
+// ===== CONFIG =====
+const API_URL = "https://cryptoapp-eqc5.onrender.com";
+
+// 🔐 AUTH
+let token = localStorage.getItem("token");
+
+if(!token){
+window.location.href = "login.html";
+}
+
+</script>
+
+<div class="back" onclick="goBack()">⬅ Назад</div>
+
+<div class="box">
+
+<h2>Виведення коштів</h2>
+
+<input id="amount" placeholder="Сума ($)">
+<input id="wallet" placeholder="Адреса гаманця">
+
+<div class="btn" onclick="withdraw()">Вивести</div>
+
+</div>
+
+<script>
+
+// ===== WITHDRAW =====
+async function withdraw(){
+
+let amount = parseFloat(document.getElementById("amount").value);
+let wallet = document.getElementById("wallet").value;
+
+if(!amount || !wallet){
+alert("Заповни всі поля");
+return;
+}
+
+try {
+
+// ===== ПЕРЕВІРКА КОРИСТУВАЧА =====
+let resUser = await fetch(API_URL + "/me", {
+headers:{ Authorization: token }
+});
+
+if(!resUser.ok){
+throw new Error("auth");
+}
+
+let user = await resUser.json();
+
+if(!user || !user.id){
+throw new Error("auth");
+}
+
+if(amount > user.balance){
+alert("Недостатньо коштів");
+return;
+}
+
+// ===== ВИВІД =====
+let res = await fetch(API_URL + "/withdraw", {
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+Authorization: token
+},
+body:JSON.stringify({ amount })
+});
+
+if(!res.ok){
+throw new Error("withdraw error");
+}
+
+let data;
+try{
+data = await res.json();
+}catch(e){
+throw new Error("bad json");
+}
+
+if(data.success){
+alert("Заявка на виведення створена");
+window.location.href="index.html";
+}else{
+alert(data.message || "Помилка виводу");
+}
+
+}catch(e){
+
+// 🔥 якщо токен помер
+if(e.message === "auth"){
+localStorage.removeItem("token");
+window.location.href = "login.html";
+return;
+}
+
+alert("Сервер не відповідає");
+
+}
+
+}
+
+// ===== BACK =====
+function goBack(){
+window.location.href="index.html";
+}
+
+</script>
+
+</body>
+</html>

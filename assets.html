@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>Активи</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+    margin: 0;
+    background: #0b0f1a;
+    color: white;
+    font-family: Arial;
+    padding-bottom: 80px;
+}
+.header {
+    padding: 20px;
+    background: linear-gradient(to right, #8b0000, #000);
+}
+.card {
+    background: #111;
+    margin: 15px;
+    padding: 20px;
+    border-radius: 15px;
+}
+.title {
+    font-size: 14px;
+    color: #aaa;
+}
+.value {
+    font-size: 24px;
+    margin-top: 5px;
+}
+.green { color: #00ff88; }
+.red { color: #ff4d4d; }
+.item {
+    margin-top: 10px;
+    padding: 10px;
+    background: #0b0f1a;
+    border-radius: 10px;
+    font-size: 13px;
+}
+.navbar {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    background: #000;
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 0;
+}
+.nav-item {
+    text-align: center;
+    color: #aaa;
+    cursor: pointer;
+}
+.nav-item.active {
+    color: orange;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">💼 Активи</div>
+
+<div class="card">
+    <div class="title">Основний баланс</div>
+    <div class="value" id="balance">$0</div>
+</div>
+
+<div class="card">
+    <div class="title">Внесок</div>
+    <div class="value" id="deposit">$0</div>
+</div>
+
+<div class="card">
+    <div class="title">Зароблені кошти</div>
+    <div class="value green" id="profit">$0</div>
+</div>
+
+<div class="card">
+<b>Історія</b>
+<div id="history"></div>
+</div>
+
+<div class="card">
+<b>Загальний пул: <span id="pool">$150000</span></b>
+<canvas id="chart"></canvas>
+</div>
+
+<div class="navbar">
+    <div class="nav-item" onclick="goHome()">🏠<br>Додому</div>
+    <div class="nav-item" onclick="goTrade()">📊<br>Торгівля</div>
+    <div class="nav-item active">💼<br>Активи</div>
+    <div class="nav-item" onclick="goInfo()">ℹ️<br>Інфо</div>
+</div>
+
+<script>
+
+// ===== CONFIG =====
+const API_URL = "https://cryptoapp-eqc5.onrender.com";
+
+// ===== AUTH CHECK =====
+let token = localStorage.getItem("token");
+
+if(!token){
+    window.location.href = "login.html";
+}
+
+// ===== LOAD USER =====
+async function loadUser(){
+
+try {
+
+let res = await fetch(API_URL + "/me", {
+headers: {
+Authorization: token
+}
+});
+
+if(!res.ok){
+throw new Error();
+}
+
+let user = await res.json();
+
+if(!user || !user.id){
+throw new Error();
+}
+
+let balance = parseFloat(user.balance) || 0;
+let deposit = parseFloat(user.deposit) || 0;
+
+let profit = balance - deposit;
+if(profit < 0) profit = 0;
+
+document.getElementById("balance").innerText = "$" + balance.toFixed(2);
+document.getElementById("deposit").innerText = "$" + deposit.toFixed(2);
+document.getElementById("profit").innerText = "$" + profit.toFixed(2);
+
+let historyHTML = "";
+
+historyHTML += `
+<div class="item green">
++${deposit}$ (депозит)
+</div>`;
+
+historyHTML += `
+<div class="item red">
+-0$ (вивід)
+</div>`;
+
+historyHTML += `
+<div class="item green">
++${profit}$ (прибуток)
+</div>`;
+
+document.getElementById("history").innerHTML = historyHTML;
+
+} catch (err) {
+
+localStorage.removeItem("token");
+window.location.href = "login.html";
+
+}
+
+}
+
+loadUser();
+
+// ===== ПУЛ =====
+let pool = parseFloat(localStorage.getItem("pool")) || 150000;
+pool *= 1.0005;
+localStorage.setItem("pool", pool);
+document.getElementById("pool").innerText = "$" + pool.toFixed(0);
+
+// ===== ГРАФІК =====
+let ctx = document.getElementById("chart");
+
+let data = [];
+let base = pool;
+
+for(let i=0;i<30;i++){
+    base *= 1.002;
+    data.push(base);
+}
+
+new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: data.map((_,i)=>i),
+        datasets: [{
+            data: data,
+            borderColor: '#00ff88',
+            fill: false
+        }]
+    },
+    options: {
+        plugins:{legend:{display:false}},
+        scales:{x:{display:false},y:{display:false}}
+    }
+});
+
+// ===== NAVIGATION =====
+function goHome(){ window.location.assign("index.html"); }
+function goTrade(){ window.location.assign("trade.html"); }
+function goInfo(){ window.location.assign("info.html"); }
+
+</script>
+
+</body>
+</html>

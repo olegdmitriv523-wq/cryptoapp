@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>Info</title>
+
+<style>
+body {margin:0;background:#0b0f1a;color:white;font-family:Arial;}
+
+.logo img {
+width:140px;
+display:block;
+margin:20px auto;
+}
+
+.block {
+background:#111;
+margin:10px;
+padding:15px;
+border-radius:10px;
+}
+
+.giveaway {
+border:2px solid gold;
+box-shadow:0 0 25px gold;
+background:#1a1400;
+}
+
+.navbar {
+position:fixed;
+bottom:0;
+width:100%;
+background:#000;
+display:flex;
+justify-content:space-around;
+padding:10px 0;
+}
+
+.nav-item {color:#aaa;text-align:center;cursor:pointer;}
+.active {color:orange;}
+
+button {
+padding:8px 12px;
+background:orange;
+border:none;
+border-radius:6px;
+cursor:pointer;
+margin-top:5px;
+}
+</style>
+</head>
+
+<body>
+
+<script>
+
+// ===== CONFIG =====
+const API_URL = "https://cryptoapp-eqc5.onrender.com";
+
+// 🔐 AUTH CHECK
+let token = localStorage.getItem("token");
+
+if(!token){
+window.location.href = "login.html";
+}
+
+</script>
+
+<div class="logo">
+<img src="https://cryptologos.cc/logos/polygon-matic-logo.png">
+</div>
+
+<div class="block">
+<b>United Ukraine</b> — крипто платформа...
+</div>
+
+<div class="block giveaway">
+
+<h2>🎁 МЕГА РОЗІГРАШ</h2>
+
+📅 1 вересня — 1000$<br>
+<button onclick="join(1)">Взяти участь</button><br><br>
+
+📅 1 жовтня — 2000$<br>
+<button onclick="join(2)">Взяти участь</button><br><br>
+
+📅 1 листопада — 5000$<br>
+<button onclick="join(3)">Взяти участь</button><br><br>
+
+<hr>
+
+<b>Умови:</b><br>
+— 5 друзів<br>
+— баланс 5000$
+
+</div>
+
+<div class="navbar">
+<div class="nav-item" onclick="goHome()">🏠<br>Додому</div>
+<div class="nav-item" onclick="goTrade()">📊<br>Торгівля</div>
+<div class="nav-item" onclick="goAssets()">💼<br>Активи</div>
+<div class="nav-item active">ℹ️<br>Інфо</div>
+</div>
+
+<script>
+
+// ===== GET BALANCE =====
+async function getBalance(){
+
+try{
+
+let res = await fetch(API_URL + "/me", {
+headers:{ Authorization: token }
+});
+
+if(!res.ok){
+throw new Error("auth error");
+}
+
+let user = await res.json();
+
+if(!user || !user.balance){
+throw new Error("no user");
+}
+
+return user.balance;
+
+}catch(e){
+
+// 🔥 якщо токен зламаний — вихід
+localStorage.removeItem("token");
+location.href = "login.html";
+return 0;
+
+}
+}
+
+// ===== JOIN =====
+async function join(id){
+
+let balance = await getBalance();
+let invites = parseInt(localStorage.getItem("invites")) || 0;
+
+if(balance < 5000 || invites < 5){
+alert("Не виконані умови");
+return;
+}
+
+if(localStorage.getItem("giveaway_"+id)){
+alert("Ти вже береш участь");
+return;
+}
+
+localStorage.setItem("giveaway_"+id,"joined");
+
+alert("Ти успішно береш участь 🎉");
+}
+
+// NAV
+function goHome(){location.href="index.html";}
+function goTrade(){location.href="trade.html";}
+function goAssets(){location.href="assets.html";}
+
+</script>
+
+</body>
+</html>

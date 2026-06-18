@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>Coin</title>
+
+<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+
+<style>
+body {
+margin:0;
+background:#0b0f1a;
+color:white;
+font-family:Arial;
+}
+
+.header {
+text-align:center;
+padding:10px;
+font-size:20px;
+}
+
+#chart {
+height:350px;
+position:relative;
+z-index:1;
+}
+
+.controls {
+position:relative;
+z-index:2;
+padding:10px;
+}
+
+.actions {
+display:flex;
+justify-content:space-around;
+margin:10px 0;
+flex-wrap:wrap;
+gap:10px;
+}
+
+.btn {
+background:orange;
+padding:10px 15px;
+border-radius:10px;
+cursor:pointer;
+}
+
+input {
+width:100%;
+padding:8px;
+margin:5px 0;
+background:#111;
+color:white;
+border:none;
+}
+
+#positions, #history {
+padding:10px;
+}
+</style>
+
+</head>
+
+<body>
+
+<script>
+
+// ===== CONFIG =====
+const API_URL = "https://cryptoapp-eqc5.onrender.com";
+
+// 🔐 AUTH CHECK
+let token = localStorage.getItem("token");
+if(!token){
+window.location.href = "login.html";
+}
+
+</script>
+
+<div class="header" id="title"></div>
+
+<div id="chart"></div>
+
+<div class="controls">
+
+<input id="amount" placeholder="Сума $" />
+<input id="sl" placeholder="Stop Loss" />
+<input id="tp" placeholder="Take Profit" />
+
+<div class="actions">
+<div class="btn" onclick="buy()">LONG</div>
+<div class="btn" onclick="short()">SHORT</div>
+<div class="btn" onclick="setLev(1)">x1</div>
+<div class="btn" onclick="setLev(5)">x5</div>
+<div class="btn" onclick="setLev(10)">x10</div>
+</div>
+
+</div>
+
+<div id="positions"></div>
+<div id="history"></div>
+
+<script>
+
+// ===== INIT =====
+let symbol = localStorage.getItem("symbol") || "BTC";
+document.getElementById("title").innerText = symbol + "/USDT";
+
+let balance = 0;
+let positions = [];
+let history = [];
+
+let leverage = 1;
+let currentPrice = 0;
+
+// ===== LOAD USER FROM SERVER =====
+async function loadUser(){
+
+try{
+
+let res = await fetch(API_URL + "/me", {
+headers: {
+Authorization: token
+}
+});
+
+if(!res.ok){
+throw new Error("auth error");
+}
+
+let user = await res.json();
+
+if(!user || !user.id){
+throw new Error("no user");
+}
+
+balance = parseFloat(user.balance) || 0;
+
+}catch(e){
+
+localStorage.removeItem("token");
+window.location.href = "login.html";
+
+}
+
+}
+
+// ===== CHART =====
+const chart = LightweightCharts.createChart(document.getElementById('chart'), {
+layout:{background:{color:'#0b0f1a'},textColor:'#DDD'},
+grid:{vertLines:{color:'#222'},horzLines:{color:'#222'}},
+width:window.innerWidth,
+height:350
+});
+
+const candleSeries = chart.addCandlestickSeries({
+upColor:'#00ff88',
+downColor:'#ff3b3b',
+borderUpColor:'#00ff88',
+borderDownColor:'#ff3b3b'
+});
+
+let entryLine, slLine, tpLine;
+
+// ===== LOAD CANDLES =====
+async function loadCandles(){
+let res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}USDT&interval=1m&limit=100`);
+let data = await res.json();
+
+let candles = data.map(c=>({
+time:c[0]/1000,
+open:+c[1],
+high:+c[2],
+low:+c[3],
+close:+c[4]
+}));
+
+currentPrice = candles[candles.length-1].close;
+candleSeries.setData(candles);
+}
+
+loadCandles();
+
+// ===== WEBSOCKET =====
+let ws;
+
+function startWS(){
+let pair = symbol.toLowerCase()+"usdt";
+
+ws = new WebSocket(`wss://stream.binance.com:9443/ws/${pair}@kline_1m`);
+
+ws.onmessage = (e)=>{
+let d = JSON.parse(e.data).k;
+
+currentPrice = +d.c;
+
+candleSeries.update({
+time:d.t/1000,
+open:+d.o,
+high:+d.h,
+low:+d.l,
+close:+d.c
+});
+};
+}
+
+startWS();
+
+window.onbeforeunload = ()=>{ if(ws) ws.close(); }
+
+// ===== LEVERAGE =====
+function setLev(l){
+leverage = l;
+alert("Плече x" + l);
+}
+
+// ===== BUY =====
+async function buy(){
+
+await loadUser();
+
+let amount = parseFloat(document.getElementById("amount").value);
+let sl = parseFloat(document.getElementById("sl").value);
+let tp = parseFloat(document.getElementById("tp").value);
+
+if(!amount || balance < amount){
+alert("Введи суму або мало коштів");
+return;
+}
+
+if(!sl) sl = currentPrice * 0.97;
+if(!tp) tp = currentPrice * 1.05;
+
+positions.push({
+symbol, entry:currentPrice, amount,
+type:"LONG", lev:leverage, sl, tp
+});
+
+drawPosition();
+}
+
+// ===== SHORT =====
+async function short(){
+
+await loadUser();
+
+let amount = parseFloat(document.getElementById("amount").value);
+let sl = parseFloat(document.getElementById("sl").value);
+let tp = parseFloat(document.getElementById("tp").value);
+
+if(!amount || balance < amount){
+alert("Введи суму або мало коштів");
+return;
+}
+
+if(!sl) sl = currentPrice * 1.03;
+if(!tp) tp = currentPrice * 0.95;
+
+positions.push({
+symbol, entry:currentPrice, amount,
+type:"SHORT", lev:leverage, sl, tp
+});
+
+drawPosition();
+}
+
+// ===== CLOSE =====
+function closePosition(i){
+
+let p = positions[i];
+
+let pnl = p.type==="LONG"
+? ((currentPrice-p.entry)/p.entry)*p.amount*p.lev
+: ((p.entry-currentPrice)/p.entry)*p.amount*p.lev;
+
+history.push({
+symbol:p.symbol,
+type:p.type,
+entry:p.entry,
+exit:currentPrice,
+pnl,
+time:new Date().toLocaleString()
+});
+
+positions.splice(i,1);
+
+if(entryLine) candleSeries.removePriceLine(entryLine);
+if(slLine) candleSeries.removePriceLine(slLine);
+if(tpLine) candleSeries.removePriceLine(tpLine);
+}
+
+// ===== DRAW =====
+function drawPosition(){
+
+let p = positions.find(x=>x.symbol===symbol);
+if(!p) return;
+
+if(entryLine) candleSeries.removePriceLine(entryLine);
+if(slLine) candleSeries.removePriceLine(slLine);
+if(tpLine) candleSeries.removePriceLine(tpLine);
+
+entryLine = candleSeries.createPriceLine({price:p.entry,color:"yellow"});
+slLine = candleSeries.createPriceLine({price:p.sl,color:"red"});
+tpLine = candleSeries.createPriceLine({price:p.tp,color:"lime"});
+}
+
+// ===== LIQ =====
+function checkLiquidation(p){
+let loss = p.type==="LONG"
+? (p.entry-currentPrice)/p.entry
+: (currentPrice-p.entry)/p.entry;
+
+return loss >= (1/p.lev);
+}
+
+// ===== RENDER =====
+function renderPositions(){
+
+let html="";
+
+positions.forEach((p,i)=>{
+
+let pnl = p.type==="LONG"
+? ((currentPrice-p.entry)/p.entry)*p.amount*p.lev
+: ((p.entry-currentPrice)/p.entry)*p.amount*p.lev;
+
+let color = pnl>=0?"lime":"red";
+
+html+=`
+<div>
+${p.symbol} ${p.type} x${p.lev}<br>
+PNL: <span style="color:${color}">${pnl.toFixed(2)}</span><br>
+<button onclick="closePosition(${i})">Закрити</button>
+</div>`;
+});
+
+document.getElementById("positions").innerHTML = html;
+}
+
+function renderHistory(){
+
+let html="<h3>Історія</h3>";
+
+history.slice(-10).reverse().forEach(h=>{
+let c = h.pnl>=0?"lime":"red";
+html+=`<div>${h.symbol} ${h.type} <span style="color:${c}">${h.pnl.toFixed(2)}</span></div>`;
+});
+
+document.getElementById("history").innerHTML = html;
+}
+
+// ===== LOOP =====
+setInterval(()=>{
+
+positions.forEach((p,i)=>{
+
+if(p.type==="LONG"){
+if(currentPrice<=p.sl || currentPrice>=p.tp) closePosition(i);
+}else{
+if(currentPrice>=p.sl || currentPrice<=p.tp) closePosition(i);
+}
+
+if(checkLiquidation(p)){
+alert("Ліквідація!");
+positions.splice(i,1);
+}
+});
+
+renderPositions();
+renderHistory();
+drawPosition();
+
+},1000);
+
+// ===== INIT =====
+loadUser();
+
+</script>
+
+</body>
+</html>

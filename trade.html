@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>Trade</title>
+
+<style>
+body {
+margin:0;
+background:#0b0f1a;
+color:white;
+font-family:Arial;
+}
+
+.logo img {
+width:140px;
+display:block;
+margin:15px auto;
+}
+
+.balance {
+text-align:center;
+font-size:22px;
+margin:10px;
+}
+
+.main-btn {
+display:block;
+margin:10px auto;
+padding:10px;
+width:200px;
+background:orange;
+border:none;
+border-radius:10px;
+cursor:pointer;
+}
+
+.block {
+background:#111;
+margin:10px;
+padding:10px;
+border-radius:10px;
+}
+
+.sat {
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:12px;
+border-bottom:1px solid #222;
+}
+
+.sat-info {
+text-align:left;
+}
+
+.sat button {
+background:green;
+border:none;
+padding:6px 10px;
+border-radius:6px;
+cursor:pointer;
+width:110px;
+}
+
+.cooldown {
+background:gray !important;
+}
+
+.navbar {
+position: fixed;
+bottom: 0;
+width: 100%;
+background: #000;
+display: flex;
+justify-content: space-around;
+padding: 8px 0;
+border-top: 1px solid #222;
+}
+
+.nav-item {
+color: #888;
+text-align: center;
+font-size: 13px;
+cursor: pointer;
+}
+
+.nav-item div:first-child {
+font-size: 18px;
+}
+
+.nav-text {
+font-size: 11px;
+}
+
+.nav-item.active {
+color: orange;
+}
+</style>
+
+</head>
+
+<body>
+
+<script>
+
+const API_URL = "https://cryptoapp-eqc5.onrender.com";
+
+let token = localStorage.getItem("token");
+
+if(!token){
+window.location.href = "login.html";
+}
+
+</script>
+
+<div class="logo">
+<img src="logo.png">
+</div>
+
+<div class="balance">
+Твій баланс: $<span id="balance">0</span>
+</div>
+
+<button class="main-btn" id="mainBtn">Торгувати</button>
+
+<div class="block">
+<h3>👥 Сателіти</h3>
+<div id="satellites"></div>
+</div>
+
+<div class="block" id="history"></div>
+
+<div class="navbar">
+
+<div class="nav-item" onclick="goHome()">
+<div>🏠</div>
+<div class="nav-text">Дім</div>
+</div>
+
+<div class="nav-item active">
+<div>📊</div>
+<div class="nav-text">Торгівля</div>
+</div>
+
+<div class="nav-item" onclick="goAssets()">
+<div>💼</div>
+<div class="nav-text">Активи</div>
+</div>
+
+<div class="nav-item" onclick="goInfo()">
+<div>ℹ️</div>
+<div class="nav-text">Інфо</div>
+</div>
+
+</div>
+
+<script>
+
+// ===== STATE =====
+let balance = 0;
+let history = JSON.parse(localStorage.getItem("history")) || [];
+let pending = JSON.parse(localStorage.getItem("pending")) || [];
+
+// 🔥 fallback
+let sats = [
+{name:"User1",balance:500,p:1,r:1.5},
+{name:"User2",balance:700,p:1,r:2},
+{name:"User3",balance:300,p:1,r:2.5},
+{name:"User4",balance:900,p:1,r:3.5},
+{name:"User5",balance:1200,p:1,r:5}
+];
+
+const balanceEl = document.getElementById("balance");
+const historyEl = document.getElementById("history");
+const satsEl = document.getElementById("satellites");
+const mainBtn = document.getElementById("mainBtn");
+
+// ===== LOAD BALANCE =====
+async function loadBalance(){
+
+try{
+
+let res = await fetch(API_URL + "/me", {
+headers:{ Authorization: token }
+});
+
+let user = await res.json();
+
+balance = user.balance || 0;
+balanceEl.innerText = balance.toFixed(2);
+
+}catch(e){
+localStorage.removeItem("token");
+location.href = "login.html";
+}
+
+}
+
+// ===== LOAD REFERRALS =====
+async function loadReferrals(){
+
+try{
+
+let res = await fetch(API_URL + "/referrals", {
+headers:{ Authorization: token }
+});
+
+let data = await res.json();
+
+if(data && data.length > 0){
+
+sats = data.map(u => ({
+name: u.email || ("User " + u.id),
+balance: u.balance || 0,
+p: 1,
+r: 2
+}));
+
+}
+
+}catch(e){
+console.log("ref error");
+}
+
+}
+
+// ===== FORMAT =====
+function format(ms){
+let t = Math.floor(ms/1000);
+let h = Math.floor(t/3600);
+let m = Math.floor((t%3600)/60);
+let s = t%60;
+
+return `${h}:${m}:${s}`;
+}
+
+// ===== PROCESS =====
+async function processPending(){
+
+let now = Date.now();
+
+for(let i=0;i<pending.length;i++){
+let p = pending[i];
+
+if(now >= p.time){
+
+await fetch(API_URL + "/deposit", {
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+Authorization: token
+},
+body:JSON.stringify({ amount: p.amount })
+});
+
+history.push(`${p.label} +${p.amount.toFixed(2)}`);
+pending.splice(i,1);
+i--;
+}
+}
+
+localStorage.setItem("history", JSON.stringify(history));
+localStorage.setItem("pending", JSON.stringify(pending));
+
+}
+
+// ===== MAIN =====
+mainBtn.onclick = function(){
+
+let last = localStorage.getItem("main_time");
+
+if(last && Date.now() - last < 86400000) return;
+
+let result = balance*0.02 - balance*0.01;
+
+pending.push({
+amount: result,
+time: Date.now()+600000,
+label:"MAIN"
+});
+
+localStorage.setItem("pending", JSON.stringify(pending));
+localStorage.setItem("main_time", Date.now());
+
+alert("Угода відкрита (10 хв)");
+}
+
+// ===== RENDER SAT =====
+function renderSats(){
+
+let html="";
+
+sats.forEach((s,i)=>{
+html+=`
+<div class="sat">
+<div class="sat-info">
+<b>${s.name}</b><br>
+Баланс: $${s.balance}
+</div>
+<button onclick="tradeSat(${i})">Торгувати</button>
+</div>
+`;
+});
+
+satsEl.innerHTML=html;
+
+}
+
+// ===== TRADE SAT =====
+function tradeSat(i){
+
+let result = balance*(sats[i].r/100) - balance*(sats[i].p/100);
+
+pending.push({
+amount: result,
+time: Date.now()+600000,
+label:"SAT"+(i+1)
+});
+
+localStorage.setItem("pending", JSON.stringify(pending));
+
+alert("Угода відкрита (10 хв)");
+}
+
+// ===== HISTORY =====
+function renderHistory(){
+
+let html="<h3>Історія</h3>";
+
+history.slice(-10).reverse().forEach(h=>{
+html+=`<div>${h}</div>`;
+});
+
+historyEl.innerHTML=html;
+
+}
+
+// ===== INIT =====
+async function init(){
+
+await loadBalance();
+await loadReferrals();
+await processPending();
+await loadBalance();
+
+renderSats();
+renderHistory();
+
+}
+
+init();
+
+// ===== NAV =====
+function goHome(){ location.href="index.html"; }
+function goAssets(){ location.href="assets.html"; }
+function goInfo(){ location.href="info.html"; }
+
+</script>
+
+</body>
+</html>

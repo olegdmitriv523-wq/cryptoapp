@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>United Ukraine</title>
+
+<style>
+body {
+margin:0;
+background:#0b0f1a;
+color:white;
+font-family:Arial;
+}
+
+/* LOGO */
+.logo img {
+width:120px;
+display:block;
+margin:10px auto;
+}
+
+/* HEADER */
+.header {
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:10px;
+}
+
+.profile {
+display:flex;
+align-items:center;
+gap:10px;
+}
+
+.avatar {
+width:40px;
+height:40px;
+border-radius:50%;
+overflow:hidden;
+background:#222;
+cursor:pointer;
+}
+
+.avatar img {
+width:100%;
+height:100%;
+object-fit:cover;
+}
+
+/* BUTTONS */
+.logout {
+background:red;
+padding:8px 15px;
+border-radius:10px;
+cursor:pointer;
+}
+
+.balance {
+font-size:22px;
+padding:10px;
+}
+
+.actions {
+display:flex;
+justify-content:space-around;
+margin:10px 0;
+}
+
+.btn {
+background:#111;
+padding:10px 20px;
+border-radius:10px;
+cursor:pointer;
+}
+
+/* COINS */
+.row {
+display:flex;
+justify-content:space-between;
+padding:12px;
+border-bottom:1px solid #222;
+cursor:pointer;
+}
+
+.green {color:lime;}
+.red {color:red;}
+
+/* NAV */
+.navbar {
+position:fixed;
+bottom:0;
+width:100%;
+background:#000;
+display:flex;
+justify-content:space-around;
+padding:8px 0;
+}
+
+.nav-item {
+color:#888;
+font-size:12px;
+text-align:center;
+cursor:pointer;
+}
+
+.nav-item.active {
+color:orange;
+}
+</style>
+
+</head>
+
+<body>
+
+<script>
+
+// ===== CONFIG =====
+const API_URL = "https://cryptoapp-eqc5.onrender.com";
+
+// 🔐 AUTH CHECK
+let token = localStorage.getItem("token");
+
+if(!token){
+location.href = "login.html";
+}
+
+</script>
+
+<div class="logo">
+<img src="logo.png">
+</div>
+
+<div class="header">
+
+<div class="profile">
+
+<div class="avatar" onclick="uploadPhoto()">
+<img id="avatarImg">
+</div>
+
+<div>
+<div id="userIdText"></div>
+<div id="wallet"></div>
+</div>
+
+</div>
+
+<div class="logout" onclick="logout()">Вийти</div>
+
+</div>
+
+<div id="balance" class="balance"></div>
+
+<div class="actions">
+<div class="btn" onclick="goDeposit()">Поповнити</div>
+<div class="btn" onclick="goWithdraw()">Вивести</div>
+</div>
+
+<div id="list"></div>
+
+<div class="navbar">
+<div class="nav-item active" onclick="goHome()">🏠<br>Додому</div>
+<div class="nav-item" onclick="goTrade()">📊<br>Трейд</div>
+<div class="nav-item" onclick="goAssets()">💼<br>Активи</div>
+<div class="nav-item" onclick="goInfo()">ℹ️<br>Інфо</div>
+</div>
+
+<script>
+
+// ===== LOAD USER =====
+async function loadUser(){
+
+try{
+
+let res = await fetch(API_URL + "/me", {
+headers:{
+Authorization: token
+}
+});
+
+if(!res.ok){
+throw new Error("auth error");
+}
+
+let user = await res.json();
+
+if(!user || !user.id){
+throw new Error("no user");
+}
+
+let balance = user.balance || 0;
+let deposit = user.deposit || 0;
+
+let profit = balance - deposit;
+let percent = deposit > 0 ? (profit / deposit) * 100 : 0;
+
+let color = percent >= 0 ? "green" : "red";
+
+document.getElementById("balance").innerHTML =
+`$${balance.toFixed(2)} <span class="${color}">${percent.toFixed(2)}%</span>`;
+
+document.getElementById("userIdText").innerText = "ID: " + user.id;
+
+// 🔥 ТЕПЕР НЕ ХАРДКОД
+document.getElementById("wallet").innerText =
+user.wallet || "Нема гаманця";
+
+}catch(e){
+
+// 🔥 якщо токен кривий — викидаємо
+localStorage.removeItem("token");
+location.href = "login.html";
+
+}
+
+}
+
+// ===== COINS API =====
+async function loadCoins(){
+
+try{
+
+let res = await fetch(
+"https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=15&page=1"
+);
+
+let data = await res.json();
+
+let html = "";
+
+data.forEach(c=>{
+
+let color = c.price_change_percentage_24h >=0 ? "green":"red";
+
+html += `
+<div class="row" onclick="openCoin('${c.symbol.toUpperCase()}')">
+
+<div style="display:flex;gap:10px;align-items:center">
+<img src="${c.image}" width="20">
+${c.symbol.toUpperCase()}
+</div>
+
+<div>
+$${c.current_price.toLocaleString()}
+<span class="${color}">
+${c.price_change_percentage_24h.toFixed(2)}%
+</span>
+</div>
+
+</div>
+`;
+});
+
+document.getElementById("list").innerHTML = html;
+
+}catch(e){
+console.log("coins error");
+}
+
+}
+
+// ===== NAVIGATION =====
+function goHome(){location.href="index.html";}
+function goTrade(){location.href="trade.html";}
+function goAssets(){location.href="assets.html";}
+function goInfo(){location.href="info.html";}
+function goDeposit(){location.href="deposit.html";}
+function goWithdraw(){location.href="withdraw.html";}
+
+function openCoin(symbol){
+localStorage.setItem("symbol", symbol);
+location.href="coin.html";
+}
+
+// ===== LOGOUT =====
+function logout(){
+localStorage.removeItem("token");
+location.href = "login.html";
+}
+
+// ===== AVATAR =====
+function uploadPhoto(){
+let input = document.createElement("input");
+input.type="file";
+
+input.onchange = e=>{
+let reader = new FileReader();
+reader.onload = ()=>{
+localStorage.setItem("avatar", reader.result);
+document.getElementById("avatarImg").src = reader.result;
+};
+reader.readAsDataURL(e.target.files[0]);
+};
+
+input.click();
+}
+
+// ===== LOAD AVATAR =====
+let avatar = localStorage.getItem("avatar");
+if(avatar){
+document.getElementById("avatarImg").src = avatar;
+}
+
+// ===== INIT =====
+loadUser();
+loadCoins();
+setInterval(loadCoins,10000);
+
+</script>
+
+</body>
+</html>
+// ===== LOAD USER =====
+async function loadUser(){
+
+let res = await fetch(API_URL + "/me", {
+headers:{ Authorization: token }
+});
+
+let user = await res.json();
+
+document.getElementById("wallet").innerText = user.wallet || "—";
+
+}
