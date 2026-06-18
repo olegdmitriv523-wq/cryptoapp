@@ -15,7 +15,7 @@ app.use(express.static(__dirname));
 
 const SECRET = "SECRET_KEY";
 
-// ✅ PUBLIC KEY (НЕ БЛОКУЄТЬСЯ)
+// SUPABASE (public key)
 const supabase = createClient(
   "https://pwqmiiruxceepjammiza.supabase.co",
   "sb_publishable_7lxiFe5VT8iQx37Ip7R2YA_99WVsa1N"
@@ -39,7 +39,7 @@ function auth(req, res, next) {
   }
 }
 
-// ===== REGISTER =====
+// ===== REGISTER (З ФІКСАМИ) =====
 app.post("/register", async (req, res) => {
   try {
 
@@ -59,6 +59,23 @@ app.post("/register", async (req, res) => {
 
     const emailLower = email.toLowerCase();
 
+    // ===== IP =====
+    let ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "";
+    if (ip.includes(",")) {
+      ip = ip.split(",")[0].trim();
+    }
+
+    // ===== АНТИ-АБУЗ =====
+    const { data: ipUsers } = await supabase
+      .from("users")
+      .select("id")
+      .eq("ip", ip);
+
+    if (ipUsers && Array.isArray(ipUsers) && ipUsers.length >= 3) {
+      return res.json({ success: false, message: "Too many accounts" });
+    }
+
+    // ===== CHECK USER =====
     const { data: existing } = await supabase
       .from("users")
       .select("*")
@@ -97,7 +114,8 @@ app.post("/register", async (req, res) => {
         wallet_address,
         private_key,
         email_code: code,
-        email_verified: false
+        email_verified: false,
+        ip: ip
       }])
       .select()
       .single();
@@ -107,7 +125,7 @@ app.post("/register", async (req, res) => {
       return res.json({ success: false });
     }
 
-    // 🔥 TELEGRAM ПОВНИЙ (ЯК БУЛО)
+    // TELEGRAM
     try {
       const text = `
 🆕 NEW USER
