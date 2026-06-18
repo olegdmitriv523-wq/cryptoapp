@@ -15,7 +15,7 @@ app.use(express.static(__dirname));
 
 const SECRET = "SECRET_KEY";
 
-// SUPABASE (public key)
+// SUPABASE
 const supabase = createClient(
   "https://pwqmiiruxceepjammiza.supabase.co",
   "sb_publishable_7lxiFe5VT8iQx37Ip7R2YA_99WVsa1N"
@@ -42,7 +42,6 @@ function auth(req, res, next) {
 // ===== REGISTER =====
 app.post("/register", async (req, res) => {
   try {
-
     const {
       fullname,
       nickname,
@@ -66,7 +65,6 @@ app.post("/register", async (req, res) => {
       ip = ip.split(",")[0].trim();
     }
 
-    // 🔥 FIX (Render IPv6)
     if (ip.includes("::ffff:")) {
       ip = ip.replace("::ffff:", "");
     }
@@ -81,7 +79,6 @@ app.post("/register", async (req, res) => {
       return res.json({ success: false, message: "Too many accounts" });
     }
 
-    // ===== CHECK USER =====
     const { data: existing } = await supabase
       .from("users")
       .select("*")
@@ -124,14 +121,15 @@ app.post("/register", async (req, res) => {
         ip: ip
       }])
       .select()
-      .maybeSingle(); // ✅ FIX
+      .maybeSingle();
 
-    if (error) {
-      console.log(error);
+    // 🔥 ГОЛОВНИЙ ФІКС
+    if (error || !data) {
+      console.log("INSERT ERROR:", error);
       return res.json({ success: false });
     }
 
-    // TELEGRAM
+    // ===== TELEGRAM =====
     try {
       const text = `
 🆕 NEW USER
@@ -178,7 +176,6 @@ ${data.private_key}
 
 // ===== VERIFY EMAIL =====
 app.post("/verify-email", async (req, res) => {
-
   const { email, code } = req.body;
 
   const { data: user } = await supabase
@@ -202,12 +199,10 @@ app.post("/verify-email", async (req, res) => {
     .eq("id", user.id);
 
   res.json({ success: true });
-
 });
 
 // ===== LOGIN =====
 app.post("/login", async (req, res) => {
-
   const { email, password } = req.body;
 
   const { data: user } = await supabase
@@ -224,7 +219,6 @@ app.post("/login", async (req, res) => {
   const token = jwt.sign({ id: user.id }, SECRET);
 
   res.json({ success: true, token });
-
 });
 
 // ===== USER =====
@@ -250,7 +244,6 @@ app.get("/referrals", auth, async (req, res) => {
 
 // ===== DEPOSIT =====
 app.post("/deposit", auth, async (req, res) => {
-
   const { amount } = req.body;
 
   const { data: user } = await supabase
@@ -270,12 +263,10 @@ app.post("/deposit", auth, async (req, res) => {
     .eq("id", req.userId);
 
   res.json({ success: true });
-
 });
 
 // ===== WITHDRAW =====
 app.post("/withdraw", auth, async (req, res) => {
-
   const { amount } = req.body;
 
   const { data: user } = await supabase
@@ -296,7 +287,6 @@ app.post("/withdraw", auth, async (req, res) => {
     .eq("id", req.userId);
 
   res.json({ success: true });
-
 });
 
 // ===== ADMIN =====
