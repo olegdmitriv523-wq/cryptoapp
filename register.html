@@ -1,6 +1,5 @@
 app.post("/register", async (req, res) => {
   try {
-
     const {
       fullname,
       nickname,
@@ -22,6 +21,11 @@ app.post("/register", async (req, res) => {
 
     if (ip.includes(",")) {
       ip = ip.split(",")[0].trim();
+    }
+
+    // 🔥 FIX (IPv6 Render)
+    if (ip.includes("::ffff:")) {
+      ip = ip.replace("::ffff:", "");
     }
 
     // ===== АНТИ-АБУЗ =====
@@ -76,7 +80,7 @@ app.post("/register", async (req, res) => {
         ip: ip
       }])
       .select()
-      .single();
+      .maybeSingle(); // 🔥 FIX (було single)
 
     if (error) {
       console.log(error);
