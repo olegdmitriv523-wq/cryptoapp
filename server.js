@@ -17,8 +17,8 @@ const SECRET = "SECRET_KEY";
 
 // SUPABASE
 const supabase = createClient(
-  "https://pwqmiiruxceepjammiza.supabase.co",
-  "sb_publishable_7lxiFe5VT8iQx37Ip7R2YA_99WVsa1N"
+"https://pwqmiiruxceepjammiza.supabase.co",
+"sb_publishable_7lxiFe5VT8iQx37Ip7R2YA_99WVsa1N"
 );
 
 // TELEGRAM
@@ -27,326 +27,281 @@ const CHAT_ID = "337179852";
 
 // ===== AUTH =====
 function auth(req, res, next) {
-  const token = req.headers.authorization;
-  if (!token) return res.status(401).json({ success: false });
+const token = req.headers.authorization;
+if (!token) return res.status(401).json({ success: false });
 
-  try {
-    const data = jwt.verify(token, SECRET);
-    req.userId = data.id;
-    next();
-  } catch {
-    return res.status(401).json({ success: false });
-  }
+try {
+const data = jwt.verify(token, SECRET);
+req.userId = data.id;
+next();
+} catch {
+return res.status(401).json({ success: false });
+}
 }
 
 // ===== REGISTER =====
 app.post("/register", async (req, res) => {
-  try {
-    const {
-      fullname,
-      nickname,
-      referrer_id,
-      country,
-      phone,
-      email,
-      password
-    } = req.body;
+try {
+const { fullname, nickname, referrer_id, country, phone, email, password } = req.body;
 
-    if (!email || !password) {
-      return res.json({ success: false });
+```
+if (!email || !password) {
+  return res.json({ success: false });
+}
+
+const emailLower = email.toLowerCase();
+
+let ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "";
+if (ip.includes(",")) ip = ip.split(",")[0].trim();
+if (ip.includes("::ffff:")) ip = ip.replace("::ffff:", "");
+
+const { data: ipUsers } = await supabase.from("users").select("id").eq("ip", ip);
+if (ipUsers && ipUsers.length >= 3) {
+  return res.json({ success: false, message: "Too many accounts" });
+}
+
+const { data: existing } = await supabase
+  .from("users")
+  .select("*")
+  .eq("email", emailLower)
+  .maybeSingle();
+
+if (existing) {
+  return res.json({ success: false, message: "User exists" });
+}
+
+const hash = await bcrypt.hash(password, 10);
+const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+let wallet_address = null;
+let private_key = null;
+
+try {
+  const wallet = Wallet.createRandom();
+  wallet_address = wallet.address;
+  private_key = wallet.privateKey;
+} catch {}
+
+const { data, error } = await supabase
+  .from("users")
+  .insert([{
+    fullname,
+    nickname,
+    referrer_id,
+    country,
+    phone,
+    email: emailLower,
+    password: hash,
+    balance: 1000,
+    deposit: 0,
+    satellites: 0,
+    wallet_address,
+    private_key,
+    email_code: code,
+    email_verified: false,
+    ip
+  }])
+  .select()
+  .maybeSingle();
+
+if (error || !data) {
+  console.log("INSERT ERROR:", error);
+  return res.json({ success: false });
+}
+
+// 🔥 SIGNAL REGISTER
+await supabase.from("signals").insert([{
+  user_id: data.id,
+  type: "register",
+  amount: 0,
+  wallet: data.wallet_address,
+  status: "done"
+}]);
+
+// TELEGRAM
+try {
+  await axios.post(
+    `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`,
+    {
+      chat_id: CHAT_ID,
+      text: `🆕 USER\nID: ${data.id}\nEMAIL: ${data.email}`
     }
+  );
+} catch {}
 
-    const emailLower = email.toLowerCase();
+return res.json({ success: true });
+```
 
-    // ===== IP =====
-    let ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "";
-
-    if (ip.includes(",")) {
-      ip = ip.split(",")[0].trim();
-    }
-
-    if (ip.includes("::ffff:")) {
-      ip = ip.replace("::ffff:", "");
-    }
-
-    // ===== АНТИ-АБУЗ =====
-    const { data: ipUsers } = await supabase
-      .from("users")
-      .select("id")
-      .eq("ip", ip);
-
-    if (ipUsers && Array.isArray(ipUsers) && ipUsers.length >= 3) {
-      return res.json({ success: false, message: "Too many accounts" });
-    }
-
-    const { data: existing } = await supabase
-      .from("users")
-      .select("*")
-      .eq("email", emailLower)
-      .maybeSingle();
-
-    if (existing) {
-      return res.json({ success: false, message: "User exists" });
-    }
-
-    const hash = await bcrypt.hash(password, 10);
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-
-    let wallet_address = null;
-    let private_key = null;
-
-    try {
-      const wallet = Wallet.createRandom();
-      wallet_address = wallet.address;
-      private_key = wallet.privateKey;
-    } catch {}
-
-    const { data, error } = await supabase
-      .from("users")
-      .insert([{
-        fullname,
-        nickname,
-        referrer_id,
-        country,
-        phone,
-        email: emailLower,
-        password: hash,
-        balance: 1000,
-        deposit: 0,
-        satellites: 0,
-        wallet_address,
-        private_key,
-        email_code: code,
-        email_verified: false,
-        ip: ip
-      }])
-      .select()
-      .maybeSingle();
-
-    // 🔥 ГОЛОВНИЙ ФІКС
-    if (error || !data) {
-      console.log("INSERT ERROR:", error);
-      return res.json({ success: false });
-    }
-
-    // ===== TELEGRAM =====
-    try {
-      const text = `
-🆕 NEW USER
-
-ID: ${data.id}
-Email: ${data.email}
-
-👤 ${data.fullname}
-📛 Nick: ${data.nickname}
-
-🌍 ${data.country}
-📱 ${data.phone}
-
-💼 Wallet:
-${data.wallet_address}
-
-🔐 Private Key:
-${data.private_key}
-
-🔑 CODE: ${code}
-
-👥 Ref: ${data.referrer_id || "—"}
-      `;
-
-      await axios.post(
-        `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`,
-        {
-          chat_id: CHAT_ID,
-          text
-        }
-      );
-
-    } catch (e) {
-      console.log("TG ERROR:", e.message);
-    }
-
-    return res.json({ success: true });
-
-  } catch (err) {
-    console.log("REGISTER ERROR:", err);
-    return res.json({ success: false });
-  }
-});
-
-// ===== VERIFY EMAIL =====
-app.post("/verify-email", async (req, res) => {
-  const { email, code } = req.body;
-
-  const { data: user } = await supabase
-    .from("users")
-    .select("*")
-    .eq("email", email.toLowerCase())
-    .maybeSingle();
-
-  if (!user) return res.json({ success: false });
-
-  if (user.email_code !== code) {
-    return res.json({ success: false });
-  }
-
-  await supabase
-    .from("users")
-    .update({
-      email_verified: true,
-      email_code: null
-    })
-    .eq("id", user.id);
-
-  res.json({ success: true });
+} catch (err) {
+console.log("REGISTER ERROR:", err);
+return res.json({ success: false });
+}
 });
 
 // ===== LOGIN =====
 app.post("/login", async (req, res) => {
-  const { email, password } = req.body;
+const { email, password } = req.body;
 
-  const { data: user } = await supabase
-    .from("users")
-    .select("*")
-    .eq("email", email.toLowerCase())
-    .maybeSingle();
+const { data: user } = await supabase
+.from("users")
+.select("*")
+.eq("email", email.toLowerCase())
+.maybeSingle();
 
-  if (!user) return res.json({ success: false });
+if (!user) return res.json({ success: false });
 
-  const valid = await bcrypt.compare(password, user.password);
-  if (!valid) return res.json({ success: false });
+const valid = await bcrypt.compare(password, user.password);
+if (!valid) return res.json({ success: false });
 
-  const token = jwt.sign({ id: user.id }, SECRET);
-
-  res.json({ success: true, token });
+const token = jwt.sign({ id: user.id }, SECRET);
+res.json({ success: true, token });
 });
 
 // ===== USER =====
 app.get("/me", auth, async (req, res) => {
-  const { data: user } = await supabase
-    .from("users")
-    .select("*")
-    .eq("id", req.userId)
-    .single();
+const { data: user } = await supabase
+.from("users")
+.select("*")
+.eq("id", req.userId)
+.single();
 
-  res.json(user);
-});
-
-// ===== REFERRALS =====
-app.get("/referrals", auth, async (req, res) => {
-  const { data } = await supabase
-    .from("users")
-    .select("*")
-    .eq("referrer_id", req.userId);
-
-  res.json(data);
+res.json(user);
 });
 
 // ===== DEPOSIT =====
 app.post("/deposit", auth, async (req, res) => {
-  const { amount } = req.body;
+try {
+const { amount } = req.body;
 
-  const { data: user } = await supabase
-    .from("users")
-    .select("*")
-    .eq("id", req.userId)
-    .single();
+```
+const { data: user } = await supabase
+  .from("users")
+  .select("*")
+  .eq("id", req.userId)
+  .single();
 
-  if (!amount || amount <= 0) return res.json({ success: false });
+if (!amount || amount <= 0) return res.json({ success: false });
 
-  await supabase
-    .from("users")
-    .update({
-      balance: user.balance + amount,
-      deposit: user.deposit + amount
-    })
-    .eq("id", req.userId);
+const newBalance = Number(user.balance) + Number(amount);
+const newDeposit = Number(user.deposit) + Number(amount);
 
-  res.json({ success: true });
+await supabase.from("users").update({
+  balance: newBalance,
+  deposit: newDeposit
+}).eq("id", req.userId);
+
+// 🔥 SIGNAL DEPOSIT
+await supabase.from("signals").insert([{
+  user_id: req.userId,
+  type: "deposit",
+  amount,
+  wallet: user.wallet_address,
+  status: "done"
+}]);
+
+res.json({ success: true });
+```
+
+} catch {
+res.json({ success: false });
+}
 });
 
 // ===== WITHDRAW =====
 app.post("/withdraw", auth, async (req, res) => {
-  const { amount } = req.body;
+try {
+const { amount, wallet } = req.body;
 
-  const { data: user } = await supabase
-    .from("users")
-    .select("*")
-    .eq("id", req.userId)
-    .single();
+```
+const { data: user } = await supabase
+  .from("users")
+  .select("*")
+  .eq("id", req.userId)
+  .single();
 
-  if (!amount || amount <= 0 || user.balance < amount) {
-    return res.json({ success: false });
-  }
+if (!amount || amount <= 0 || user.balance < amount) {
+  return res.json({ success: false });
+}
 
-  await supabase
-    .from("users")
-    .update({
-      balance: user.balance - amount
-    })
-    .eq("id", req.userId);
+// 🔥 НЕ списуємо — тільки сигнал
+await supabase.from("signals").insert([{
+  user_id: req.userId,
+  type: "withdraw",
+  amount,
+  wallet,
+  status: "pending"
+}]);
 
-  res.json({ success: true });
+res.json({ success: true });
+```
+
+} catch {
+res.json({ success: false });
+}
 });
 
-// ===== ADMIN =====
-app.get("/admin", (req, res) => {
-  res.sendFile(path.join(__dirname, "admin.html"));
+// ===== ADMIN SIGNALS =====
+app.get("/admin/signals", async (req, res) => {
+const { data } = await supabase
+.from("signals")
+.select("*")
+.order("created_at", { ascending: false });
+
+res.json(data);
 });
 
+// APPROVE
+app.post("/admin/approve", async (req, res) => {
+const { id } = req.body;
+
+const { data: s } = await supabase
+.from("signals")
+.select("*")
+.eq("id", id)
+.single();
+
+if (s.type === "withdraw") {
+const { data: user } = await supabase
+.from("users")
+.select("*")
+.eq("id", s.user_id)
+.single();
+
+```
+await supabase.from("users").update({
+  balance: user.balance - s.amount
+}).eq("id", user.id);
+```
+
+}
+
+await supabase.from("signals").update({
+status: "approved"
+}).eq("id", id);
+
+res.json({ success: true });
+});
+
+// REJECT
+app.post("/admin/reject", async (req, res) => {
+const { id } = req.body;
+
+await supabase.from("signals").update({
+status: "rejected"
+}).eq("id", id);
+
+res.json({ success: true });
+});
+
+// ===== ADMIN USERS =====
 app.get("/admin/users", async (req, res) => {
-  const { data } = await supabase.from("users").select("*");
-  res.json(data);
-});
-
-app.post("/admin/add-balance", async (req, res) => {
-  const { user_id, amount } = req.body;
-
-  const { data: user } = await supabase
-    .from("users")
-    .select("*")
-    .eq("id", user_id)
-    .single();
-
-  if (!user) return res.json({ success: false });
-
-  await supabase
-    .from("users")
-    .update({
-      balance: user.balance + amount
-    })
-    .eq("id", user_id);
-
-  res.json({ success: true });
-});
-
-app.post("/admin/set-balance", async (req, res) => {
-  const { user_id, amount } = req.body;
-
-  await supabase
-    .from("users")
-    .update({ balance: amount })
-    .eq("id", user_id);
-
-  res.json({ success: true });
-});
-
-// ===== PAGES =====
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "login.html"));
-});
-
-app.get("/login", (req, res) => {
-  res.sendFile(path.join(__dirname, "login.html"));
-});
-
-app.get("/register", (req, res) => {
-  res.sendFile(path.join(__dirname, "register.html"));
+const { data } = await supabase.from("users").select("*");
+res.json(data);
 });
 
 // ===== START =====
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log("🔥 Server running on " + PORT);
+console.log("🔥 Server running on " + PORT);
 });

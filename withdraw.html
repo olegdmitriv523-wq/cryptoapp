@@ -135,35 +135,48 @@ return;
 
 try {
 
-// USER
+// ===== USER =====
 let resUser = await fetch(API_URL + "/me", {
 headers:{ Authorization: token }
 });
 
+if(!resUser.ok){
+throw new Error("auth");
+}
+
 let user = await resUser.json();
+
+if(!user || !user.id){
+throw new Error("auth");
+}
 
 if(amount > user.balance){
 alert("Недостатньо коштів");
 return;
 }
 
-// 🔥 WITHDRAW (ТЕПЕР З WALLET)
+// ===== WITHDRAW =====
 let res = await fetch(API_URL + "/withdraw", {
 method:"POST",
 headers:{
 "Content-Type":"application/json",
 Authorization: token
 },
-body:JSON.stringify({ amount, wallet }) // 🔥 ГОЛОВНИЙ ФІКС
+body:JSON.stringify({ amount, wallet })
 });
+
+if(!res.ok){
+throw new Error("server");
+}
 
 let data = await res.json();
 
 if(data.success){
 
+// 🔥 СТАВИМО ТАЙМЕР
 localStorage.setItem("withdraw_time", Date.now());
 
-alert("Заявка відправлена");
+alert("Заявка на виведення створена");
 
 window.location.href="index.html";
 
@@ -172,7 +185,16 @@ alert(data.message || "Помилка");
 }
 
 }catch(e){
+
+// 🔥 якщо токен помер
+if(e.message === "auth"){
+localStorage.removeItem("token");
+window.location.href = "login.html";
+return;
+}
+
 alert("Сервер не відповідає");
+
 }
 
 }

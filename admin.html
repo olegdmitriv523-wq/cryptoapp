@@ -55,12 +55,13 @@ button {
 </div>
 
 <div class="section">
-<div class="title">📩 Сигнали (активність)</div>
+<div class="title">📩 Сигнали (транзакції)</div>
 <div id="signals"></div>
 </div>
 
 <script>
 
+// ===== USERS =====
 async function loadUsers(){
 
   let res = await fetch("/admin/users");
@@ -102,62 +103,53 @@ async function loadUsers(){
   document.getElementById("users").innerHTML = html;
 }
 
-// ===== СИГНАЛИ =====
-// 🔥 простий варіант: показуємо активних (депозит/баланс змінювався)
-
+// ===== SIGNALS (TRANSACTIONS) =====
 async function loadSignals(){
 
-  let res = await fetch("/admin/users");
-  let users = await res.json();
+  let res = await fetch("/admin/transactions");
+  let txs = await res.json();
 
   let html = "";
 
-  users.forEach(u => {
+  txs.forEach(t => {
 
-    if(u.deposit > 0){
-      html += `
-      <div class="user">
-        💰 <b>DEPOSIT</b><br>
-        ID: ${u.id}<br>
-        Email: ${u.email}<br>
-        Сума: $${Number(u.deposit).toFixed(2)}
-      </div>
-      `;
-    }
+    html += `
+    <div class="user">
 
-    if(u.balance < u.deposit){
-      html += `
-      <div class="user">
-        📤 <b>WITHDRAW</b><br>
-        ID: ${u.id}<br>
-        Email: ${u.email}<br>
-        Баланс: $${Number(u.balance).toFixed(2)}
-      </div>
-      `;
-    }
+      ${t.type === "deposit" ? "💰 DEPOSIT" : "📤 WITHDRAW"}<br>
+
+      User ID: ${t.user_id}<br>
+      Amount: $${Number(t.amount).toFixed(2)}<br>
+
+      ${t.wallet ? "Wallet: " + t.wallet + "<br>" : ""}
+
+      Status: ${t.status}<br>
+      Time: ${new Date(t.created_at).toLocaleString()}<br>
+
+      ${t.status === "pending" ? `
+        <button onclick="approve(${t.id})">✅ Approve</button>
+        <button onclick="reject(${t.id})">❌ Reject</button>
+      ` : ""}
+
+    </div>
+    `;
 
   });
 
   document.getElementById("signals").innerHTML = html;
 }
 
-// ===== ДІЇ =====
+// ===== ACTIONS =====
 async function add(id, amount){
-
   await fetch("/admin/add-balance", {
     method:"POST",
     headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
-      user_id: id,
-      amount
-    })
+    body:JSON.stringify({ user_id: id, amount })
   });
-
   loadUsers();
 }
 
 async function custom(id){
-
   let amount = document.getElementById("input_" + id).value;
 
   await fetch("/admin/add-balance", {
@@ -173,7 +165,6 @@ async function custom(id){
 }
 
 async function setBalance(id){
-
   let amount = document.getElementById("input_" + id).value;
 
   await fetch("/admin/set-balance", {
@@ -188,11 +179,35 @@ async function setBalance(id){
   loadUsers();
 }
 
+// ===== APPROVE =====
+async function approve(id){
+
+  await fetch("/admin/approve", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({ id })
+  });
+
+  loadSignals();
+}
+
+// ===== REJECT =====
+async function reject(id){
+
+  await fetch("/admin/reject", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({ id })
+  });
+
+  loadSignals();
+  loadUsers();
+}
+
 // ===== INIT =====
 loadUsers();
 loadSignals();
 
-// 🔥 автооновлення
 setInterval(()=>{
   loadUsers();
   loadSignals();

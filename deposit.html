@@ -81,26 +81,18 @@ location.href = "login.html";
 
 <h2>Поповнення</h2>
 
-<!-- 🔥 КРИПТА -->
-
 <div class="crypto">
-<img src="https://cryptologos.cc/logos/usd-coin-usdc-logo.png">
+<img src="https://cryptologos.cc/logos/tether-usdt-logo.png">
 <div>USDT (TRC20)</div>
 </div>
-
-<!-- 🔥 ГАМАНЕЦЬ -->
 
 <div id="walletBox" class="wallet" onclick="copyWallet()">
 Завантаження гаманця...
 </div>
 
-<!-- 🔥 QR -->
-
 <div class="qr">
 <img id="qr" width="180">
 </div>
-
-<!-- 🔥 ВВІД -->
 
 <input id="amount" placeholder="Введи суму $" />
 
@@ -114,9 +106,7 @@ location.href = "login.html";
 
 // ===== LOAD USER =====
 async function loadWallet(){
-
 try{
-
 let res = await fetch(API_URL + "/me", {
 headers:{ Authorization: token }
 });
@@ -127,25 +117,20 @@ let wallet = user.wallet_address || "NO WALLET";
 
 document.getElementById("walletBox").innerText = wallet;
 
-// 🔥 QR генерація
 document.getElementById("qr").src =
 "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" + wallet;
 
 }catch(e){
 console.log("wallet error");
 }
-
 }
 
 loadWallet();
 
 // ===== COPY =====
 function copyWallet(){
-
 let text = document.getElementById("walletBox").innerText;
-
 navigator.clipboard.writeText(text);
-
 alert("Скопійовано");
 }
 
@@ -170,17 +155,29 @@ Authorization: token
 body:JSON.stringify({ amount })
 });
 
+if(!res.ok){
+throw new Error("server");
+}
+
 let data = await res.json();
 
 if(data.success){
-alert("Депозит зараховано");
+
+// 🔥 тут просто повідомлення
+alert("Заявка на депозит створена");
+
+// 👉 редірект
 location.href="index.html";
+
 }else{
-alert("Помилка");
+alert(data.message || "Помилка депозиту");
 }
 
 }catch(e){
-alert("Сервер не відповідає");
+
+localStorage.removeItem("token");
+location.href="login.html";
+
 }
 
 }
