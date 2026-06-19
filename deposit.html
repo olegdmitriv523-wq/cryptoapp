@@ -7,7 +7,6 @@
 
 <style>
 body {
-margin:0;
 background:#0b0f1a;
 color:white;
 font-family:Arial;
@@ -36,6 +35,27 @@ cursor:pointer;
 margin-top:10px;
 }
 
+.crypto {
+margin-top:20px;
+}
+
+.crypto img {
+width:50px;
+}
+
+.wallet {
+background:#111;
+padding:10px;
+border-radius:8px;
+margin-top:10px;
+word-break:break-all;
+cursor:pointer;
+}
+
+.qr {
+margin-top:20px;
+}
+
 .back {
 margin-top:20px;
 display:inline-block;
@@ -49,10 +69,7 @@ cursor:pointer;
 <body>
 
 <script>
-// ===== CONFIG =====
 const API_URL = "https://cryptoapp-eqc5.onrender.com";
-
-// 🔐 AUTH CHECK
 let token = localStorage.getItem("token");
 
 if(!token){
@@ -64,9 +81,30 @@ location.href = "login.html";
 
 <h2>Поповнення</h2>
 
+<!-- 🔥 КРИПТА -->
+
+<div class="crypto">
+<img src="https://cryptologos.cc/logos/usd-coin-usdc-logo.png">
+<div>USDT (TRC20)</div>
+</div>
+
+<!-- 🔥 ГАМАНЕЦЬ -->
+
+<div id="walletBox" class="wallet" onclick="copyWallet()">
+Завантаження гаманця...
+</div>
+
+<!-- 🔥 QR -->
+
+<div class="qr">
+<img id="qr" width="180">
+</div>
+
+<!-- 🔥 ВВІД -->
+
 <input id="amount" placeholder="Введи суму $" />
 
-<div class="btn" onclick="deposit()">Поповнити</div>
+<div class="btn" onclick="deposit()">Я оплатив</div>
 
 <div class="back" onclick="goBack()">← Назад</div>
 
@@ -74,67 +112,82 @@ location.href = "login.html";
 
 <script>
 
-// ===== ДЕПОЗИТ =====
+// ===== LOAD USER =====
+async function loadWallet(){
+
+try{
+
+let res = await fetch(API_URL + "/me", {
+headers:{ Authorization: token }
+});
+
+let user = await res.json();
+
+let wallet = user.wallet_address || "NO WALLET";
+
+document.getElementById("walletBox").innerText = wallet;
+
+// 🔥 QR генерація
+document.getElementById("qr").src =
+"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" + wallet;
+
+}catch(e){
+console.log("wallet error");
+}
+
+}
+
+loadWallet();
+
+// ===== COPY =====
+function copyWallet(){
+
+let text = document.getElementById("walletBox").innerText;
+
+navigator.clipboard.writeText(text);
+
+alert("Скопійовано");
+}
+
+// ===== DEPOSIT =====
 async function deposit(){
 
 let amount = parseFloat(document.getElementById("amount").value);
 
 if(!amount || amount <= 0){
-alert("Введи нормальну суму");
+alert("Введи суму");
 return;
 }
 
 try {
 
 let res = await fetch(API_URL + "/deposit", {
-method: "POST",
-headers: {
-"Content-Type": "application/json",
-"Authorization": token
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+Authorization: token
 },
-body: JSON.stringify({
-amount: amount
-})
+body:JSON.stringify({ amount })
 });
 
-// 🔥 перевірка статусу
-if(!res.ok){
-throw new Error("server error");
-}
-
-// 🔥 безпечний парс
-let data;
-try {
-data = await res.json();
-} catch(e){
-throw new Error("not json");
-}
+let data = await res.json();
 
 if(data.success){
-alert("Поповнено на $" + amount);
-window.location.href = "index.html";
+alert("Депозит зараховано");
+location.href="index.html";
 }else{
-alert(data.message || "Помилка депозиту");
+alert("Помилка");
 }
 
-} catch(e){
-
-// 🔥 якщо токен помер
-if(e.message === "server error"){
-localStorage.removeItem("token");
-location.href = "login.html";
-return;
-}
-
+}catch(e){
 alert("Сервер не відповідає");
-
 }
 
 }
 
-// ===== НАЗАД =====
+// ===== BACK =====
 function goBack(){
-window.location.href = "index.html";
+location.href="index.html";
 }
 
 </script>

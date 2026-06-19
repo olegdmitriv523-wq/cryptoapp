@@ -1,54 +1,70 @@
 <!DOCTYPE html>
+
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
 <title>Withdraw</title>
 
 <style>
-body {background:#0b0f1a;color:white;font-family:Arial;text-align:center;}
-.box {margin-top:50px;}
+body {
+background:#0b0f1a;
+color:white;
+font-family:Arial;
+text-align:center;
+}
+
+.box {
+margin-top:50px;
+}
 
 input {
-    display:block;
-    margin:10px auto;
-    padding:10px;
-    width:250px;
-    background:#111;
-    color:white;
-    border:none;
-    border-radius:6px;
+display:block;
+margin:10px auto;
+padding:12px;
+width:260px;
+background:#111;
+color:white;
+border:none;
+border-radius:8px;
 }
 
 .btn {
-    padding:10px;
-    background:red;
-    border-radius:10px;
-    cursor:pointer;
+padding:12px;
+background:red;
+border-radius:12px;
+cursor:pointer;
+font-size:16px;
+}
+
+.btn.disabled {
+background:#555;
+cursor:not-allowed;
 }
 
 .back {
-    position:absolute;
-    top:10px;
-    left:10px;
-    cursor:pointer;
+position:absolute;
+top:10px;
+left:10px;
+cursor:pointer;
+}
+
+.timer {
+margin-top:10px;
+color:orange;
 }
 </style>
+
 </head>
 
 <body>
 
 <script>
-
-// ===== CONFIG =====
 const API_URL = "https://cryptoapp-eqc5.onrender.com";
-
-// 🔐 AUTH
 let token = localStorage.getItem("token");
 
 if(!token){
 window.location.href = "login.html";
 }
-
 </script>
 
 <div class="back" onclick="goBack()">⬅ Назад</div>
@@ -60,84 +76,103 @@ window.location.href = "login.html";
 <input id="amount" placeholder="Сума ($)">
 <input id="wallet" placeholder="Адреса гаманця">
 
-<div class="btn" onclick="withdraw()">Вивести</div>
+<div id="btn" class="btn" onclick="withdraw()">Вивести</div>
+
+<div id="timer" class="timer"></div>
 
 </div>
 
 <script>
 
+// ===== ТАЙМЕР =====
+function checkTimer(){
+let last = localStorage.getItem("withdraw_time");
+
+if(!last) return;
+
+let diff = Date.now() - parseInt(last);
+let left = 3600000 - diff;
+
+if(left > 0){
+
+document.getElementById("btn").classList.add("disabled");
+
+setInterval(()=>{
+let l = 3600000 - (Date.now() - parseInt(last));
+
+if(l <= 0){
+location.reload();
+return;
+}
+
+let min = Math.floor(l / 60000);
+let sec = Math.floor((l % 60000) / 1000);
+
+document.getElementById("timer").innerText =
+"Спробуй через: " + min + "м " + sec + "с";
+
+},1000);
+
+}
+}
+
+checkTimer();
+
 // ===== WITHDRAW =====
 async function withdraw(){
 
-let amount = parseFloat(document.getElementById("amount").value);
-let wallet = document.getElementById("wallet").value;
+if(document.getElementById("btn").classList.contains("disabled")){
+return;
+}
 
-if(!amount || !wallet){
+let amount = parseFloat(document.getElementById("amount").value);
+let wallet = document.getElementById("wallet").value.trim();
+
+if(!amount || amount <= 0 || !wallet){
 alert("Заповни всі поля");
 return;
 }
 
 try {
 
-// ===== ПЕРЕВІРКА КОРИСТУВАЧА =====
+// USER
 let resUser = await fetch(API_URL + "/me", {
 headers:{ Authorization: token }
 });
 
-if(!resUser.ok){
-throw new Error("auth");
-}
-
 let user = await resUser.json();
-
-if(!user || !user.id){
-throw new Error("auth");
-}
 
 if(amount > user.balance){
 alert("Недостатньо коштів");
 return;
 }
 
-// ===== ВИВІД =====
+// 🔥 WITHDRAW (ТЕПЕР З WALLET)
 let res = await fetch(API_URL + "/withdraw", {
 method:"POST",
 headers:{
 "Content-Type":"application/json",
 Authorization: token
 },
-body:JSON.stringify({ amount })
+body:JSON.stringify({ amount, wallet }) // 🔥 ГОЛОВНИЙ ФІКС
 });
 
-if(!res.ok){
-throw new Error("withdraw error");
-}
-
-let data;
-try{
-data = await res.json();
-}catch(e){
-throw new Error("bad json");
-}
+let data = await res.json();
 
 if(data.success){
-alert("Заявка на виведення створена");
+
+localStorage.setItem("withdraw_time", Date.now());
+
+alert("Заявка відправлена");
+
 window.location.href="index.html";
+
 }else{
-alert(data.message || "Помилка виводу");
+alert(data.message || "Помилка");
 }
 
 }catch(e){
-
-// 🔥 якщо токен помер
-if(e.message === "auth"){
-localStorage.removeItem("token");
-window.location.href = "login.html";
-return;
-}
-
 alert("Сервер не відповідає");
-
 }
 
 }

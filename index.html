@@ -70,24 +70,26 @@ margin:10px 0;
 
 .btn {
 background:#111;
-padding:10px 20px;
-border-radius:10px;
+padding:12px 20px;
+border-radius:12px;
 cursor:pointer;
+font-size:16px;
 }
 
 /* COINS */
 .row {
 display:flex;
 justify-content:space-between;
-padding:12px;
+padding:14px;
 border-bottom:1px solid #222;
 cursor:pointer;
+font-size:16px;
 }
 
 .green {color:lime;}
 .red {color:red;}
 
-/* NAV */
+/* NAV (ЗБІЛЬШИВ) */
 .navbar {
 position:fixed;
 bottom:0;
@@ -95,14 +97,15 @@ width:100%;
 background:#000;
 display:flex;
 justify-content:space-around;
-padding:8px 0;
+padding:15px 0;
 }
 
 .nav-item {
 color:#888;
-font-size:12px;
+font-size:16px;
 text-align:center;
 cursor:pointer;
+flex:1;
 }
 
 .nav-item.active {
@@ -171,24 +174,22 @@ location.href = "login.html";
 
 // ===== LOAD USER =====
 async function loadUser(){
-
 try{
 
 let res = await fetch(API_URL + "/me", {
-headers:{
-Authorization: token
-}
+headers:{ Authorization: token }
 });
-
-if(!res.ok){
-throw new Error("auth error");
-}
 
 let user = await res.json();
 
-if(!user || !user.id){
-throw new Error("no user");
-}
+console.log(user);
+
+// 🔥 ВИПРАВЛЕНО ТУТ
+document.getElementById("wallet").innerText =
+user.wallet_address || "Нема гаманця";
+
+document.getElementById("userIdText").innerText =
+"ID: " + user.id;
 
 let balance = user.balance || 0;
 let deposit = user.deposit || 0;
@@ -201,29 +202,18 @@ let color = percent >= 0 ? "green" : "red";
 document.getElementById("balance").innerHTML =
 `$${balance.toFixed(2)} <span class="${color}">${percent.toFixed(2)}%</span>`;
 
-document.getElementById("userIdText").innerText = "ID: " + user.id;
-
-// 🔥 ТЕПЕР НЕ ХАРДКОД
-document.getElementById("wallet").innerText =
-user.wallet || "Нема гаманця";
-
 }catch(e){
-
-// 🔥 якщо токен кривий — викидаємо
 localStorage.removeItem("token");
 location.href = "login.html";
-
+}
 }
 
-}
-
-// ===== COINS API =====
+// ===== COINS =====
 async function loadCoins(){
-
 try{
 
 let res = await fetch(
-"https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=15&page=1"
+"https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&per_page=15"
 );
 
 let data = await res.json();
@@ -231,24 +221,14 @@ let data = await res.json();
 let html = "";
 
 data.forEach(c=>{
-
 let color = c.price_change_percentage_24h >=0 ? "green":"red";
 
 html += `
-<div class="row" onclick="openCoin('${c.symbol.toUpperCase()}')">
-
-<div style="display:flex;gap:10px;align-items:center">
-<img src="${c.image}" width="20">
-${c.symbol.toUpperCase()}
-</div>
-
-<div>
-$${c.current_price.toLocaleString()}
-<span class="${color}">
+<div class="row">
+<div>${c.symbol.toUpperCase()}</div>
+<div>$${c.current_price} <span class="${color}">
 ${c.price_change_percentage_24h.toFixed(2)}%
-</span>
-</div>
-
+</span></div>
 </div>
 `;
 });
@@ -258,21 +238,15 @@ document.getElementById("list").innerHTML = html;
 }catch(e){
 console.log("coins error");
 }
-
 }
 
-// ===== NAVIGATION =====
+// ===== NAV =====
 function goHome(){location.href="index.html";}
 function goTrade(){location.href="trade.html";}
 function goAssets(){location.href="assets.html";}
 function goInfo(){location.href="info.html";}
 function goDeposit(){location.href="deposit.html";}
 function goWithdraw(){location.href="withdraw.html";}
-
-function openCoin(symbol){
-localStorage.setItem("symbol", symbol);
-location.href="coin.html";
-}
 
 // ===== LOGOUT =====
 function logout(){
@@ -312,15 +286,3 @@ setInterval(loadCoins,10000);
 
 </body>
 </html>
-// ===== LOAD USER =====
-async function loadUser(){
-
-let res = await fetch(API_URL + "/me", {
-headers:{ Authorization: token }
-});
-
-let user = await res.json();
-
-document.getElementById("wallet").innerText = user.wallet || "—";
-
-}

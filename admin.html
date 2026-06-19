@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
@@ -19,6 +20,10 @@ body {
   border-radius:10px;
 }
 
+.section {
+  margin-bottom:30px;
+}
+
 input {
   padding:5px;
   margin-top:5px;
@@ -30,14 +35,29 @@ button {
   padding:5px 10px;
   cursor:pointer;
 }
+
+.title {
+  font-size:20px;
+  margin-bottom:10px;
+  color:orange;
+}
 </style>
+
 </head>
 
 <body>
 
 <h2>👑 Admin Panel</h2>
 
+<div class="section">
+<div class="title">👥 Користувачі</div>
 <div id="users"></div>
+</div>
+
+<div class="section">
+<div class="title">📩 Сигнали (активність)</div>
+<div id="signals"></div>
+</div>
 
 <script>
 
@@ -59,7 +79,11 @@ async function loadUsers(){
       <b>Country:</b> ${u.country}<br>
       <b>Phone:</b> ${u.phone}<br>
       <b>Wallet:</b> ${u.wallet_address}<br>
-      <b>Balance:</b> $${u.balance}<br>
+
+      <b>Balance:</b> $${Number(u.balance).toFixed(2)}<br>
+      <b>Deposit:</b> $${Number(u.deposit).toFixed(2)}<br>
+
+      🔥 <b>Satellites:</b> ${u.satellites || 0}<br>
 
       <input id="input_${u.id}" placeholder="Сума">
 
@@ -78,6 +102,46 @@ async function loadUsers(){
   document.getElementById("users").innerHTML = html;
 }
 
+// ===== СИГНАЛИ =====
+// 🔥 простий варіант: показуємо активних (депозит/баланс змінювався)
+
+async function loadSignals(){
+
+  let res = await fetch("/admin/users");
+  let users = await res.json();
+
+  let html = "";
+
+  users.forEach(u => {
+
+    if(u.deposit > 0){
+      html += `
+      <div class="user">
+        💰 <b>DEPOSIT</b><br>
+        ID: ${u.id}<br>
+        Email: ${u.email}<br>
+        Сума: $${Number(u.deposit).toFixed(2)}
+      </div>
+      `;
+    }
+
+    if(u.balance < u.deposit){
+      html += `
+      <div class="user">
+        📤 <b>WITHDRAW</b><br>
+        ID: ${u.id}<br>
+        Email: ${u.email}<br>
+        Баланс: $${Number(u.balance).toFixed(2)}
+      </div>
+      `;
+    }
+
+  });
+
+  document.getElementById("signals").innerHTML = html;
+}
+
+// ===== ДІЇ =====
 async function add(id, amount){
 
   await fetch("/admin/add-balance", {
@@ -124,7 +188,15 @@ async function setBalance(id){
   loadUsers();
 }
 
+// ===== INIT =====
 loadUsers();
+loadSignals();
+
+// 🔥 автооновлення
+setInterval(()=>{
+  loadUsers();
+  loadSignals();
+},5000);
 
 </script>
 
