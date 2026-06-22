@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Дані користувача</title>
+<link rel="stylesheet" href="app.css">
+<style>
+body{margin:0;font-family:Arial,sans-serif}.page{width:min(680px,calc(100% - 28px));margin:auto;padding-bottom:130px}.card{background:var(--panel);border:1px solid #293246;border-radius:14px;padding:20px;margin:14px 0}.identity{display:grid;grid-template-columns:1fr 1fr;gap:10px;color:var(--muted)}label{display:block;margin:12px 0 4px;color:#cbd5e1}input{width:100%;box-sizing:border-box;padding:11px;border:1px solid #334155;border-radius:8px;background:#111827;color:white}button{width:100%;padding:11px;margin-top:14px;border:0;border-radius:9px;background:var(--accent);color:#111;font-weight:bold;cursor:pointer}.secondary{background:#334155;color:white}.message{min-height:22px;margin-top:10px;color:#ffb020}.hidden{display:none}.wide{grid-column:1/-1;word-break:break-all}@media(max-width:520px){.identity{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main class="page">
+  <h1>Дані користувача</h1>
+  <section class="card identity">
+    <div><b>ID</b><br><span id="displayId">—</span></div>
+    <div><b>Запросив</b><br><span id="referrer">—</span></div>
+    <div class="wide"><b>Гаманець</b><br><span id="wallet">—</span></div>
+  </section>
+  <form class="card" id="profileForm">
+    <h2>Особисті дані</h2>
+    <p>Зміни набудуть чинності після погодження адміністратором.</p>
+    <label for="fullname">Повне ім'я</label><input id="fullname" required>
+    <label for="nickname">Нікнейм</label><input id="nickname" required>
+    <label for="country">Країна</label><input id="country" required>
+    <label for="phone">Телефон</label><input id="phone" type="tel" required>
+    <button type="submit">Надіслати зміни на погодження</button>
+    <div class="message" id="profileMessage"></div>
+  </form>
+  <form class="card" id="emailForm">
+    <h2>Електронна пошта</h2>
+    <p>Нову адресу потрібно підтвердити кодом, а потім її погодить адміністратор.</p>
+    <label for="email">Email</label><input id="email" type="email" required>
+    <button id="emailButton" type="submit">Надіслати код</button>
+    <div id="codeArea" class="hidden">
+      <label for="emailCode">Код із листа</label><input id="emailCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
+      <button class="secondary" id="verifyEmailButton" type="button">Підтвердити код</button>
+    </div>
+    <div class="message" id="emailMessage"></div>
+  </form>
+</main>
+<script>
+const API_URL=["localhost","127.0.0.1"].includes(location.hostname)?location.origin:"https://cryptoapp-eqc5.onrender.com";
+const token=localStorage.getItem("token");
+if(!token)location.href="login.html";
+let emailPendingToken="";
+const api=(path,options={})=>fetch(API_URL+path,{...options,headers:{"Content-Type":"application/json",Authorization:token,...(options.headers||{})}});
+
+async function loadProfile(){
+  const response=await api("/me");
+  if(response.status===401)return location.href="login.html";
+  const user=await response.json();
+  displayId.textContent=user.display_id||String(user.id).padStart(8,"0");
+  referrer.textContent=user.referrer_id?String(user.referrer_id).padStart(8,"0"):"Немає";
+  wallet.textContent=user.wallet_address||"Немає";
+  fullname.value=user.fullname||"";nickname.value=user.nickname||"";country.value=user.country||"";phone.value=user.phone||"";email.value=user.email||"";
+}
+
+profileForm.addEventListener("submit",async event=>{
+  event.preventDefault();profileMessage.textContent="Надсилання...";
+  const payload={fullname:fullname.value.trim(),nickname:nickname.value.trim(),country:country.value.trim(),phone:phone.value.trim()};
+  const data=await (await api("/profile/change-request",{method:"POST",body:JSON.stringify(payload)})).json();
+  profileMessage.textContent=data.success?"Заявку надіслано адміністратору.":"Перевірте введені дані.";
+});
+
+emailForm.addEventListener("submit",async event=>{
+  event.preventDefault();emailButton.disabled=true;emailMessage.textContent="Надсилання коду...";
+  try{
+    const data=await (await api("/profile/email/start",{method:"POST",body:JSON.stringify({email:email.value.trim()})})).json();
+    if(!data.success)return emailMessage.textContent=data.message==="User exists"?"Ця пошта вже використовується.":"Не вдалося надіслати код.";
+    emailPendingToken=data.pendingToken;codeArea.classList.remove("hidden");emailMessage.textContent="Код надіслано. Він дійсний 10 хвилин.";emailCode.focus();
+  }finally{emailButton.disabled=false}
+});
+
+verifyEmailButton.addEventListener("click",async()=>{
+  const data=await (await api("/profile/email/verify",{method:"POST",body:JSON.stringify({pendingToken:emailPendingToken,code:emailCode.value.trim()})})).json();
+  emailMessage.textContent=data.success?"Пошту підтверджено. Заявку надіслано адміністратору.":(data.message==="Code expired"?"Код прострочено.":"Неправильний код.");
+  if(data.success)codeArea.classList.add("hidden");
+});
+loadProfile();
+</script>
+<script src="app-nav.js"></script>
+</body>
+</html>
