@@ -2,169 +2,51 @@
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
-<title>Info</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Про проєкт</title>
 <link rel="stylesheet" href="app.css">
-
 <style>
-body {margin:0;background:#0b0f1a;color:white;font-family:Arial;padding-bottom:120px;}
-
-.logo img {
-width:140px;
-display:block;
-margin:20px auto;
-}
-
-.block {
-background:#111;
-margin:10px;
-padding:15px;
-border-radius:10px;
-}
-
-.giveaway {
-border:2px solid gold;
-box-shadow:0 0 25px gold;
-background:#1a1400;
-}
-
-.navbar {
-position:fixed;
-bottom:0;
-width:100%;
-background:#000;
-display:flex;
-justify-content:space-around;
-padding:10px 0;
-}
-
-.nav-item {color:#aaa;text-align:center;cursor:pointer;}
-.nav-icon {display:inline-block;font-size:54px;line-height:1;margin-bottom:6px;}
-.active {color:orange;}
-
-button {
-padding:8px 12px;
-background:orange;
-border:none;
-border-radius:6px;
-cursor:pointer;
-margin-top:5px;
-}
+body{margin:0;font-family:Arial,sans-serif}.info-page{width:min(900px,calc(100% - 28px));margin:auto;padding-bottom:130px}.hero,.section{background:var(--panel);border:1px solid #293246;border-radius:15px;padding:22px;margin:14px 0}.hero{background:linear-gradient(135deg,#111827,#18233a);text-align:center}.hero h1{margin-top:0}.section h2{color:var(--accent);margin-top:0}.section p,.section li{color:#cbd5e1;line-height:1.7}.principles{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.principle{padding:15px;border-radius:12px;background:var(--panel-soft)}.notice{border-color:#ef4444;background:rgba(239,68,68,.08)}@media(max-width:650px){.principles{grid-template-columns:1fr}}
 </style>
 </head>
-
 <body>
-
-<script>
-
-// ===== CONFIG =====
-const API_URL = "https://cryptoapp-eqc5.onrender.com";
-
-// 🔐 AUTH CHECK
-let token = localStorage.getItem("token");
-
-if(!token){
-window.location.href = "login.html";
-}
-
-</script>
-
-<div class="logo">
-<img src="https://cryptologos.cc/logos/polygon-matic-logo.png">
-</div>
-
-<div class="block">
-<b>United Ukraine</b> — крипто платформа...
-</div>
-
-<div class="block giveaway">
-
-<h2>🎁 МЕГА РОЗІГРАШ</h2>
-
-📅 1 вересня — 1000$<br>
-<button onclick="join(1)">Взяти участь</button><br><br>
-
-📅 1 жовтня — 2000$<br>
-<button onclick="join(2)">Взяти участь</button><br><br>
-
-📅 1 листопада — 5000$<br>
-<button onclick="join(3)">Взяти участь</button><br><br>
-
-<hr>
-
-<b>Умови:</b><br>
-— 5 друзів<br>
-— баланс 5000$
-
-</div>
-
-<div class="navbar">
-<div class="nav-item" onclick="goHome()"><span class="nav-icon">🏠</span><br>Додому</div>
-<div class="nav-item" onclick="goTrade()"><span class="nav-icon">📊</span><br>Торгівля</div>
-<div class="nav-item" onclick="goAssets()"><span class="nav-icon">💼</span><br>Активи</div>
-<div class="nav-item active"><span class="nav-icon">ℹ️</span><br>Інфо</div>
-</div>
-
-<script>
-
-// ===== GET BALANCE =====
-async function getBalance(){
-
-try{
-
-let res = await fetch(API_URL + "/me", {
-headers:{ Authorization: token }
-});
-
-if(!res.ok){
-throw new Error("auth error");
-}
-
-let user = await res.json();
-
-if(!user || !user.balance){
-throw new Error("no user");
-}
-
-return user.balance;
-
-}catch(e){
-
-// 🔥 якщо токен зламаний — вихід
-localStorage.removeItem("token");
-location.href = "login.html";
-return 0;
-
-}
-}
-
-// ===== JOIN =====
-async function join(id){
-
-let balance = await getBalance();
-let invites = parseInt(localStorage.getItem("invites")) || 0;
-
-if(balance < 5000 || invites < 5){
-alert("Не виконані умови");
-return;
-}
-
-if(localStorage.getItem("giveaway_"+id)){
-alert("Ти вже береш участь");
-return;
-}
-
-localStorage.setItem("giveaway_"+id,"joined");
-
-alert("Ти успішно береш участь 🎉");
-}
-
-// NAV
-function goHome(){location.href="index.html";}
-function goTrade(){location.href="trade.html";}
-function goAssets(){location.href="assets.html";}
-
-</script>
-
+<main class="info-page">
+  <section class="hero">
+    <h1>United Ukraine</h1>
+    <p>Цифрова платформа для послідовного знайомства з криптовалютами, керування власним профілем, навчання та моделювання торгових рішень.</p>
+  </section>
+  <section class="section">
+    <h2>Про проєкт</h2>
+    <p>United Ukraine об'єднує в одному середовищі навчальні матеріали, облік операцій, персональну історію активності та зрозумілу структуру запрошених користувачів. Мета проєкту полягає не в тому, щоб замінити самостійне фінансове рішення, а в тому, щоб дати користувачеві впорядкований простір для вивчення базових принципів цифрових активів і спостереження за власними діями.</p>
+    <p>Кожна суттєва дія фіксується як окрема подія. Реєстрації, навчальні винагороди й результати торгівлі формують звичайну історію активності. Запити на поповнення та виведення передаються адміністратору окремо і самі по собі не змінюють баланс. Такий підхід робить рух даних зрозумілим і дозволяє перевірити статус кожного звернення.</p>
+  </section>
+  <section class="section">
+    <h2>Як працює система</h2>
+    <div class="principles">
+      <div class="principle"><b>Ідентифікація</b><p>Кожен користувач має унікальний восьмизначний ID, підтверджену електронну пошту та персональний профіль.</p></div>
+      <div class="principle"><b>Контроль змін</b><p>Зміни особистих даних надсилаються на погодження. Зміна пошти додатково підтверджується одноразовим кодом.</p></div>
+      <div class="principle"><b>Прозора історія</b><p>Навчання, торгівля, поповнення та виведення відображаються окремими подіями з датою і статусом.</p></div>
+    </div>
+  </section>
+  <section class="section">
+    <h2>Навчання і винагороди</h2>
+    <p>Навчальний розділ побудований короткими тематичними блоками. Після матеріалу користувач відповідає на контрольне запитання, щоб перевірити розуміння теми. Одноразова винагорода за правильне проходження кожного тесту становить 10 доларів і відображається в історії активів. Винагорода є внутрішнім обліковим показником платформи та не повинна сприйматися як обіцянка ринкового доходу.</p>
+  </section>
+  <section class="section">
+    <h2>Торгівля та сателіти</h2>
+    <p>Основна торгова позиція доступна кожному зареєстрованому користувачеві. Додаткові позиції відкриваються поступово, коли за персональним ID реєструються запрошені користувачі, яких система називає сателітами. У торговому розділі видно, який саме сателіт відкрив позицію, а також його поточний реальний баланс у системі.</p>
+    <p>Кількість відкритих позицій залежить від фактичної структури запрошень. Для першої позиції встановлено 1%, для другої накопичена ставка становить 1,5%, для третьої 2,25%, для четвертої 3,5%, а для п'ятої 5,5%. Розрахунок відбувається відповідно до правил і періодичності, показаних безпосередньо на сторінці торгівлі.</p>
+  </section>
+  <section class="section">
+    <h2>Безпека та відповідальність</h2>
+    <p>Коди підтвердження мають обмежений строк дії та потрібні для завершення реєстрації або підтвердження нової електронної адреси. Паролі зберігаються у вигляді криптографічного хешу. Водночас жоден технічний механізм не скасовує особисту відповідальність: не передавайте пароль, код із пошти чи приватний ключ третім особам і перевіряйте адресу сайту перед введенням даних.</p>
+  </section>
+  <section class="section notice">
+    <h2>Важливе попередження</h2>
+    <p>Криптовалюти є високоризиковими активами. Їхня ціна може різко змінюватися, а технічні, правові або ринкові обставини можуть призвести до часткової чи повної втрати коштів. Інформація на платформі має навчальний та інформаційний характер і не є індивідуальною інвестиційною рекомендацією. Перед фінансовим рішенням оцініть власну здатність нести ризик і, за потреби, зверніться до незалежного фахівця.</p>
+  </section>
+</main>
+<script>if(!localStorage.getItem("token"))location.href="login.html";</script>
 <script src="app-nav.js"></script>
 </body>
 </html>
