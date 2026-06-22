@@ -18,6 +18,8 @@ body {
   color: var(--text);
 }
 
+body[data-no-nav="true"] { padding-bottom: 24px !important; }
+
 .site-brand {
   display: flex;
   justify-content: center;
