@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const path = require("path");
 const { Wallet } = require("ethers");
 const axios = require("axios");
 const { createClient } = require("@supabase/supabase-js");
@@ -9,7 +10,18 @@ const { createClient } = require("@supabase/supabase-js");
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static(__dirname));
+
+const PUBLIC_FILES = new Set([
+  "index.html", "login.html", "register.html", "terms.html", "loading.html",
+  "trade.html", "assets.html", "learning.html", "info.html", "coin.html",
+  "deposit.html", "withdraw.html", "admin.html", "app.css", "app-nav.js",
+  "pwa.js", "service-worker.js", "manifest.json", "logo.png"
+]);
+app.get("/", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
+app.get("/:file", (req, res, next) => {
+  if (!PUBLIC_FILES.has(req.params.file)) return next();
+  return res.sendFile(path.join(__dirname, req.params.file));
+});
 
 const SECRET = process.env.JWT_SECRET || "SECRET_KEY";
 const supabase = createClient(
