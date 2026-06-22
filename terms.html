@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Умови користування та ризики</title>
+<link rel="stylesheet" href="app.css">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="logo.png">
+<link rel="apple-touch-icon" href="logo.png">
+<style>
+body { margin:0; font-family:Arial,sans-serif; }
+.terms { width:min(820px,calc(100% - 28px)); margin:0 auto 40px; }
+.warning { padding:16px; border:1px solid #ef4444; border-radius:12px; background:rgba(239,68,68,.12); color:#fecaca; }
+.terms-list { padding:18px 18px 18px 38px; border:1px solid #293246; border-radius:14px; background:var(--panel); line-height:1.55; }
+.terms-list li { margin:12px 0; }
+.agreement { display:block; margin:18px 0; padding:16px; border-radius:12px; background:var(--panel-soft); cursor:pointer; }
+.agreement input { width:20px; height:20px; margin-right:9px; vertical-align:middle; }
+.actions { display:flex; gap:10px; }
+.actions button { flex:1; padding:12px; border:0; border-radius:9px; cursor:pointer; }
+.accept { background:var(--accent); color:#111; font-weight:bold; }
+.back { background:#334155; color:white; }
+#termsMessage { min-height:22px; margin-top:10px; color:var(--danger); }
+</style>
+</head>
+<body data-no-nav="true">
+<main class="terms">
+  <h1>Умови користування та попередження про ризики</h1>
+  <p class="warning"><b>Важливо:</b> операції з криптовалютами є високоризиковими. Ви можете втратити частину або всі внесені кошти. Жоден прибуток не гарантований.</p>
+  <ol class="terms-list">
+    <li><b>Волатильність.</b> Ціни криптоактивів можуть різко змінюватися за короткий час через новини, ліквідність, ринкові настрої чи маніпуляції.</li>
+    <li><b>Ризик повної втрати.</b> Вартість активу може впасти до нуля. Використовуйте лише кошти, втрата яких не вплине на необхідні витрати.</li>
+    <li><b>Відсутність гарантій.</b> Історична дохідність, навчальні приклади та показники платформи не гарантують майбутніх результатів.</li>
+    <li><b>Кредитне плече й ліквідація.</b> Торгівля з плечем збільшує як потенційний прибуток, так і збиток та може призвести до швидкої ліквідації позиції.</li>
+    <li><b>Ліквідність.</b> У певний момент актив може бути неможливо швидко купити або продати за очікуваною ціною.</li>
+    <li><b>Стейблкоїни.</b> Прив'язка до валюти може бути втрачена; існують ризики емітента, резервів і блокування активів.</li>
+    <li><b>Технічні ризики.</b> Можливі збої мережі, бірж, API, блокчейнів, смартконтрактів, затримки транзакцій і тимчасова недоступність сервісу.</li>
+    <li><b>Гаманці та ключі.</b> Втрата приватного ключа або передача його третій особі може назавжди позбавити вас активів. Транзакції часто неможливо скасувати.</li>
+    <li><b>Шахрайство й фішинг.</b> Перевіряйте адресу сайту та гаманця, не повідомляйте паролі й коди, остерігайтеся підроблених повідомлень.</li>
+    <li><b>Сторонні сервіси.</b> Платформа може залежати від хостингу, блокчейнів, провайдерів цін та інших третіх сторін, робота яких не контролюється платформою.</li>
+    <li><b>Правові й податкові ризики.</b> Правила щодо криптовалют можуть змінюватися. Користувач сам відповідає за дотримання законів і сплату податків у своїй країні.</li>
+    <li><b>Не фінансова порада.</b> Матеріали платформи мають інформаційний і навчальний характер. Рішення про операції ви приймаєте самостійно.</li>
+  </ol>
+  <label class="agreement"><input id="acceptTerms" type="checkbox">Я прочитав(ла), розумію перелічені ризики, можливість часткової або повної втрати коштів і погоджуюся з умовами користування.</label>
+  <div class="actions"><button class="back" onclick="location.href='login.html'">Назад</button><button class="accept" onclick="continueRegistration()">Погоджуюся і продовжити</button></div>
+  <div id="termsMessage" role="alert"></div>
+</main>
+<script>
+function continueRegistration() {
+  if (!document.getElementById("acceptTerms").checked) {
+    document.getElementById("termsMessage").textContent = "Потрібно прочитати умови та підтвердити згоду.";
+    return;
+  }
+  localStorage.setItem("registration_terms_accepted", "yes");
+  location.href = "register.html";
+}
+</script>
+<script src="app-nav.js"></script>
+<script src="pwa.js"></script>
+</body>
+</html>
