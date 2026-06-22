@@ -4,6 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Withdraw</title>
+<link rel="stylesheet" href="app.css">
 
 <style>
 body {
@@ -176,7 +177,7 @@ if(data.success){
 // 🔥 СТАВИМО ТАЙМЕР
 localStorage.setItem("withdraw_time", Date.now());
 
-alert("Заявка на виведення створена");
+alert("Заявку на виведення передано адміністратору. Баланс автоматично не змінюється.");
 
 window.location.href="index.html";
 
@@ -206,5 +207,6 @@ window.location.href="index.html";
 
 </script>
 
+<script src="app-nav.js"></script>
 </body>
 </html>
