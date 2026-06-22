@@ -1,4 +1,19 @@
 document.addEventListener("DOMContentLoaded", () => {
+  const headLinks = [
+    ["manifest", "manifest.json"],
+    ["icon", "logo.png"],
+    ["apple-touch-icon", "logo.png"]
+  ];
+  headLinks.forEach(([rel, href]) => {
+    if (!document.head.querySelector(`link[rel="${rel}"]`)) {
+      const link = document.createElement("link");
+      link.rel = rel;
+      link.href = href;
+      document.head.append(link);
+    }
+  });
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("service-worker.js").catch(() => {});
+
   document.querySelectorAll(".logo, .navbar, .app-navbar, .site-brand").forEach(element => element.remove());
 
   const brand = document.createElement("header");
@@ -10,6 +25,8 @@ document.addEventListener("DOMContentLoaded", () => {
   `;
   brand.querySelector("button").addEventListener("click", () => location.href = "index.html");
   document.body.prepend(brand);
+
+  if (document.body.dataset.noNav === "true") return;
 
   const items = [
     ["index.html", "🏠", "Додому"],
