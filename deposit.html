@@ -4,6 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Deposit</title>
+<link rel="stylesheet" href="app.css">
 
 <style>
 body {
@@ -164,7 +165,7 @@ let data = await res.json();
 if(data.success){
 
 // 🔥 тут просто повідомлення
-alert("Заявка на депозит створена");
+alert("Заявку на поповнення передано адміністратору. Баланс автоматично не змінюється.");
 
 // 👉 редірект
 location.href="index.html";
@@ -189,5 +190,6 @@ location.href="index.html";
 
 </script>
 
+<script src="app-nav.js"></script>
 </body>
 </html>
