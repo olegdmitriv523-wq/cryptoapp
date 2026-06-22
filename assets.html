@@ -2,221 +2,120 @@
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Активи</title>
 <link rel="stylesheet" href="app.css">
-
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="logo.png">
+<link rel="apple-touch-icon" href="logo.png">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <style>
-body {
-    margin: 0;
-    background: #0b0f1a;
-    color: white;
-    font-family: Arial;
-    padding-bottom: 120px;
-}
-.header {
-    padding: 20px;
-    background: linear-gradient(to right, #8b0000, #000);
-}
-.card {
-    background: #111;
-    margin: 15px;
-    padding: 20px;
-    border-radius: 15px;
-}
-.title {
-    font-size: 14px;
-    color: #aaa;
-}
-.value {
-    font-size: 24px;
-    margin-top: 5px;
-}
-.green { color: #00ff88; }
-.red { color: #ff4d4d; }
-.item {
-    margin-top: 10px;
-    padding: 10px;
-    background: #0b0f1a;
-    border-radius: 10px;
-    font-size: 13px;
-}
-.navbar {
-    position: fixed;
-    bottom: 0;
-    width: 100%;
-    background: #000;
-    display: flex;
-    justify-content: space-around;
-    padding: 10px 0;
-}
-.nav-item {
-    text-align: center;
-    color: #aaa;
-    cursor: pointer;
-}
-.nav-icon {
-    display: inline-block;
-    font-size: 54px;
-    line-height: 1;
-    margin-bottom: 6px;
-}
-.nav-item.active {
-    color: orange;
-}
+body { margin:0; font-family:Arial,sans-serif; }
+.assets-page { width:min(900px,calc(100% - 28px)); margin:auto; }
+.summary { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; }
+.card { margin:14px 0; padding:18px; border:1px solid #293246; border-radius:14px; background:var(--panel); }
+.summary .card { margin:0; }
+.title { color:var(--muted); font-size:13px; }
+.value { margin-top:6px; font-size:25px; }
+.green { color:var(--success); }
+.red { color:var(--danger); }
+.history-item { display:grid; grid-template-columns:1fr auto; gap:8px; padding:12px 0; border-bottom:1px solid #293246; }
+.history-item:last-child { border-bottom:0; }
+.history-meta { color:var(--muted); font-size:12px; margin-top:5px; }
+.empty { padding:20px; color:var(--muted); text-align:center; }
+.pool-head { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap; }
+.pool-value { font-size:28px; color:var(--success); }
+#poolChart { max-height:320px; }
 </style>
 </head>
-
 <body>
+<main class="assets-page">
+  <h1>Активи</h1>
+  <section class="summary">
+    <article class="card"><div class="title">Основний баланс</div><div class="value" id="balance">$0.00</div></article>
+    <article class="card"><div class="title">Поповнення, підтверджені адміністратором</div><div class="value" id="deposit">$0.00</div></article>
+    <article class="card"><div class="title">Зароблено торгівлею</div><div class="value green" id="tradingEarned">$0.00</div></article>
+  </section>
 
-<div class="header">💼 Активи</div>
+  <section class="card">
+    <h2>Історія операцій і винагород</h2>
+    <div id="history"><div class="empty">Завантаження...</div></div>
+  </section>
 
-<div class="card">
-    <div class="title">Основний баланс</div>
-    <div class="value" id="balance">$0</div>
-</div>
-
-<div class="card">
-    <div class="title">Внесок</div>
-    <div class="value" id="deposit">$0</div>
-</div>
-
-<div class="card">
-    <div class="title">Зароблені кошти</div>
-    <div class="value green" id="profit">$0</div>
-</div>
-
-<div class="card">
-<b>Історія</b>
-<div id="history"></div>
-</div>
-
-<div class="card">
-<b>Загальний пул: <span id="pool">$150000</span></b>
-<canvas id="chart"></canvas>
-</div>
-
-<div class="navbar">
-    <div class="nav-item" onclick="goHome()"><span class="nav-icon">🏠</span><br>Додому</div>
-    <div class="nav-item" onclick="goTrade()"><span class="nav-icon">📊</span><br>Торгівля</div>
-    <div class="nav-item active"><span class="nav-icon">💼</span><br>Активи</div>
-    <div class="nav-item" onclick="goInfo()"><span class="nav-icon">ℹ️</span><br>Інфо</div>
-</div>
-
+  <section class="card">
+    <div class="pool-head">
+      <div><div class="title">Загальний пул</div><div class="pool-value" id="pool">$1,000,347.00</div></div>
+      <div><div class="title">Добова зміна</div><div class="green" id="poolChange">+0%</div></div>
+    </div>
+    <canvas id="poolChart"></canvas>
+  </section>
+</main>
 <script>
+const API_URL = ["localhost", "127.0.0.1"].includes(location.hostname) ? location.origin : "https://cryptoapp-eqc5.onrender.com";
+const token = localStorage.getItem("token");
+if (!token) location.href = "login.html";
+let poolChart;
 
-// ===== CONFIG =====
-const API_URL = "https://cryptoapp-eqc5.onrender.com";
+const money = value => "$" + Number(value || 0).toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2});
+const escapeHtml = value => String(value ?? "").replace(/[&<>'"]/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[char]));
+const typeLabels = {
+  deposit:"Поповнення",
+  withdraw:"Виведення",
+  quiz_1:"Винагорода за тест 1", quiz_2:"Винагорода за тест 2", quiz_3:"Винагорода за тест 3",
+  quiz_4:"Винагорода за тест 4", quiz_5:"Винагорода за тест 5",
+  trade_main:"Винагорода за основну торгівлю",
+  trade_satellite_1:"Торгівля із сателітом 1", trade_satellite_2:"Торгівля із сателітом 2",
+  trade_satellite_3:"Торгівля із сателітом 3", trade_satellite_4:"Торгівля із сателітом 4",
+  trade_satellite_5:"Торгівля із сателітом 5"
+};
 
-// ===== AUTH CHECK =====
-let token = localStorage.getItem("token");
-
-if(!token){
-    window.location.href = "login.html";
+function renderHistory(history) {
+  const container = document.getElementById("history");
+  if (!history.length) return container.innerHTML = '<div class="empty">Операцій поки немає</div>';
+  container.innerHTML = history.map(item => {
+    const outgoing = item.type === "withdraw";
+    const amountClass = outgoing ? "red" : "green";
+    const sign = outgoing ? "-" : "+";
+    return `<div class="history-item">
+      <div><b>${escapeHtml(typeLabels[item.type] || item.type)}</b><div class="history-meta">${new Date(item.created_at).toLocaleString("uk-UA")} · ${escapeHtml(item.status)}</div></div>
+      <strong class="${amountClass}">${sign}${money(item.amount)}</strong>
+    </div>`;
+  }).join("");
 }
 
-// ===== LOAD USER =====
-async function loadUser(){
-
-try {
-
-let res = await fetch(API_URL + "/me", {
-headers: {
-Authorization: token
-}
-});
-
-if(!res.ok){
-throw new Error();
-}
-
-let user = await res.json();
-
-if(!user || !user.id){
-throw new Error();
-}
-
-let balance = parseFloat(user.balance) || 0;
-let deposit = parseFloat(user.deposit) || 0;
-
-let profit = balance - deposit;
-if(profit < 0) profit = 0;
-
-document.getElementById("balance").innerText = "$" + balance.toFixed(2);
-document.getElementById("deposit").innerText = "$" + deposit.toFixed(2);
-document.getElementById("profit").innerText = "$" + profit.toFixed(2);
-
-let historyHTML = "";
-
-historyHTML += `
-<div class="item green">
-+${deposit}$ (депозит)
-</div>`;
-
-historyHTML += `
-<div class="item red">
--0$ (вивід)
-</div>`;
-
-historyHTML += `
-<div class="item green">
-+${profit}$ (прибуток)
-</div>`;
-
-document.getElementById("history").innerHTML = historyHTML;
-
-} catch (err) {
-
-localStorage.removeItem("token");
-window.location.href = "login.html";
-
-}
-
-}
-
-loadUser();
-
-// ===== ПУЛ =====
-let pool = parseFloat(localStorage.getItem("pool")) || 150000;
-pool *= 1.0005;
-localStorage.setItem("pool", pool);
-document.getElementById("pool").innerText = "$" + pool.toFixed(0);
-
-// ===== ГРАФІК =====
-let ctx = document.getElementById("chart");
-
-let data = [];
-let base = pool;
-
-for(let i=0;i<30;i++){
-    base *= 1.002;
-    data.push(base);
-}
-
-new Chart(ctx, {
-    type: 'line',
-    data: {
-        labels: data.map((_,i)=>i),
-        datasets: [{
-            data: data,
-            borderColor: '#00ff88',
-            fill: false
-        }]
+function renderPool(pool) {
+  document.getElementById("pool").textContent = money(pool.current);
+  document.getElementById("poolChange").textContent = `+${Number(pool.dailyChangePercent).toFixed(2)}% за добу`;
+  if (poolChart) poolChart.destroy();
+  poolChart = new Chart(document.getElementById("poolChart"), {
+    type:"line",
+    data:{
+      labels:pool.series.map(point => new Date(point.date).toLocaleDateString("uk-UA", {day:"2-digit",month:"2-digit"})),
+      datasets:[{label:"Загальний пул, $",data:pool.series.map(point => point.value),borderColor:"#22c55e",backgroundColor:"rgba(34,197,94,.12)",fill:true,tension:.3}]
     },
-    options: {
-        plugins:{legend:{display:false}},
-        scales:{x:{display:false},y:{display:false}}
-    }
-});
+    options:{responsive:true,plugins:{legend:{labels:{color:"#f8fafc"}}},scales:{x:{ticks:{color:"#9ca3af"},grid:{color:"#1f2937"}},y:{ticks:{color:"#9ca3af"},grid:{color:"#1f2937"}}}}
+  });
+}
 
-// ===== NAVIGATION =====
-function goHome(){ window.location.assign("index.html"); }
-function goTrade(){ window.location.assign("trade.html"); }
-function goInfo(){ window.location.assign("info.html"); }
-
+async function loadAssets() {
+  try {
+    const response = await fetch(API_URL + "/assets/summary", {headers:{Authorization:token}});
+    if (response.status === 401) return location.href = "login.html";
+    const data = await response.json();
+    if (!data.success) throw new Error();
+    document.getElementById("balance").textContent = money(data.balance);
+    document.getElementById("deposit").textContent = money(data.deposit);
+    document.getElementById("tradingEarned").textContent = money(data.tradingEarned);
+    renderHistory(data.history || []);
+    renderPool(data.pool);
+  } catch {
+    document.getElementById("history").innerHTML = '<div class="empty red">Не вдалося завантажити активи</div>';
+  }
+}
+loadAssets();
+setInterval(loadAssets, 60000);
 </script>
-
 <script src="app-nav.js"></script>
+<script src="pwa.js"></script>
 </body>
 </html>
