@@ -1,153 +1,135 @@
-app.post("/register", async (req, res) => {
-try {
-const {
-fullname,
-nickname,
-referrer_id,
-country,
-phone,
-email,
-password
-} = req.body;
-
-```
-const TELEGRAM_TOKEN = "8714057941:AAGZL1OXRoy8-7_IoVAHBePTLwuTKmqicOg";
-const CHAT_ID = "337179852";
-
-// ===== VALIDATION =====
-if (!email || !password || !phone) {
-  return res.json({ success: false, message: "No data" });
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Реєстрація</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+  background: #0b0f1a;
+  font-family: Arial, sans-serif;
+  color: white;
 }
-
-// ✅ FIX EMAIL REGEX
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-if (!emailRegex.test(email)) {
-  return res.json({ success: false, message: "Invalid email" });
+.box {
+  width: min(100%, 380px);
+  padding: 30px;
+  background: #111;
+  border-radius: 15px;
+  text-align: center;
 }
-
-// PHONE
-const phoneClean = phone.replace(/\D/g, "");
-if (phoneClean.length < 10 || phoneClean.length > 15) {
-  return res.json({ success: false, message: "Invalid phone" });
+input {
+  width: 100%;
+  padding: 11px;
+  margin: 7px 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  outline: none;
+  background: #222;
+  color: white;
 }
-
-if (password.length < 6) {
-  return res.json({ success: false, message: "Weak password" });
+input:focus { border-color: orange; }
+button {
+  width: 100%;
+  padding: 11px;
+  margin-top: 12px;
+  border: none;
+  border-radius: 10px;
+  background: orange;
+  cursor: pointer;
+  font-weight: bold;
 }
+button:disabled { cursor: wait; opacity: .65; }
+.message { min-height: 20px; margin-top: 12px; color: #ff6b6b; }
+.switch { margin-top: 8px; color: #aaa; cursor: pointer; }
+</style>
+</head>
+<body>
+<form class="box" id="registerForm">
+  <h2>Реєстрація</h2>
+  <input id="fullname" autocomplete="name" placeholder="Повне ім'я" required>
+  <input id="nickname" autocomplete="nickname" placeholder="Нікнейм" required>
+  <input id="country" autocomplete="country-name" placeholder="Країна" required>
+  <input id="phone" type="tel" autocomplete="tel" placeholder="Телефон" required>
+  <input id="email" type="email" autocomplete="email" placeholder="Email" required>
+  <input id="password" type="password" autocomplete="new-password" minlength="6" placeholder="Пароль (мінімум 6 символів)" required>
+  <input id="referrer_id" inputmode="numeric" placeholder="ID запрошувача (необов'язково)">
+  <button id="submitButton" type="submit">Створити акаунт</button>
+  <div class="message" id="message" role="alert"></div>
+  <div class="switch" onclick="location.href='login.html'">Вже є акаунт? Увійти</div>
+</form>
 
-const emailLower = email.toLowerCase();
+<script>
+const API_URL = ["localhost", "127.0.0.1"].includes(location.hostname)
+  ? location.origin
+  : "https://cryptoapp-eqc5.onrender.com";
 
-// ===== IP =====
-let ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "";
+const messages = {
+  "No data": "Заповніть усі обов'язкові поля.",
+  "Invalid email": "Введіть правильну електронну адресу.",
+  "Invalid phone": "Телефон має містити від 10 до 15 цифр.",
+  "Weak password": "Пароль має містити щонайменше 6 символів.",
+  "User exists": "Користувач із таким email уже існує.",
+  "Too many accounts": "З цього пристрою створено забагато акаунтів.",
+  "Insert error": "Не вдалося створити акаунт. Спробуйте ще раз.",
+  "Server error": "Сталася помилка сервера. Спробуйте пізніше."
+};
 
-if (ip.includes(",")) ip = ip.split(",")[0].trim();
-if (ip.includes("::ffff:")) ip = ip.replace("::ffff:", "");
+document.getElementById("registerForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
 
-// ===== АНТИ-АБУЗ =====
-const { data: ipUsers } = await supabase
-  .from("users")
-  .select("id")
-  .eq("ip", ip);
+  const button = document.getElementById("submitButton");
+  const message = document.getElementById("message");
+  const phone = document.getElementById("phone").value.trim();
+  const phoneDigits = phone.replace(/\D/g, "");
 
-if (ipUsers && ipUsers.length >= 3) {
-  return res.json({ success: false, message: "Too many accounts" });
-}
+  if (phoneDigits.length < 10 || phoneDigits.length > 15) {
+    message.textContent = messages["Invalid phone"];
+    return;
+  }
 
-// ===== CHECK EMAIL =====
-const { data: existing } = await supabase
-  .from("users")
-  .select("id")
-  .eq("email", emailLower)
-  .maybeSingle();
+  const payload = {
+    fullname: document.getElementById("fullname").value.trim(),
+    nickname: document.getElementById("nickname").value.trim(),
+    country: document.getElementById("country").value.trim(),
+    phone,
+    email: document.getElementById("email").value.trim(),
+    password: document.getElementById("password").value,
+    referrer_id: document.getElementById("referrer_id").value.trim() || null
+  };
 
-if (existing) {
-  return res.json({ success: false, message: "User exists" });
-}
+  button.disabled = true;
+  button.textContent = "Створення...";
+  message.textContent = "";
 
-const hash = await bcrypt.hash(password, 10);
-const code = Math.floor(100000 + Math.random() * 900000).toString();
+  try {
+    const response = await fetch(API_URL + "/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json();
 
-// ===== WALLET =====
-let wallet_address = null;
-let private_key = null;
-
-try {
-  const wallet = Wallet.createRandom();
-  wallet_address = wallet.address;
-  private_key = wallet.privateKey;
-} catch {}
-
-// ===== INSERT =====
-const insertRes = await supabase
-  .from("users")
-  .insert([{
-    fullname,
-    nickname,
-    referrer_id,
-    country,
-    phone: phoneClean,
-    email: emailLower,
-    password: hash,
-    balance: 1000,
-    deposit: 0,
-    satellites: 0,
-    wallet_address,
-    private_key,
-    email_code: code,
-    email_verified: false,
-    ip
-  }])
-  .select();
-
-const data = insertRes.data?.[0];
-const error = insertRes.error;
-
-// ✅ FIX
-if (error || !data) {
-  console.log("INSERT ERROR:", error);
-  return res.json({ success: false, message: "Insert error" });
-}
-
-// ===== TELEGRAM =====
-try {
-  const text = `
-```
-
-🆕 NEW USER
-
-ID: ${data.id}
-Email: ${data.email}
-
-👤 ${data.fullname}
-📛 Nick: ${data.nickname}
-
-🌍 ${data.country}
-📱 ${data.phone}
-
-💼 Wallet: ${data.wallet_address}
-
-🔑 CODE: ${code}
-👥 Ref: ${data.referrer_id || "—"}
-`;
-
-```
-  await axios.post(
-    `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`,
-    {
-      chat_id: CHAT_ID,
-      text
+    if (!response.ok || !data.success) {
+      message.textContent = messages[data.message] || "Не вдалося зареєструватися.";
+      return;
     }
-  );
 
-} catch (e) {
-  console.log("TG ERROR:", e.message);
-}
-
-return res.json({ success: true });
-```
-
-} catch (err) {
-console.log("REGISTER ERROR:", err);
-return res.json({ success: false, message: "Server error" });
-}
+    alert("Акаунт успішно створено. Тепер увійдіть.");
+    location.href = "login.html";
+  } catch {
+    message.textContent = "Сервер недоступний. Перевірте з'єднання та спробуйте ще раз.";
+  } finally {
+    button.disabled = false;
+    button.textContent = "Створити акаунт";
+  }
 });
+</script>
+</body>
+</html>
