@@ -1,219 +1,181 @@
 <!DOCTYPE html>
-
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
-<title>Admin Panel</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Адмінпанель</title>
+<link rel="stylesheet" href="app.css">
 <style>
-body {
-  background:#0b0f1a;
-  color:white;
-  font-family:Arial;
-  padding:20px;
-}
-
-.user {
-  background:#111;
-  padding:15px;
-  margin:10px 0;
-  border-radius:10px;
-}
-
-.section {
-  margin-bottom:30px;
-}
-
-input {
-  padding:5px;
-  margin-top:5px;
-  width:100px;
-}
-
-button {
-  margin:5px;
-  padding:5px 10px;
-  cursor:pointer;
-}
-
-.title {
-  font-size:20px;
-  margin-bottom:10px;
-  color:orange;
-}
+body { margin:0; padding:20px; font-family:Arial,sans-serif; }
+.admin-wrap { max-width:1100px; margin:auto; }
+h1 { text-align:center; }
+.tabs { display:flex; flex-wrap:wrap; gap:8px; margin:20px 0; }
+.tabs button { width:auto; padding:10px 14px; border:0; border-radius:8px; background:#273248; color:white; cursor:pointer; }
+.tabs button.active { background:var(--accent); color:#111; }
+.section { display:none; }
+.section.active { display:block; }
+.card { margin:10px 0; padding:16px; border:1px solid #273248; border-radius:12px; background:var(--panel); }
+.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:8px; }
+.label { color:var(--muted); font-size:12px; }
+.controls { display:flex; gap:8px; margin-top:12px; }
+.controls input { width:140px; padding:9px; border:1px solid #334155; border-radius:7px; background:#0b1220; color:white; }
+.controls button,.signal-actions button { width:auto; padding:9px 12px; border:0; border-radius:7px; cursor:pointer; }
+.approve { background:var(--success); color:#04130a; }
+.reject { background:var(--danger); color:white; }
+.pending { color:var(--accent); }
+.approved,.done,.rewarded { color:var(--success); }
+.rejected { color:var(--danger); }
+.tree { margin-left:20px; padding-left:14px; border-left:2px solid #334155; }
+.empty { padding:18px; color:var(--muted); text-align:center; }
+.access { max-width:420px; margin:20px auto; text-align:center; }
+.access input { width:100%; padding:11px; margin:10px 0; border:1px solid #334155; border-radius:8px; background:#0b1220; color:white; }
+.access button { padding:10px 18px; border:0; border-radius:8px; background:var(--accent); color:#111; cursor:pointer; }
 </style>
-
 </head>
-
 <body>
-
-<h2>👑 Admin Panel</h2>
-
-<div class="section">
-<div class="title">👥 Користувачі</div>
-<div id="users"></div>
-</div>
-
-<div class="section">
-<div class="title">📩 Сигнали (транзакції)</div>
-<div id="signals"></div>
-</div>
-
+<main class="admin-wrap">
+  <h1>Адмінпанель</h1>
+  <section class="card access" id="adminAccess">
+    <h2>Вхід адміністратора</h2>
+    <input id="adminKeyInput" type="password" autocomplete="current-password" placeholder="Код доступу">
+    <button type="button" onclick="loginAdmin()">Увійти</button>
+    <div class="empty" id="accessMessage"></div>
+  </section>
+  <div id="adminContent" hidden>
+    <div class="tabs">
+      <button class="active" data-tab="users">Користувачі</button>
+      <button data-tab="signals">Сигнали</button>
+      <button data-tab="satellites">Структура сателітів</button>
+    </div>
+    <section class="section active" id="users"></section>
+    <section class="section" id="signals"></section>
+    <section class="section" id="satellites"></section>
+  </div>
+</main>
 <script>
+const API_URL = ["localhost", "127.0.0.1"].includes(location.hostname) ? location.origin : "https://cryptoapp-eqc5.onrender.com";
+let adminKey = sessionStorage.getItem("admin_key") || "";
+const adminFetch = (path, options = {}) => fetch(API_URL + path, {
+  ...options,
+  headers: { ...(options.headers || {}), "X-Admin-Key": adminKey }
+});
+const escapeHtml = value => String(value ?? "-").replace(/[&<>'"]/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[char]));
+const money = value => Number(value || 0).toFixed(2);
 
-// ===== USERS =====
-async function loadUsers(){
-
-  let res = await fetch("/admin/users");
-  let users = await res.json();
-
-  let html = "";
-
-  users.forEach(u => {
-
-    html += `
-    <div class="user">
-      <b>ID:</b> ${u.id}<br>
-      <b>Email:</b> ${u.email}<br>
-      <b>Name:</b> ${u.fullname}<br>
-      <b>Nick:</b> ${u.nickname}<br>
-      <b>Country:</b> ${u.country}<br>
-      <b>Phone:</b> ${u.phone}<br>
-      <b>Wallet:</b> ${u.wallet_address}<br>
-
-      <b>Balance:</b> $${Number(u.balance).toFixed(2)}<br>
-      <b>Deposit:</b> $${Number(u.deposit).toFixed(2)}<br>
-
-      🔥 <b>Satellites:</b> ${u.satellites || 0}<br>
-
-      <input id="input_${u.id}" placeholder="Сума">
-
-      <br>
-
-      <button onclick="add(${u.id},100)">+100</button>
-      <button onclick="add(${u.id},-100)">-100</button>
-
-      <button onclick="custom(${u.id})">ДОДАТИ</button>
-      <button onclick="setBalance(${u.id})">SET</button>
-    </div>
-    `;
-
-  });
-
-  document.getElementById("users").innerHTML = html;
+async function loginAdmin() {
+  adminKey = document.getElementById("adminKeyInput").value.trim();
+  const response = await adminFetch("/admin/users");
+  if (!response.ok) {
+    document.getElementById("accessMessage").textContent = "Невірний код або ADMIN_KEY не налаштований на Render.";
+    return;
+  }
+  sessionStorage.setItem("admin_key", adminKey);
+  document.getElementById("adminAccess").hidden = true;
+  document.getElementById("adminContent").hidden = false;
+  await refresh();
 }
 
-// ===== SIGNALS (TRANSACTIONS) =====
-async function loadSignals(){
+document.querySelectorAll("[data-tab]").forEach(button => button.addEventListener("click", () => {
+  document.querySelectorAll("[data-tab], .section").forEach(element => element.classList.remove("active"));
+  button.classList.add("active");
+  document.getElementById(button.dataset.tab).classList.add("active");
+}));
 
-  let res = await fetch("/admin/transactions");
-  let txs = await res.json();
-
-  let html = "";
-
-  txs.forEach(t => {
-
-    html += `
-    <div class="user">
-
-      ${t.type === "deposit" ? "💰 DEPOSIT" : "📤 WITHDRAW"}<br>
-
-      User ID: ${t.user_id}<br>
-      Amount: $${Number(t.amount).toFixed(2)}<br>
-
-      ${t.wallet ? "Wallet: " + t.wallet + "<br>" : ""}
-
-      Status: ${t.status}<br>
-      Time: ${new Date(t.created_at).toLocaleString()}<br>
-
-      ${t.status === "pending" ? `
-        <button onclick="approve(${t.id})">✅ Approve</button>
-        <button onclick="reject(${t.id})">❌ Reject</button>
-      ` : ""}
-
-    </div>
-    `;
-
-  });
-
-  document.getElementById("signals").innerHTML = html;
+async function loadUsers() {
+  const response = await adminFetch("/admin/users");
+  if (response.status === 401 || response.status === 503) throw new Error("admin-auth");
+  const users = await response.json();
+  document.getElementById("users").innerHTML = users.length ? users.map(user => `
+    <article class="card">
+      <div class="grid">
+        <div><span class="label">ID</span><br>${user.id}</div>
+        <div><span class="label">Ім'я</span><br>${escapeHtml(user.fullname)}</div>
+        <div><span class="label">Нікнейм</span><br>${escapeHtml(user.nickname)}</div>
+        <div><span class="label">Email</span><br>${escapeHtml(user.email)}</div>
+        <div><span class="label">Телефон</span><br>${escapeHtml(user.phone)}</div>
+        <div><span class="label">Країна</span><br>${escapeHtml(user.country)}</div>
+        <div><span class="label">Баланс</span><br>$${money(user.balance)}</div>
+        <div><span class="label">Запрошений користувачем</span><br>${user.referrer_id || "-"}</div>
+        <div><span class="label">Сателіти</span><br>${user.satellites || 0}</div>
+      </div>
+      <div class="controls">
+        <input id="balance-${user.id}" type="number" step="0.01" placeholder="Сума">
+        <button class="approve" onclick="changeBalance(${user.id}, 'add')">Додати</button>
+        <button onclick="changeBalance(${user.id}, 'set')">Встановити</button>
+      </div>
+    </article>
+  `).join("") : '<div class="empty">Користувачів немає</div>';
 }
 
-// ===== ACTIONS =====
-async function add(id, amount){
-  await fetch("/admin/add-balance", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({ user_id: id, amount })
+async function changeBalance(userId, mode) {
+  const amount = Number(document.getElementById(`balance-${userId}`).value);
+  if (!Number.isFinite(amount)) return alert("Введіть суму");
+  await adminFetch(`/admin/${mode === "add" ? "add-balance" : "set-balance"}`, {
+    method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({user_id:userId, amount})
   });
-  loadUsers();
+  await loadUsers();
 }
 
-async function custom(id){
-  let amount = document.getElementById("input_" + id).value;
+const signalNames = {
+  register:"Реєстрація", deposit:"Поповнення", withdraw:"Виведення",
+  quiz_1:"Тест 1", quiz_2:"Тест 2", quiz_3:"Тест 3", quiz_4:"Тест 4", quiz_5:"Тест 5",
+  trade_main:"Основна торгівля", trade_satellite_1:"Сателіт 1", trade_satellite_2:"Сателіт 2",
+  trade_satellite_3:"Сателіт 3", trade_satellite_4:"Сателіт 4", trade_satellite_5:"Сателіт 5"
+};
 
-  await fetch("/admin/add-balance", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
-      user_id: id,
-      amount: Number(amount)
-    })
-  });
-
-  loadUsers();
+async function loadSignals() {
+  const signals = await adminFetch("/admin/signals").then(response => response.json());
+  document.getElementById("signals").innerHTML = signals.length ? signals.map(signal => `
+    <article class="card">
+      <b>${escapeHtml(signalNames[signal.type] || signal.type)}</b>
+      <div class="grid">
+        <div><span class="label">Користувач</span><br>#${signal.user_id} ${escapeHtml(signal.user?.nickname || signal.user?.fullname)}</div>
+        <div><span class="label">Email</span><br>${escapeHtml(signal.user?.email)}</div>
+        <div><span class="label">Сума</span><br>$${money(signal.amount)}</div>
+        <div><span class="label">Гаманець / ID сателіта</span><br>${escapeHtml(signal.wallet)}</div>
+        <div><span class="label">Статус</span><br><span class="${escapeHtml(signal.status)}">${escapeHtml(signal.status)}</span></div>
+        <div><span class="label">Час</span><br>${new Date(signal.created_at).toLocaleString("uk-UA")}</div>
+      </div>
+      ${signal.status === "pending" ? `<div class="signal-actions"><button class="approve" onclick="setSignal(${signal.id}, 'approve')">Підтвердити</button><button class="reject" onclick="setSignal(${signal.id}, 'reject')">Відхилити</button></div>` : ""}
+    </article>
+  `).join("") : '<div class="empty">Сигналів немає</div>';
 }
 
-async function setBalance(id){
-  let amount = document.getElementById("input_" + id).value;
-
-  await fetch("/admin/set-balance", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
-      user_id: id,
-      amount: Number(amount)
-    })
-  });
-
-  loadUsers();
+async function setSignal(id, action) {
+  await adminFetch(`/admin/${action}`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({id})});
+  await loadSignals();
 }
 
-// ===== APPROVE =====
-async function approve(id){
-
-  await fetch("/admin/approve", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({ id })
-  });
-
-  loadSignals();
+function treeNode(user, childrenByReferrer) {
+  const children = childrenByReferrer[user.id] || [];
+  return `<div class="card"><b>#${user.id} ${escapeHtml(user.nickname || user.fullname)}</b> · $${money(user.balance)} · ${escapeHtml(user.email)}
+    ${children.length ? `<div class="tree">${children.map(child => treeNode(child, childrenByReferrer)).join("")}</div>` : ""}
+  </div>`;
 }
 
-// ===== REJECT =====
-async function reject(id){
-
-  await fetch("/admin/reject", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({ id })
+async function loadSatellites() {
+  const users = await adminFetch("/admin/referrals").then(response => response.json());
+  const children = {};
+  users.forEach(user => {
+    if (user.referrer_id) (children[user.referrer_id] ||= []).push(user);
   });
-
-  loadSignals();
-  loadUsers();
+  const roots = users.filter(user => !user.referrer_id || !users.some(parent => parent.id === user.referrer_id));
+  document.getElementById("satellites").innerHTML = roots.length ? roots.map(root => treeNode(root, children)).join("") : '<div class="empty">Структура порожня</div>';
 }
 
-// ===== INIT =====
-loadUsers();
-loadSignals();
-
-setInterval(()=>{
-  loadUsers();
-  loadSignals();
-},5000);
-
+async function refresh() {
+  try { await Promise.all([loadUsers(), loadSignals(), loadSatellites()]); }
+  catch (error) {
+    const message = error.message === "admin-auth" ? "Невірний код адміністратора або ADMIN_KEY не налаштований на Render." : "Не вдалося завантажити дані";
+    document.querySelectorAll(".section").forEach(section => section.innerHTML = `<div class="empty">${message}</div>`);
+  }
+}
+if (adminKey) {
+  document.getElementById("adminKeyInput").value = adminKey;
+  loginAdmin();
+}
+setInterval(() => { if (adminKey) refresh(); }, 15000);
 </script>
-
+<script src="app-nav.js"></script>
 </body>
 </html>
