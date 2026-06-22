@@ -12,7 +12,7 @@ body {
     background: #0b0f1a;
     color: white;
     font-family: Arial;
-    padding-bottom: 80px;
+    padding-bottom: 120px;
 }
 .header {
     padding: 20px;
@@ -55,6 +55,12 @@ body {
     color: #aaa;
     cursor: pointer;
 }
+.nav-icon {
+    display: inline-block;
+    font-size: 54px;
+    line-height: 1;
+    margin-bottom: 6px;
+}
 .nav-item.active {
     color: orange;
 }
@@ -91,10 +97,10 @@ body {
 </div>
 
 <div class="navbar">
-    <div class="nav-item" onclick="goHome()">🏠<br>Додому</div>
-    <div class="nav-item" onclick="goTrade()">📊<br>Торгівля</div>
-    <div class="nav-item active">💼<br>Активи</div>
-    <div class="nav-item" onclick="goInfo()">ℹ️<br>Інфо</div>
+    <div class="nav-item" onclick="goHome()"><span class="nav-icon">🏠</span><br>Додому</div>
+    <div class="nav-item" onclick="goTrade()"><span class="nav-icon">📊</span><br>Торгівля</div>
+    <div class="nav-item active"><span class="nav-icon">💼</span><br>Активи</div>
+    <div class="nav-item" onclick="goInfo()"><span class="nav-icon">ℹ️</span><br>Інфо</div>
 </div>
 
 <script>
