@@ -61,7 +61,7 @@ button:disabled { cursor: wait; opacity: .65; }
   <input id="phone" type="tel" autocomplete="tel" placeholder="Телефон" required>
   <input id="email" type="email" autocomplete="email" placeholder="Email" required>
   <input id="password" type="password" autocomplete="new-password" minlength="6" placeholder="Пароль (мінімум 6 символів)" required>
-  <input id="referrer_id" inputmode="numeric" placeholder="ID запрошувача (необов'язково)">
+  <input id="referrer_id" inputmode="numeric" maxlength="8" placeholder="8-значний ID запрошувача (необов'язково)">
   <button id="submitButton" type="submit">Створити акаунт</button>
   <div class="message" id="message" role="alert"></div>
   <div class="switch" onclick="location.href='login.html'">Вже є акаунт? Увійти</div>
