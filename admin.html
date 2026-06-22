@@ -61,6 +61,7 @@ const adminFetch = (path, options = {}) => fetch(API_URL + path, {
 });
 const escapeHtml = value => String(value ?? "-").replace(/[&<>'"]/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[char]));
 const money = value => Number(value || 0).toFixed(2);
+const displayId = value => value ? String(value).padStart(8, "0") : "-";
 
 async function loginAdmin() {
   adminKey = document.getElementById("adminKeyInput").value.trim();
@@ -88,14 +89,14 @@ async function loadUsers() {
   document.getElementById("users").innerHTML = users.length ? users.map(user => `
     <article class="card">
       <div class="grid">
-        <div><span class="label">ID</span><br>${user.id}</div>
+        <div><span class="label">ID</span><br>${user.display_id || displayId(user.id)}</div>
         <div><span class="label">Ім'я</span><br>${escapeHtml(user.fullname)}</div>
         <div><span class="label">Нікнейм</span><br>${escapeHtml(user.nickname)}</div>
         <div><span class="label">Email</span><br>${escapeHtml(user.email)}</div>
         <div><span class="label">Телефон</span><br>${escapeHtml(user.phone)}</div>
         <div><span class="label">Країна</span><br>${escapeHtml(user.country)}</div>
         <div><span class="label">Баланс</span><br>$${money(user.balance)}</div>
-        <div><span class="label">Запрошений користувачем</span><br>${user.referrer_id || "-"}</div>
+        <div><span class="label">Запрошений користувачем</span><br>${displayId(user.referrer_id)}</div>
         <div><span class="label">Сателіти</span><br>${user.satellites || 0}</div>
       </div>
       <div class="controls">
@@ -129,7 +130,7 @@ async function loadSignals() {
     <article class="card">
       <b>${escapeHtml(signalNames[signal.type] || signal.type)}</b>
       <div class="grid">
-        <div><span class="label">Користувач</span><br>#${signal.user_id} ${escapeHtml(signal.user?.nickname || signal.user?.fullname)}</div>
+        <div><span class="label">Користувач</span><br>#${signal.user?.display_id || displayId(signal.user_id)} ${escapeHtml(signal.user?.nickname || signal.user?.fullname)}</div>
         <div><span class="label">Email</span><br>${escapeHtml(signal.user?.email)}</div>
         <div><span class="label">Сума</span><br>$${money(signal.amount)}</div>
         <div><span class="label">Гаманець / ID сателіта</span><br>${escapeHtml(signal.wallet)}</div>
@@ -148,7 +149,7 @@ async function setSignal(id, action) {
 
 function treeNode(user, childrenByReferrer) {
   const children = childrenByReferrer[user.id] || [];
-  return `<div class="card"><b>#${user.id} ${escapeHtml(user.nickname || user.fullname)}</b> · $${money(user.balance)} · ${escapeHtml(user.email)}
+  return `<div class="card"><b>#${user.display_id || displayId(user.id)} ${escapeHtml(user.nickname || user.fullname)}</b> · $${money(user.balance)} · ${escapeHtml(user.email)}
     ${children.length ? `<div class="tree">${children.map(child => treeNode(child, childrenByReferrer)).join("")}</div>` : ""}
   </div>`;
 }
