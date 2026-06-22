@@ -11,6 +11,7 @@ margin:0;
 background:#0b0f1a;
 color:white;
 font-family:Arial;
+padding-bottom:120px;
 }
 
 /* LOGO */
@@ -108,6 +109,13 @@ cursor:pointer;
 flex:1;
 }
 
+.nav-icon {
+display:inline-block;
+font-size:54px;
+line-height:1;
+margin-bottom:6px;
+}
+
 .nav-item.active {
 color:orange;
 }
@@ -164,10 +172,10 @@ location.href = "login.html";
 <div id="list"></div>
 
 <div class="navbar">
-<div class="nav-item active" onclick="goHome()">🏠<br>Додому</div>
-<div class="nav-item" onclick="goTrade()">📊<br>Трейд</div>
-<div class="nav-item" onclick="goAssets()">💼<br>Активи</div>
-<div class="nav-item" onclick="goInfo()">ℹ️<br>Інфо</div>
+<div class="nav-item active" onclick="goHome()"><span class="nav-icon">🏠</span><br>Додому</div>
+<div class="nav-item" onclick="goTrade()"><span class="nav-icon">📊</span><br>Трейд</div>
+<div class="nav-item" onclick="goAssets()"><span class="nav-icon">💼</span><br>Активи</div>
+<div class="nav-item" onclick="goInfo()"><span class="nav-icon">ℹ️</span><br>Інфо</div>
 </div>
 
 <script>
