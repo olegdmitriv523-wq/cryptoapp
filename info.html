@@ -5,7 +5,7 @@
 <title>Info</title>
 
 <style>
-body {margin:0;background:#0b0f1a;color:white;font-family:Arial;}
+body {margin:0;background:#0b0f1a;color:white;font-family:Arial;padding-bottom:120px;}
 
 .logo img {
 width:140px;
@@ -37,6 +37,7 @@ padding:10px 0;
 }
 
 .nav-item {color:#aaa;text-align:center;cursor:pointer;}
+.nav-icon {display:inline-block;font-size:54px;line-height:1;margin-bottom:6px;}
 .active {color:orange;}
 
 button {
@@ -96,10 +97,10 @@ window.location.href = "login.html";
 </div>
 
 <div class="navbar">
-<div class="nav-item" onclick="goHome()">🏠<br>Додому</div>
-<div class="nav-item" onclick="goTrade()">📊<br>Торгівля</div>
-<div class="nav-item" onclick="goAssets()">💼<br>Активи</div>
-<div class="nav-item active">ℹ️<br>Інфо</div>
+<div class="nav-item" onclick="goHome()"><span class="nav-icon">🏠</span><br>Додому</div>
+<div class="nav-item" onclick="goTrade()"><span class="nav-icon">📊</span><br>Торгівля</div>
+<div class="nav-item" onclick="goAssets()"><span class="nav-icon">💼</span><br>Активи</div>
+<div class="nav-item active"><span class="nav-icon">ℹ️</span><br>Інфо</div>
 </div>
 
 <script>
