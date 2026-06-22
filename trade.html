@@ -44,7 +44,7 @@ function renderPosition(position, option, title) {
   const subtitle = position === 0
     ? "Доступна всім користувачам"
     : satellite
-      ? `Сателіт #${satellite.id}: ${satellite.nickname || "без нікнейма"} · реальний баланс $${money(satellite.balance)}`
+      ? `Сателіт #${satellite.display_id || String(satellite.id).padStart(8, "0")}: ${satellite.nickname || "без нікнейма"} · реальний баланс $${money(satellite.balance)}`
       : `Потрібен ${position}-й запрошений користувач`;
   const disabled = !option.unlocked || option.cooldown > 0 || statusData.balance <= 0;
   return `<article class="trade-card${option.unlocked ? "" : " locked"}">
