@@ -44,11 +44,15 @@ h1 { text-align:center; }
   <div id="adminContent" hidden>
     <div class="tabs">
       <button class="active" data-tab="users">Користувачі</button>
-      <button data-tab="signals">Сигнали</button>
+      <button data-tab="signals">Типові сигнали</button>
+      <button data-tab="deposits">Поповнення</button>
+      <button data-tab="withdrawals">Виведення</button>
       <button data-tab="satellites">Структура сателітів</button>
     </div>
     <section class="section active" id="users"></section>
     <section class="section" id="signals"></section>
+    <section class="section" id="deposits"></section>
+    <section class="section" id="withdrawals"></section>
     <section class="section" id="satellites"></section>
   </div>
 </main>
@@ -121,25 +125,41 @@ const signalNames = {
   register:"Реєстрація", deposit:"Поповнення", withdraw:"Виведення",
   quiz_1:"Тест 1", quiz_2:"Тест 2", quiz_3:"Тест 3", quiz_4:"Тест 4", quiz_5:"Тест 5",
   trade_main:"Основна торгівля", trade_satellite_1:"Сателіт 1", trade_satellite_2:"Сателіт 2",
-  trade_satellite_3:"Сателіт 3", trade_satellite_4:"Сателіт 4", trade_satellite_5:"Сателіт 5"
+  trade_satellite_3:"Сателіт 3", trade_satellite_4:"Сателіт 4", trade_satellite_5:"Сателіт 5",
+  profile_update:"Зміна даних користувача", email_update:"Зміна електронної пошти"
 };
 
-async function loadSignals() {
-  const signals = await adminFetch("/admin/signals").then(response => response.json());
-  document.getElementById("signals").innerHTML = signals.length ? signals.map(signal => `
+function signalDetails(signal) {
+  if (signal.type !== "profile_update" && signal.type !== "email_update") return escapeHtml(signal.wallet);
+  try {
+    const changes = JSON.parse(signal.wallet || "{}");
+    const names = {fullname:"Повне ім'я",nickname:"Нікнейм",country:"Країна",phone:"Телефон",email:"Нова пошта"};
+    return Object.entries(changes).map(([key,value]) => `<b>${names[key] || escapeHtml(key)}:</b> ${escapeHtml(value)}`).join("<br>");
+  } catch { return "Некоректні дані заявки"; }
+}
+
+function renderSignalList(signals, emptyText) {
+  return signals.length ? signals.map(signal => `
     <article class="card">
       <b>${escapeHtml(signalNames[signal.type] || signal.type)}</b>
       <div class="grid">
         <div><span class="label">Користувач</span><br>#${signal.user?.display_id || displayId(signal.user_id)} ${escapeHtml(signal.user?.nickname || signal.user?.fullname)}</div>
         <div><span class="label">Email</span><br>${escapeHtml(signal.user?.email)}</div>
         <div><span class="label">Сума</span><br>$${money(signal.amount)}</div>
-        <div><span class="label">Гаманець / ID сателіта</span><br>${escapeHtml(signal.wallet)}</div>
+        <div><span class="label">Деталі</span><br>${signalDetails(signal)}</div>
         <div><span class="label">Статус</span><br><span class="${escapeHtml(signal.status)}">${escapeHtml(signal.status)}</span></div>
         <div><span class="label">Час</span><br>${new Date(signal.created_at).toLocaleString("uk-UA")}</div>
       </div>
       ${signal.status === "pending" ? `<div class="signal-actions"><button class="approve" onclick="setSignal(${signal.id}, 'approve')">Підтвердити</button><button class="reject" onclick="setSignal(${signal.id}, 'reject')">Відхилити</button></div>` : ""}
     </article>
-  `).join("") : '<div class="empty">Сигналів немає</div>';
+  `).join("") : `<div class="empty">${emptyText}</div>`;
+}
+
+async function loadSignals() {
+  const signals = await adminFetch("/admin/signals").then(response => response.json());
+  document.getElementById("signals").innerHTML = renderSignalList(signals.filter(signal => !["deposit","withdraw"].includes(signal.type)), "Типових сигналів немає");
+  document.getElementById("deposits").innerHTML = renderSignalList(signals.filter(signal => signal.type === "deposit"), "Заявок на поповнення немає");
+  document.getElementById("withdrawals").innerHTML = renderSignalList(signals.filter(signal => signal.type === "withdraw"), "Заявок на виведення немає");
 }
 
 async function setSignal(id, action) {
