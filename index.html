@@ -198,7 +198,7 @@ document.getElementById("wallet").innerText =
 user.wallet_address || "Нема гаманця";
 
 document.getElementById("userIdText").innerText =
-"ID: " + user.id;
+"ID: " + (user.display_id || String(user.id).padStart(8, "0"));
 
 let balance = user.balance || 0;
 let deposit = user.deposit || 0;
