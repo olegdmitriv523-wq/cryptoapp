@@ -50,6 +50,8 @@ button {
 button:disabled { cursor: wait; opacity: .65; }
 .message { min-height: 20px; margin-top: 12px; color: #ff6b6b; }
 .switch { margin-top: 8px; color: #aaa; cursor: pointer; }
+.hidden { display: none; }
+.code-help { color:#aaa; font-size:13px; line-height:1.45; }
 </style>
 </head>
 <body data-no-nav="true">
@@ -62,9 +64,17 @@ button:disabled { cursor: wait; opacity: .65; }
   <input id="email" type="email" autocomplete="email" placeholder="Email" required>
   <input id="password" type="password" autocomplete="new-password" minlength="6" placeholder="Пароль (мінімум 6 символів)" required>
   <input id="referrer_id" inputmode="numeric" maxlength="8" placeholder="8-значний ID запрошувача (необов'язково)">
-  <button id="submitButton" type="submit">Створити акаунт</button>
+  <button id="submitButton" type="submit">Надіслати код на пошту</button>
   <div class="message" id="message" role="alert"></div>
   <div class="switch" onclick="location.href='login.html'">Вже є акаунт? Увійти</div>
+</form>
+<form class="box hidden" id="verifyForm">
+  <h2>Підтвердження пошти</h2>
+  <p class="code-help">Ми надіслали шестизначний код на <b id="codeEmail"></b>. Без правильного коду акаунт не буде створено.</p>
+  <input id="emailCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="Код із листа" required>
+  <button id="verifyButton" type="submit">Підтвердити та створити акаунт</button>
+  <div class="message" id="verifyMessage" role="alert"></div>
+  <div class="switch" onclick="restartRegistration()">Змінити дані або надіслати код ще раз</div>
 </form>
 
 <script>
@@ -85,8 +95,12 @@ const messages = {
   "User exists": "Користувач із таким email уже існує.",
   "Too many accounts": "З цього пристрою створено забагато акаунтів.",
   "Insert error": "Не вдалося створити акаунт. Спробуйте ще раз.",
+  "Email send error": "Не вдалося надіслати лист. Перевірте email і спробуйте ще раз.",
+  "Invalid code": "Неправильний код підтвердження.",
+  "Code expired": "Термін дії коду минув. Надішліть новий код.",
   "Server error": "Сталася помилка сервера. Спробуйте пізніше."
 };
+let pendingToken = "";
 
 document.getElementById("registerForm").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -112,11 +126,11 @@ document.getElementById("registerForm").addEventListener("submit", async (event)
   };
 
   button.disabled = true;
-  button.textContent = "Створення...";
+  button.textContent = "Надсилання коду...";
   message.textContent = "";
 
   try {
-    const response = await fetch(API_URL + "/register", {
+    const response = await fetch(API_URL + "/register/start", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
@@ -128,16 +142,50 @@ document.getElementById("registerForm").addEventListener("submit", async (event)
       return;
     }
 
-    localStorage.removeItem("registration_terms_accepted");
-    alert("Акаунт успішно створено. Тепер увійдіть.");
-    location.href = "login.html";
+    pendingToken = data.pendingToken;
+    document.getElementById("codeEmail").textContent = data.email;
+    document.getElementById("registerForm").classList.add("hidden");
+    document.getElementById("verifyForm").classList.remove("hidden");
+    document.getElementById("emailCode").focus();
   } catch {
     message.textContent = "Сервер недоступний. Перевірте з'єднання та спробуйте ще раз.";
   } finally {
     button.disabled = false;
-    button.textContent = "Створити акаунт";
+    button.textContent = "Надіслати код на пошту";
   }
 });
+
+document.getElementById("verifyForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  const button = document.getElementById("verifyButton");
+  const message = document.getElementById("verifyMessage");
+  const code = document.getElementById("emailCode").value.trim();
+  if (!/^\d{6}$/.test(code)) return message.textContent = "Введіть усі 6 цифр коду.";
+  button.disabled = true;
+  button.textContent = "Перевірка...";
+  message.textContent = "";
+  try {
+    const response = await fetch(API_URL + "/register/verify", {
+      method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({pendingToken, code})
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success) return message.textContent = messages[data.message] || "Не вдалося підтвердити код.";
+    localStorage.removeItem("registration_terms_accepted");
+    alert("Пошту підтверджено, акаунт створено. Тепер увійдіть.");
+    location.href = "login.html";
+  } catch {
+    message.textContent = "Сервер недоступний. Спробуйте ще раз.";
+  } finally {
+    button.disabled = false;
+    button.textContent = "Підтвердити та створити акаунт";
+  }
+});
+
+function restartRegistration() {
+  pendingToken = "";
+  document.getElementById("verifyForm").classList.add("hidden");
+  document.getElementById("registerForm").classList.remove("hidden");
+}
 </script>
 <script src="app-nav.js"></script>
 </body>
