@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Навчання криптовалютам</title>
+<link rel="stylesheet" href="app.css">
+<style>
+body { margin:0; font-family:Arial,sans-serif; }
+.learning { width:min(900px,calc(100% - 28px)); margin:0 auto 30px; }
+.intro { text-align:center; color:var(--muted); }
+.quiz { margin:16px 0; padding:20px; border:1px solid #293246; border-radius:14px; background:var(--panel); }
+.quiz.done { border-color:var(--success); }
+.lesson { padding:12px; border-radius:9px; background:var(--panel-soft); line-height:1.5; }
+.question { margin:16px 0 10px; font-weight:bold; }
+label { display:block; margin:8px 0; padding:9px; border-radius:7px; background:#0b1220; cursor:pointer; }
+.quiz button { width:auto; padding:10px 16px; border:0; border-radius:8px; background:var(--accent); color:#111; font-weight:bold; cursor:pointer; }
+.quiz button:disabled { background:#334155; color:#94a3b8; cursor:not-allowed; }
+.result { min-height:20px; margin-top:10px; }
+.reward { color:var(--success); }
+</style>
+</head>
+<body>
+<main class="learning">
+  <h1>Навчання криптовалютам</h1>
+  <p class="intro">Прочитайте короткий урок і дайте правильну відповідь. Кожен тест можна пройти один раз, винагорода становить $10.</p>
+
+  <article class="quiz" data-id="1">
+    <h2>1. Блокчейн</h2>
+    <p class="lesson">Блокчейн — це розподілений реєстр записів. Дані групуються у блоки, пов'язані криптографічно, а копії реєстру зберігаються на багатьох вузлах мережі.</p>
+    <p class="question">Що найкраще описує блокчейн?</p>
+    <label><input type="radio" name="q1" value="a"> Центральна база одного банку</label>
+    <label><input type="radio" name="q1" value="b"> Розподілений ланцюг криптографічно пов'язаних блоків</label>
+    <label><input type="radio" name="q1" value="c"> Звичайний текстовий файл</label>
+    <button onclick="submitQuiz(1)">Перевірити</button><div class="result"></div>
+  </article>
+
+  <article class="quiz" data-id="2">
+    <h2>2. Приватний ключ</h2>
+    <p class="lesson">Приватний ключ дає повний контроль над криптогаманцем. Його не можна надсилати іншим людям або вводити на неперевірених сайтах. Втрата ключа часто означає втрату доступу до активів.</p>
+    <p class="question">Кому можна повідомляти приватний ключ?</p>
+    <label><input type="radio" name="q2" value="a"> Службі підтримки</label>
+    <label><input type="radio" name="q2" value="b"> Адміністратору чату</label>
+    <label><input type="radio" name="q2" value="c"> Нікому</label>
+    <button onclick="submitQuiz(2)">Перевірити</button><div class="result"></div>
+  </article>
+
+  <article class="quiz" data-id="3">
+    <h2>3. Волатильність</h2>
+    <p class="lesson">Ціни криптовалют можуть швидко зростати й падати. Така мінливість називається волатильністю. Не варто вкладати кошти, втрата яких критично вплине на бюджет.</p>
+    <p class="question">Що означає висока волатильність?</p>
+    <label><input type="radio" name="q3" value="a"> Ціна може різко змінюватися</label>
+    <label><input type="radio" name="q3" value="b"> Ціна завжди зростає</label>
+    <label><input type="radio" name="q3" value="c"> Актив гарантований державою</label>
+    <button onclick="submitQuiz(3)">Перевірити</button><div class="result"></div>
+  </article>
+
+  <article class="quiz" data-id="4">
+    <h2>4. Стейблкоїни</h2>
+    <p class="lesson">Стейблкоїни намагаються підтримувати стабільну ціну, часто відносно долара США. Проте вони теж мають ризики емітента, резервів, смартконтрактів і втрати прив'язки.</p>
+    <p class="question">До чого часто прив'язана ціна стейблкоїна?</p>
+    <label><input type="radio" name="q4" value="a"> До погоди</label>
+    <label><input type="radio" name="q4" value="b"> До валюти, наприклад долара США</label>
+    <label><input type="radio" name="q4" value="c"> До кількості транзакцій</label>
+    <button onclick="submitQuiz(4)">Перевірити</button><div class="result"></div>
+  </article>
+
+  <article class="quiz" data-id="5">
+    <h2>5. Фішинг</h2>
+    <p class="lesson">Фішинг маскується під справжні сайти або повідомлення, щоб викрасти пароль чи ключ. Завжди перевіряйте адресу сайту, не відкривайте підозрілі посилання та використовуйте двофакторний захист.</p>
+    <p class="question">Що найкраще захищає від фішингу?</p>
+    <label><input type="radio" name="q5" value="a"> Один пароль для всіх сайтів</label>
+    <label><input type="radio" name="q5" value="b"> Перехід за будь-яким посиланням із чату</label>
+    <label><input type="radio" name="q5" value="c"> Перевірка адреси сайту та двофакторний захист</label>
+    <button onclick="submitQuiz(5)">Перевірити</button><div class="result"></div>
+  </article>
+</main>
+<script>
+const API_URL = ["localhost", "127.0.0.1"].includes(location.hostname) ? location.origin : "https://cryptoapp-eqc5.onrender.com";
+const token = localStorage.getItem("token");
+if (!token) location.href = "login.html";
+
+function markCompleted(id) {
+  const card = document.querySelector(`[data-id="${id}"]`);
+  card.classList.add("done");
+  card.querySelector("button").disabled = true;
+  card.querySelector(".result").innerHTML = '<span class="reward">Пройдено · винагорода $10</span>';
+}
+
+async function loadProgress() {
+  const response = await fetch(API_URL + "/quiz/progress", {headers:{Authorization:token}});
+  if (response.status === 401) return location.href = "login.html";
+  const data = await response.json();
+  (data.completed || []).forEach(markCompleted);
+}
+
+async function submitQuiz(id) {
+  const card = document.querySelector(`[data-id="${id}"]`);
+  const selected = card.querySelector(`input[name="q${id}"]:checked`);
+  const result = card.querySelector(".result");
+  if (!selected) return result.textContent = "Оберіть відповідь.";
+
+  const response = await fetch(API_URL + "/quiz/complete", {
+    method:"POST", headers:{"Content-Type":"application/json",Authorization:token},
+    body:JSON.stringify({quizId:id, answer:selected.value})
+  });
+  const data = await response.json();
+  if (data.success || data.message === "Already completed") {
+    markCompleted(id);
+    if (data.success) alert(`Правильно! На баланс нараховано $${data.reward}.`);
+  } else {
+    result.textContent = data.message === "Incorrect answer" ? "Неправильно. Перечитайте урок і спробуйте ще раз." : "Не вдалося перевірити відповідь.";
+  }
+}
+loadProgress();
+</script>
+<script src="app-nav.js"></script>
+</body>
+</html>
