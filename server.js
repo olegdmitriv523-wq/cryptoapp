@@ -619,9 +619,23 @@ app.post("/admin/set-balance", adminAuth, async (req, res) => {
 app.post("/admin/approve", adminAuth, async (req, res) => {
   try {
     const signalId = Number(req.body.id);
-    const { data: signal } = await supabase.from("signals").select("id,user_id,type,wallet,status").eq("id", signalId).maybeSingle();
+    const { data: signal } = await supabase.from("signals").select("id,user_id,type,amount,wallet,status").eq("id", signalId).maybeSingle();
     if (!signal || signal.status !== "pending") return res.json({ success: false, message: "Request unavailable" });
-    if (signal.type === "profile_update" || signal.type === "email_update") {
+    if (signal.type === "deposit" || signal.type === "withdraw") {
+      const amount = Number(signal.amount || 0);
+      const user = await findUser(signal.user_id, "id,balance,deposit");
+      if (!user || !Number.isFinite(amount) || amount <= 0) return res.json({ success: false, message: "Invalid request" });
+      if (signal.type === "withdraw" && Number(user.balance || 0) < amount) {
+        return res.json({ success: false, message: "Insufficient balance" });
+      }
+      const balance = signal.type === "deposit"
+        ? Number((Number(user.balance || 0) + amount).toFixed(2))
+        : Number((Number(user.balance || 0) - amount).toFixed(2));
+      const updates = { balance };
+      if (signal.type === "deposit") updates.deposit = Number((Number(user.deposit || 0) + amount).toFixed(2));
+      const { error } = await supabase.from("users").update(updates).eq("id", signal.user_id);
+      if (error) throw error;
+    } else if (signal.type === "profile_update" || signal.type === "email_update") {
       const changes = JSON.parse(signal.wallet || "{}");
       const allowed = signal.type === "email_update"
         ? { email: String(changes.email || "").trim().toLowerCase(), email_verified: true }
@@ -645,6 +659,39 @@ app.post("/admin/approve", adminAuth, async (req, res) => {
 app.post("/admin/reject", adminAuth, async (req, res) => {
   await supabase.from("signals").update({ status: "rejected" }).eq("id", Number(req.body.id));
   return res.json({ success: true });
+});
+
+app.post("/admin/delete-signal", adminAuth, async (req, res) => {
+  try {
+    const signalId = Number(req.body.id);
+    if (!Number.isInteger(signalId) || signalId <= 0) return res.json({ success: false, message: "Invalid signal" });
+    const { error } = await supabase.from("signals").delete().eq("id", signalId);
+    if (error) throw error;
+    return res.json({ success: true });
+  } catch (error) {
+    console.error("ADMIN DELETE SIGNAL ERROR:", error);
+    return res.status(500).json({ success: false, message: "Delete error" });
+  }
+});
+
+app.post("/admin/delete-user", adminAuth, async (req, res) => {
+  try {
+    const userId = Number(req.body.user_id);
+    if (!Number.isInteger(userId) || userId <= 0) return res.json({ success: false, message: "Invalid user" });
+    const user = await findUser(userId, "id,referrer_id");
+    if (!user) return res.json({ success: false, message: "User not found" });
+    const { error: referralsError } = await supabase.from("users").update({ referrer_id: null }).eq("referrer_id", userId);
+    if (referralsError) throw referralsError;
+    const { error: signalsError } = await supabase.from("signals").delete().eq("user_id", userId);
+    if (signalsError) throw signalsError;
+    const { error: usersError } = await supabase.from("users").delete().eq("id", userId);
+    if (usersError) throw usersError;
+    await refreshSatelliteCount(user.referrer_id);
+    return res.json({ success: true });
+  } catch (error) {
+    console.error("ADMIN DELETE USER ERROR:", error);
+    return res.status(500).json({ success: false, message: "Delete error" });
+  }
 });
 
 const PORT = process.env.PORT || 3000;
