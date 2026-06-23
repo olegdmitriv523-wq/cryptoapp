@@ -101,6 +101,19 @@ const messages = {
   "Server error": "Сталася помилка сервера. Спробуйте пізніше."
 };
 let pendingToken = "";
+let emailVerificationRequired = true;
+
+async function loadRegistrationMode() {
+  try {
+    const response = await fetch(API_URL + "/registration/settings", { cache: "no-store" });
+    const data = await response.json();
+    emailVerificationRequired = data.emailVerificationRequired !== false;
+  } catch {
+    emailVerificationRequired = true;
+  }
+  document.getElementById("submitButton").textContent = emailVerificationRequired ? "Надіслати код на пошту" : "Зареєструватися";
+}
+loadRegistrationMode();
 
 document.getElementById("registerForm").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -126,7 +139,7 @@ document.getElementById("registerForm").addEventListener("submit", async (event)
   };
 
   button.disabled = true;
-  button.textContent = "Надсилання коду...";
+  button.textContent = emailVerificationRequired ? "Надсилання коду..." : "Створення акаунта...";
   message.textContent = "";
 
   try {
@@ -142,6 +155,13 @@ document.getElementById("registerForm").addEventListener("submit", async (event)
       return;
     }
 
+    if (data.registered) {
+      localStorage.removeItem("registration_terms_accepted");
+      alert("Акаунт створено. Тепер увійдіть.");
+      location.href = "login.html";
+      return;
+    }
+
     pendingToken = data.pendingToken;
     document.getElementById("codeEmail").textContent = data.email;
     document.getElementById("registerForm").classList.add("hidden");
@@ -151,7 +171,7 @@ document.getElementById("registerForm").addEventListener("submit", async (event)
     message.textContent = "Сервер недоступний. Перевірте з'єднання та спробуйте ще раз.";
   } finally {
     button.disabled = false;
-    button.textContent = "Надіслати код на пошту";
+    button.textContent = emailVerificationRequired ? "Надіслати код на пошту" : "Зареєструватися";
   }
 });
 
