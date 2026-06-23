@@ -30,6 +30,10 @@ h1 { text-align:center; }
 .access { max-width:420px; margin:20px auto; text-align:center; }
 .access input { width:100%; padding:11px; margin:10px 0; border:1px solid #334155; border-radius:8px; background:#0b1220; color:white; }
 .access button { padding:10px 18px; border:0; border-radius:8px; background:var(--accent); color:#111; cursor:pointer; }
+.search-panel { margin:12px 0 18px; padding:14px; border:1px solid #273248; border-radius:12px; background:var(--panel); }
+.search-panel input { width:100%; box-sizing:border-box; padding:11px; border:1px solid #334155; border-radius:8px; background:#0b1220; color:white; }
+.delete-btn { background:#7f1d1d; color:white; }
+.muted-note { color:var(--muted); font-size:12px; margin-top:8px; }
 </style>
 </head>
 <body data-no-nav="true">
@@ -47,18 +51,27 @@ h1 { text-align:center; }
       <button data-tab="signals">Типові сигнали</button>
       <button data-tab="deposits">Поповнення</button>
       <button data-tab="withdrawals">Виведення</button>
+      <button data-tab="profileRequests">Зміни даних</button>
       <button data-tab="satellites">Структура сателітів</button>
+    </div>
+    <div class="search-panel">
+      <input id="adminSearch" type="search" placeholder="Пошук: ID, email, ім'я, нікнейм, тип заявки, статус, сума">
+      <div class="muted-note">Пошук працює по користувачах, заявках і структурі сателітів.</div>
     </div>
     <section class="section active" id="users"></section>
     <section class="section" id="signals"></section>
     <section class="section" id="deposits"></section>
     <section class="section" id="withdrawals"></section>
+    <section class="section" id="profileRequests"></section>
     <section class="section" id="satellites"></section>
   </div>
 </main>
 <script>
 const API_URL = ["localhost", "127.0.0.1"].includes(location.hostname) ? location.origin : "https://cryptoapp-eqc5.onrender.com";
 let adminKey = sessionStorage.getItem("admin_key") || "";
+let allUsers = [];
+let allSignals = [];
+let allReferrals = [];
 const adminFetch = (path, options = {}) => fetch(API_URL + path, {
   ...options,
   headers: { ...(options.headers || {}), "X-Admin-Key": adminKey }
@@ -66,6 +79,9 @@ const adminFetch = (path, options = {}) => fetch(API_URL + path, {
 const escapeHtml = value => String(value ?? "-").replace(/[&<>'"]/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[char]));
 const money = value => Number(value || 0).toFixed(2);
 const displayId = value => value ? String(value).padStart(8, "0") : "-";
+const searchText = () => (document.getElementById("adminSearch")?.value || "").trim().toLowerCase();
+const searchable = values => values.map(value => String(value ?? "").toLowerCase()).join(" ");
+const matchesSearch = text => !searchText() || text.includes(searchText());
 
 async function loginAdmin() {
   adminKey = document.getElementById("adminKeyInput").value.trim();
@@ -85,12 +101,24 @@ document.querySelectorAll("[data-tab]").forEach(button => button.addEventListene
   button.classList.add("active");
   document.getElementById(button.dataset.tab).classList.add("active");
 }));
+document.getElementById("adminSearch").addEventListener("input", () => {
+  renderUsers(allUsers);
+  renderSignals(allSignals);
+  renderSatellites(allReferrals);
+});
 
 async function loadUsers() {
   const response = await adminFetch("/admin/users");
   if (response.status === 401 || response.status === 503) throw new Error("admin-auth");
-  const users = await response.json();
-  document.getElementById("users").innerHTML = users.length ? users.map(user => `
+  allUsers = await response.json();
+  renderUsers(allUsers);
+}
+
+function renderUsers(users) {
+  const filtered = users.filter(user => matchesSearch(searchable([
+    user.id, user.display_id, user.fullname, user.nickname, user.email, user.phone, user.country, user.balance, user.referrer_id
+  ])));
+  document.getElementById("users").innerHTML = filtered.length ? filtered.map(user => `
     <article class="card">
       <div class="grid">
         <div><span class="label">ID</span><br>${user.display_id || displayId(user.id)}</div>
@@ -107,6 +135,7 @@ async function loadUsers() {
         <input id="balance-${user.id}" type="number" step="0.01" placeholder="Сума">
         <button class="approve" onclick="changeBalance(${user.id}, 'add')">Додати</button>
         <button onclick="changeBalance(${user.id}, 'set')">Встановити</button>
+        <button class="delete-btn" onclick="deleteUser(${user.id}, '${escapeHtml(user.display_id || displayId(user.id))}')">Видалити користувача</button>
       </div>
     </article>
   `).join("") : '<div class="empty">Користувачів немає</div>';
@@ -119,6 +148,16 @@ async function changeBalance(userId, mode) {
     method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({user_id:userId, amount})
   });
   await loadUsers();
+}
+
+async function deleteUser(userId, displayIdText) {
+  if (!confirm(`Видалити користувача #${displayIdText}? Буде видалено акаунт і його заявки/історію.`)) return;
+  const response = await adminFetch("/admin/delete-user", {
+    method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({user_id:userId})
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!result.success) return alert(result.message || "Не вдалося видалити користувача");
+  await refresh();
 }
 
 const signalNames = {
@@ -139,7 +178,11 @@ function signalDetails(signal) {
 }
 
 function renderSignalList(signals, emptyText) {
-  return signals.length ? signals.map(signal => `
+  const filtered = signals.filter(signal => matchesSearch(searchable([
+    signal.id, signal.user_id, signal.user?.display_id, signal.user?.fullname, signal.user?.nickname,
+    signal.user?.email, signal.type, signalNames[signal.type], signal.amount, signal.wallet, signal.status, signal.created_at
+  ])));
+  return filtered.length ? filtered.map(signal => `
     <article class="card">
       <b>${escapeHtml(signalNames[signal.type] || signal.type)}</b>
       <div class="grid">
@@ -150,21 +193,39 @@ function renderSignalList(signals, emptyText) {
         <div><span class="label">Статус</span><br><span class="${escapeHtml(signal.status)}">${escapeHtml(signal.status)}</span></div>
         <div><span class="label">Час</span><br>${new Date(signal.created_at).toLocaleString("uk-UA")}</div>
       </div>
-      ${signal.status === "pending" ? `<div class="signal-actions"><button class="approve" onclick="setSignal(${signal.id}, 'approve')">Підтвердити</button><button class="reject" onclick="setSignal(${signal.id}, 'reject')">Відхилити</button></div>` : ""}
+      <div class="signal-actions">
+        ${signal.status === "pending" ? `<button class="approve" onclick="setSignal(${signal.id}, 'approve')">Підтвердити</button><button class="reject" onclick="setSignal(${signal.id}, 'reject')">Відхилити</button>` : ""}
+        <button class="delete-btn" onclick="deleteSignal(${signal.id})">Видалити заявку</button>
+      </div>
     </article>
   `).join("") : `<div class="empty">${emptyText}</div>`;
 }
 
 async function loadSignals() {
-  const signals = await adminFetch("/admin/signals").then(response => response.json());
-  document.getElementById("signals").innerHTML = renderSignalList(signals.filter(signal => !["deposit","withdraw"].includes(signal.type)), "Типових сигналів немає");
+  allSignals = await adminFetch("/admin/signals").then(response => response.json());
+  renderSignals(allSignals);
+}
+
+function renderSignals(signals) {
+  document.getElementById("signals").innerHTML = renderSignalList(signals.filter(signal => !["deposit","withdraw","profile_update","email_update"].includes(signal.type)), "Типових сигналів немає");
   document.getElementById("deposits").innerHTML = renderSignalList(signals.filter(signal => signal.type === "deposit"), "Заявок на поповнення немає");
   document.getElementById("withdrawals").innerHTML = renderSignalList(signals.filter(signal => signal.type === "withdraw"), "Заявок на виведення немає");
+  document.getElementById("profileRequests").innerHTML = renderSignalList(signals.filter(signal => ["profile_update","email_update"].includes(signal.type)), "Заявок на зміну даних немає");
 }
 
 async function setSignal(id, action) {
-  await adminFetch(`/admin/${action}`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({id})});
-  await loadSignals();
+  const response = await adminFetch(`/admin/${action}`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({id})});
+  const result = await response.json().catch(() => ({}));
+  if (!result.success) return alert(result.message || "Дію не виконано");
+  await refresh();
+}
+
+async function deleteSignal(id) {
+  if (!confirm("Видалити цю заявку/запис з адмін-панелі?")) return;
+  const response = await adminFetch("/admin/delete-signal", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({id})});
+  const result = await response.json().catch(() => ({}));
+  if (!result.success) return alert(result.message || "Не вдалося видалити заявку");
+  await refresh();
 }
 
 function treeNode(user, childrenByReferrer) {
@@ -175,7 +236,22 @@ function treeNode(user, childrenByReferrer) {
 }
 
 async function loadSatellites() {
-  const users = await adminFetch("/admin/referrals").then(response => response.json());
+  allReferrals = await adminFetch("/admin/referrals").then(response => response.json());
+  renderSatellites(allReferrals);
+}
+
+function renderSatellites(users) {
+  if (searchText()) {
+    const filtered = users.filter(user => matchesSearch(searchable([
+      user.id, user.display_id, user.fullname, user.nickname, user.email, user.balance, user.referrer_id
+    ])));
+    document.getElementById("satellites").innerHTML = filtered.length ? filtered.map(user => `
+      <div class="card"><b>#${user.display_id || displayId(user.id)} ${escapeHtml(user.nickname || user.fullname)}</b> · $${money(user.balance)} · ${escapeHtml(user.email)}
+        <div class="label">Запрошений користувачем: ${displayId(user.referrer_id)}</div>
+      </div>
+    `).join("") : '<div class="empty">За пошуком нічого не знайдено</div>';
+    return;
+  }
   const children = {};
   users.forEach(user => {
     if (user.referrer_id) (children[user.referrer_id] ||= []).push(user);
