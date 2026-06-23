@@ -19,12 +19,15 @@ label { display:block; margin:8px 0; padding:9px; border-radius:7px; background:
 .result { min-height:20px; margin-top:10px; }
 .reward { color:var(--success); }
 .reward-highlight { display:inline-block; margin-top:8px; padding:8px 12px; border:1px solid #ef4444; border-radius:8px; background:rgba(239,68,68,.12); color:#ff4d4d; font-weight:bold; }
+.access-note { margin:16px 0; padding:16px; border:1px solid #f59e0b; border-radius:12px; background:rgba(245,158,11,.1); color:#fde68a; line-height:1.55; }
+.access-note.locked { border-color:#ef4444; background:rgba(239,68,68,.1); color:#fecaca; }
 </style>
 </head>
 <body>
 <main class="learning">
   <h1>Навчання криптовалютам</h1>
   <p class="intro">Прочитайте короткий урок і дайте правильну відповідь. Кожен тест можна пройти один раз.<br><span class="reward-highlight">Винагорода становить 10 доларів</span></p>
+  <div class="access-note" id="accessNote">Навчання доступне після підтвердженого поповнення від $500. Матеріали оновлюються кожного 1 числа місяця.</div>
 
   <article class="quiz" data-id="1">
     <h2>1. Блокчейн</h2>
@@ -88,10 +91,19 @@ function markCompleted(id) {
   card.querySelector(".result").innerHTML = '<span class="reward">Пройдено · винагорода $10</span>';
 }
 
+function setLearningLocked(data) {
+  const note = document.getElementById("accessNote");
+  note.classList.add("locked");
+  note.textContent = `Навчання відкривається після підтвердженого поповнення від $${data.minDeposit || 500}. Зараз підтверджено: $${Number(data.deposit || 0).toFixed(2)}. Матеріали оновлюються кожного 1 числа місяця.`;
+  document.querySelectorAll(".quiz button").forEach(button => button.disabled = true);
+  document.querySelectorAll(".quiz .result").forEach(result => result.textContent = "Розділ поки заблокований.");
+}
+
 async function loadProgress() {
   const response = await fetch(API_URL + "/quiz/progress", {headers:{Authorization:token}});
   if (response.status === 401) return location.href = "login.html";
   const data = await response.json();
+  if (!data.learningUnlocked) setLearningLocked(data);
   (data.completed || []).forEach(markCompleted);
 }
 
@@ -110,7 +122,11 @@ async function submitQuiz(id) {
     markCompleted(id);
     if (data.success) alert(`Правильно! На баланс нараховано $${data.reward}.`);
   } else {
-    result.textContent = data.message === "Incorrect answer" ? "Неправильно. Перечитайте урок і спробуйте ще раз." : "Не вдалося перевірити відповідь.";
+    result.textContent = data.message === "Learning locked"
+      ? `Навчання доступне після поповнення від $${data.minDeposit || 500}.`
+      : data.message === "Incorrect answer"
+        ? "Неправильно. Перечитайте урок і спробуйте ще раз."
+        : "Не вдалося перевірити відповідь.";
   }
 }
 loadProgress();

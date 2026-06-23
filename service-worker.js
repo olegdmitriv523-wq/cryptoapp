@@ -1,4 +1,4 @@
-const CACHE_NAME = "united-ukraine-v4";
+const CACHE_NAME = "united-ukraine-v5";
 const APP_SHELL = [
   "/loading.html",
   "/login.html",
@@ -9,6 +9,9 @@ const APP_SHELL = [
   "/assets.html",
   "/learning.html",
   "/info.html",
+  "/deposit.html",
+  "/withdraw.html",
+  "/coin.html",
   "/profile.html",
   "/app.css",
   "/app-nav.js",

@@ -1,299 +1,224 @@
 <!DOCTYPE html>
-
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>United Ukraine</title>
 <link rel="stylesheet" href="app.css">
-
 <style>
 body {
-margin:0;
-background:#0b0f1a;
-color:white;
-font-family:Arial;
-padding-bottom:120px;
+  margin: 0;
+  background: #0b0f1a;
+  color: white;
+  font-family: Arial, sans-serif;
 }
-
-/* LOGO */
-.logo img {
-width:120px;
-display:block;
-margin:10px auto;
+.home-page {
+  width: min(920px, calc(100% - 24px));
+  margin: auto;
 }
-
-/* HEADER */
 .header {
-display:flex;
-justify-content:space-between;
-align-items:center;
-padding:10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 0 6px;
 }
-
 .profile {
-display:flex;
-align-items:center;
-gap:10px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
 }
-
 .avatar {
-width:40px;
-height:40px;
-border-radius:50%;
-overflow:hidden;
-background:#222;
-cursor:pointer;
+  width: 64px;
+  height: 64px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #111827;
+  border: 1px solid #293246;
+  cursor: pointer;
 }
-
 .avatar img {
-width:100%;
-height:100%;
-object-fit:cover;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
-
-/* BUTTONS */
+.user-meta {
+  font-size: 18px;
+  line-height: 1.45;
+  color: #e5e7eb;
+  min-width: 0;
+}
+.user-meta div {
+  word-break: break-all;
+}
 .logout {
-background:red;
-padding:8px 15px;
-border-radius:10px;
-cursor:pointer;
+  background: #ef4444;
+  padding: 10px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  white-space: nowrap;
 }
-
 .balance {
-font-size:22px;
-padding:10px;
+  margin: 10px 0 0;
+  padding: 18px;
+  border: 1px solid #293246;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #111827, #18233a);
+  text-align: center;
+  font-size: 36px;
+  font-weight: 800;
 }
-
 .actions {
-display:flex;
-justify-content:space-around;
-margin:10px 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 30px 0 18px;
 }
-
 .btn {
-background:#111;
-padding:12px 20px;
-border-radius:12px;
-cursor:pointer;
-font-size:16px;
+  padding: 16px 12px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  color: #111827;
+  cursor: pointer;
+  font-size: 17px;
+  font-weight: 800;
+  text-align: center;
+  box-shadow: 0 12px 30px rgba(245, 158, 11, .18);
 }
-
-/* COINS */
+.btn.secondary {
+  background: linear-gradient(135deg, #2563eb, #14b8a6);
+  color: white;
+  box-shadow: 0 12px 30px rgba(20, 184, 166, .14);
+}
+.market-title {
+  margin: 20px 0 8px;
+  color: #cbd5e1;
+  font-size: 18px;
+}
 .row {
-display:flex;
-justify-content:space-between;
-padding:14px;
-border-bottom:1px solid #222;
-cursor:pointer;
-font-size:16px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid #222;
+  cursor: pointer;
+  font-size: 18px;
 }
-
-.green {color:lime;}
-.red {color:red;}
-
-/* NAV (ЗБІЛЬШИВ) */
-.navbar {
-position:fixed;
-bottom:0;
-width:100%;
-background:#000;
-display:flex;
-justify-content:space-around;
-padding:15px 0;
+.green { color: #22c55e; }
+.red { color: #ef4444; }
+@media (max-width: 620px) {
+  .header { padding-top: 12px; }
+  .actions { grid-template-columns: 1fr; margin-top: 24px; }
+  .balance { font-size: 31px; }
+  .user-meta { font-size: 16px; }
 }
-
-.nav-item {
-color:#888;
-font-size:16px;
-text-align:center;
-cursor:pointer;
-flex:1;
-}
-
-.nav-icon {
-display:inline-block;
-font-size:54px;
-line-height:1;
-margin-bottom:6px;
-}
-
-.nav-item.active {
-color:orange;
+@media (max-width: 420px) {
+  .avatar { width: 56px; height: 56px; }
+  .logout { padding: 9px 12px; }
+  .balance { font-size: 28px; }
+  .row { font-size: 16px; }
 }
 </style>
-
 </head>
-
 <body>
-
 <script>
-
-// ===== CONFIG =====
-const API_URL = "https://cryptoapp-eqc5.onrender.com";
-
-// 🔐 AUTH CHECK
-let token = localStorage.getItem("token");
-
-if(!token){
-location.href = "login.html";
-}
-
+const API_URL = ["localhost", "127.0.0.1"].includes(location.hostname) ? location.origin : "https://cryptoapp-eqc5.onrender.com";
+const token = localStorage.getItem("token");
+if (!token) location.href = "login.html";
 </script>
 
-<div class="logo">
-<img src="logo.png">
-</div>
+<main class="home-page">
+  <div class="header">
+    <div class="profile">
+      <div class="avatar" onclick="uploadPhoto()"><img id="avatarImg" alt=""></div>
+      <div class="user-meta">
+        <div id="userIdText"></div>
+        <div id="wallet"></div>
+      </div>
+    </div>
+    <div class="logout" onclick="logout()" data-i18n="logout">Вийти</div>
+  </div>
 
-<div class="header">
+  <div id="balance" class="balance"></div>
 
-<div class="profile">
+  <div class="actions">
+    <div class="btn" onclick="goDeposit()" data-i18n="addFunds">Поповнити</div>
+    <div class="btn" onclick="goWithdraw()" data-i18n="withdrawShort">Вивести</div>
+    <div class="btn secondary" onclick="location.href='profile.html'" data-i18n="userData">Дані користувача</div>
+  </div>
 
-<div class="avatar" onclick="uploadPhoto()">
-<img id="avatarImg">
-</div>
-
-<div>
-<div id="userIdText"></div>
-<div id="wallet"></div>
-</div>
-
-</div>
-
-<div class="logout" onclick="logout()">Вийти</div>
-
-</div>
-
-<div id="balance" class="balance"></div>
-
-<div class="actions">
-<div class="btn" onclick="goDeposit()">Поповнити</div>
-<div class="btn" onclick="goWithdraw()">Вивести</div>
-<div class="btn" onclick="location.href='profile.html'">Дані користувача</div>
-</div>
-
-<div id="list"></div>
-
-<div class="navbar">
-<div class="nav-item active" onclick="goHome()"><span class="nav-icon">🏠</span><br>Додому</div>
-<div class="nav-item" onclick="goTrade()"><span class="nav-icon">📊</span><br>Трейд</div>
-<div class="nav-item" onclick="goAssets()"><span class="nav-icon">💼</span><br>Активи</div>
-<div class="nav-item" onclick="goInfo()"><span class="nav-icon">ℹ️</span><br>Інфо</div>
-</div>
-
-<script>
-
-// ===== LOAD USER =====
-async function loadUser(){
-try{
-
-let res = await fetch(API_URL + "/me", {
-headers:{ Authorization: token }
-});
-
-let user = await res.json();
-
-console.log(user);
-
-// 🔥 ВИПРАВЛЕНО ТУТ
-document.getElementById("wallet").innerText =
-user.wallet_address || "Нема гаманця";
-
-document.getElementById("userIdText").innerText =
-"ID: " + (user.display_id || String(user.id).padStart(8, "0"));
-
-let balance = user.balance || 0;
-let deposit = user.deposit || 0;
-
-let profit = balance - deposit;
-let percent = deposit > 0 ? (profit / deposit) * 100 : 0;
-
-let color = percent >= 0 ? "green" : "red";
-
-document.getElementById("balance").innerHTML =
-`$${balance.toFixed(2)} <span class="${color}">${percent.toFixed(2)}%</span>`;
-
-}catch(e){
-localStorage.removeItem("token");
-location.href = "login.html";
-}
-}
-
-// ===== COINS =====
-async function loadCoins(){
-try{
-
-let res = await fetch(
-"https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&per_page=15"
-);
-
-let data = await res.json();
-
-let html = "";
-
-data.forEach(c=>{
-let color = c.price_change_percentage_24h >=0 ? "green":"red";
-
-html += `
-<div class="row">
-<div>${c.symbol.toUpperCase()}</div>
-<div>$${c.current_price} <span class="${color}">
-${c.price_change_percentage_24h.toFixed(2)}%
-</span></div>
-</div>
-`;
-});
-
-document.getElementById("list").innerHTML = html;
-
-}catch(e){
-console.log("coins error");
-}
-}
-
-// ===== NAV =====
-function goHome(){location.href="index.html";}
-function goTrade(){location.href="trade.html";}
-function goAssets(){location.href="assets.html";}
-function goInfo(){location.href="info.html";}
-function goDeposit(){location.href="deposit.html";}
-function goWithdraw(){location.href="withdraw.html";}
-
-// ===== LOGOUT =====
-function logout(){
-localStorage.removeItem("token");
-location.href = "login.html";
-}
-
-// ===== AVATAR =====
-function uploadPhoto(){
-let input = document.createElement("input");
-input.type="file";
-
-input.onchange = e=>{
-let reader = new FileReader();
-reader.onload = ()=>{
-localStorage.setItem("avatar", reader.result);
-document.getElementById("avatarImg").src = reader.result;
-};
-reader.readAsDataURL(e.target.files[0]);
-};
-
-input.click();
-}
-
-// ===== LOAD AVATAR =====
-let avatar = localStorage.getItem("avatar");
-if(avatar){
-document.getElementById("avatarImg").src = avatar;
-}
-
-// ===== INIT =====
-loadUser();
-loadCoins();
-setInterval(loadCoins,10000);
-
-</script>
+  <h2 class="market-title" data-i18n="market">Ринок</h2>
+  <div id="list"></div>
+</main>
 
 <script src="app-nav.js"></script>
+<script>
+const money = value => Number(value || 0).toFixed(2);
+const localText = key => window.appTranslate ? window.appTranslate.tr(key) : ({ balance: "Баланс", wallet: "Гаманець" }[key] || key);
+
+async function loadUser() {
+  try {
+    const res = await fetch(API_URL + "/me", { headers: { Authorization: token } });
+    if (res.status === 401) throw new Error("auth");
+    const user = await res.json();
+
+    document.getElementById("wallet").textContent = `${localText("wallet")}: ${user.wallet_address || "немає гаманця"}`;
+    document.getElementById("userIdText").textContent = `ID: ${user.display_id || String(user.id).padStart(8, "0")}`;
+
+    const balance = Number(user.balance || 0);
+    const deposit = Number(user.deposit || 0);
+    const profit = balance - deposit;
+    const percent = deposit > 0 ? (profit / deposit) * 100 : 0;
+    const color = percent >= 0 ? "green" : "red";
+    document.getElementById("balance").innerHTML = `${localText("balance")}: $${money(balance)} <span class="${color}">${percent.toFixed(2)}%</span>`;
+  } catch {
+    localStorage.removeItem("token");
+    location.href = "login.html";
+  }
+}
+
+async function loadCoins() {
+  try {
+    const res = await fetch("https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&per_page=15");
+    const data = await res.json();
+    document.getElementById("list").innerHTML = data.map(c => {
+      const color = c.price_change_percentage_24h >= 0 ? "green" : "red";
+      return `<div class="row"><div>${c.symbol.toUpperCase()}</div><div>$${c.current_price} <span class="${color}">${c.price_change_percentage_24h.toFixed(2)}%</span></div></div>`;
+    }).join("");
+  } catch {
+    document.getElementById("list").innerHTML = "";
+  }
+}
+
+function goDeposit(){ location.href = "deposit.html"; }
+function goWithdraw(){ location.href = "withdraw.html"; }
+function logout(){ localStorage.removeItem("token"); location.href = "login.html"; }
+
+function uploadPhoto() {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.onchange = event => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      localStorage.setItem("avatar", reader.result);
+      document.getElementById("avatarImg").src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  };
+  input.click();
+}
+
+const avatar = localStorage.getItem("avatar");
+if (avatar) document.getElementById("avatarImg").src = avatar;
+loadUser();
+loadCoins();
+setInterval(loadCoins, 10000);
+</script>
 </body>
 </html>

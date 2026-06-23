@@ -44,8 +44,8 @@ function renderPosition(position, option, title) {
   const subtitle = position === 0
     ? "Доступна всім користувачам"
     : satellite
-      ? `Сателіт #${satellite.display_id || String(satellite.id).padStart(8, "0")}: ${satellite.nickname || "без нікнейма"} · реальний баланс $${money(satellite.balance)}`
-      : `Потрібен ${position}-й запрошений користувач`;
+      ? `Сателіт #${satellite.display_id || String(satellite.id).padStart(8, "0")}: ${satellite.nickname || "без нікнейма"} · реальний баланс $${money(satellite.balance)} · підтверджене поповнення $${money(satellite.deposit)}${satellite.active ? "" : ` · активується від $${option.minDeposit || 500}`}`
+      : `Потрібен ${position}-й активний сателіт із підтвердженим поповненням від $${option.minDeposit || 500}`;
   const disabled = !option.unlocked || option.cooldown > 0 || statusData.balance <= 0;
   return `<article class="trade-card${option.unlocked ? "" : " locked"}">
     <div><h2>${title}</h2><div class="details">${subtitle}<br>Винагорода: ${(option.rate * 100).toFixed(1)}% від вашого балансу<br>${cooldownText(option.cooldown)}</div></div>

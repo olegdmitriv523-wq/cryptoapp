@@ -40,7 +40,9 @@ const EMAIL_VERIFICATION_REQUIRED = process.env.EMAIL_VERIFICATION_REQUIRED === 
 
 const PUBLIC_USER_FIELDS = "id,fullname,nickname,country,email,phone,balance,deposit,satellites,wallet_address,referrer_id";
 const QUIZ_ANSWERS = { 1: "b", 2: "c", 3: "a", 4: "b", 5: "c" };
-const TRADE_RATES = [0.01, 0.01, 0.015, 0.0225, 0.035, 0.055];
+const LEARNING_MIN_DEPOSIT = 500;
+const ACTIVE_SATELLITE_MIN_DEPOSIT = 500;
+const TRADE_RATES = [0.01, 0.01, 0.005, 0.0075, 0.0125, 0.02];
 const TRADE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const POOL_BASE = 1000347;
 const POOL_START_DAY = Date.UTC(2026, 5, 22) / 86400000;
@@ -459,14 +461,20 @@ app.post("/withdraw", auth, async (req, res) => {
 app.get("/referrals", auth, async (req, res) => {
   const { data, error } = await supabase
     .from("users")
-    .select("id,nickname,country,balance")
+    .select("id,nickname,country,balance,deposit")
     .eq("referrer_id", req.userId)
     .order("id", { ascending: true });
   if (error) return res.status(500).json({ success: false });
-  return res.json((data || []).map(withDisplayId));
+  return res.json((data || []).map(user => ({
+    ...withDisplayId(user),
+    active: Number(user.deposit || 0) >= ACTIVE_SATELLITE_MIN_DEPOSIT
+  })));
 });
 
 app.get("/quiz/progress", auth, async (req, res) => {
+  const user = await findUser(req.userId, "id,deposit");
+  if (!user) return res.status(404).json({ success: false });
+  const learningUnlocked = Number(user.deposit || 0) >= LEARNING_MIN_DEPOSIT;
   const { data } = await supabase
     .from("signals")
     .select("type")
@@ -474,11 +482,17 @@ app.get("/quiz/progress", auth, async (req, res) => {
     .like("type", "quiz_%")
     .eq("status", "rewarded");
   const completed = (data || []).map(item => Number(item.type.replace("quiz_", ""))).filter(Boolean);
-  return res.json({ success: true, completed });
+  return res.json({ success: true, completed, learningUnlocked, minDeposit: LEARNING_MIN_DEPOSIT, deposit: Number(user.deposit || 0) });
 });
 
 app.post("/quiz/complete", auth, async (req, res) => {
   try {
+    const user = await findUser(req.userId, "id,balance,deposit");
+    if (!user) return res.status(404).json({ success: false });
+    if (Number(user.deposit || 0) < LEARNING_MIN_DEPOSIT) {
+      return res.json({ success: false, message: "Learning locked", minDeposit: LEARNING_MIN_DEPOSIT });
+    }
+
     const quizId = Number(req.body.quizId);
     const answer = String(req.body.answer || "").toLowerCase();
     if (!QUIZ_ANSWERS[quizId] || QUIZ_ANSWERS[quizId] !== answer) {
@@ -496,8 +510,6 @@ app.post("/quiz/complete", auth, async (req, res) => {
       .maybeSingle();
     if (existing) return res.json({ success: false, message: "Already completed" });
 
-    const user = await findUser(req.userId, "id,balance");
-    if (!user) return res.status(404).json({ success: false });
     const newBalance = Number(user.balance || 0) + 10;
     const { error } = await supabase.from("users").update({ balance: newBalance }).eq("id", req.userId);
     if (error) throw error;
@@ -515,11 +527,14 @@ async function tradeStatus(userId) {
 
   const { data: referralRows } = await supabase
     .from("users")
-    .select("id,nickname,country,balance")
+    .select("id,nickname,country,balance,deposit")
     .eq("referrer_id", userId)
     .order("id", { ascending: true })
     .limit(5);
-  const referrals = (referralRows || []).map(withDisplayId);
+  const referrals = (referralRows || []).map(user => ({
+    ...withDisplayId(user),
+    active: Number(user.deposit || 0) >= ACTIVE_SATELLITE_MIN_DEPOSIT
+  }));
   const { data: trades } = await supabase
     .from("signals")
     .select("type,created_at")
@@ -541,10 +556,11 @@ async function tradeStatus(userId) {
       const satellite = referrals?.[index] || null;
       return {
         position: index + 1,
-        unlocked: Boolean(satellite),
+        unlocked: Boolean(satellite?.active),
         cooldown: cooldown(`trade_satellite_${index + 1}`),
         rate: TRADE_RATES[index + 1],
-        satellite
+        satellite,
+        minDeposit: ACTIVE_SATELLITE_MIN_DEPOSIT
       };
     })
   };
