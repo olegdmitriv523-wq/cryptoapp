@@ -44,8 +44,8 @@ body { margin:0; font-family:Arial,sans-serif; }
 
   <section class="card">
     <div class="pool-head">
-      <div><div class="title">Загальний пул</div><div class="pool-value" id="pool">$1,000,347.00</div></div>
-      <div><div class="title">Добова зміна</div><div class="green" id="poolChange">+0%</div></div>
+      <div><div class="title" data-i18n="pool">Загальний пул</div><div class="pool-value" id="pool">$1,000,347.00</div></div>
+      <div><div class="title" data-i18n="dailyChange">Добова зміна</div><div class="green" id="poolChange">+0%</div></div>
     </div>
     <canvas id="poolChart"></canvas>
   </section>
@@ -55,8 +55,10 @@ const API_URL = ["localhost", "127.0.0.1"].includes(location.hostname) ? locatio
 const token = localStorage.getItem("token");
 if (!token) location.href = "login.html";
 let poolChart;
+let lastPool;
 
 const money = value => "$" + Number(value || 0).toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2});
+const localText = key => window.appTranslate ? window.appTranslate.tr(key) : ({pool:"Загальний пул",dailyChange:"Добова зміна"}[key] || key);
 const escapeHtml = value => String(value ?? "").replace(/[&<>'"]/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[char]));
 const typeLabels = {
   deposit:"Поповнення",
@@ -84,14 +86,15 @@ function renderHistory(history) {
 }
 
 function renderPool(pool) {
+  lastPool = pool;
   document.getElementById("pool").textContent = money(pool.current);
   document.getElementById("poolChange").textContent = `+${Number(pool.dailyChangePercent).toFixed(2)}% за добу`;
   if (poolChart) poolChart.destroy();
   poolChart = new Chart(document.getElementById("poolChart"), {
     type:"line",
     data:{
-      labels:pool.series.map(point => new Date(point.date).toLocaleDateString("uk-UA", {day:"2-digit",month:"2-digit"})),
-      datasets:[{label:"Загальний пул, $",data:pool.series.map(point => point.value),borderColor:"#22c55e",backgroundColor:"rgba(34,197,94,.12)",fill:true,tension:.3}]
+      labels:pool.series.map(point => new Date(point.date).toLocaleDateString(window.appTranslate?.currentLang() === "en" ? "en-US" : "uk-UA", {day:"2-digit",month:"2-digit"})),
+      datasets:[{label:`${localText("pool")}, $`,data:pool.series.map(point => point.value),borderColor:"#22c55e",backgroundColor:"rgba(34,197,94,.12)",fill:true,tension:.3}]
     },
     options:{responsive:true,plugins:{legend:{labels:{color:"#f8fafc"}}},scales:{x:{ticks:{color:"#9ca3af"},grid:{color:"#1f2937"}},y:{ticks:{color:"#9ca3af"},grid:{color:"#1f2937"}}}}
   });
@@ -114,6 +117,10 @@ async function loadAssets() {
 }
 loadAssets();
 setInterval(loadAssets, 60000);
+window.addEventListener("app-language-ready", () => {
+  if (lastPool) renderPool(lastPool);
+  window.appTranslate?.applyTranslations(document.body);
+});
 </script>
 <script src="app-nav.js"></script>
 <script src="pwa.js"></script>

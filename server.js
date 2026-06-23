@@ -127,7 +127,7 @@ const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN || "8714057941:AAGZL1OXRoy8-7_
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID || "337179852";
 const ADMIN_KEY = process.env.ADMIN_KEY || "";
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
-const EMAIL_FROM = process.env.EMAIL_FROM || "United Ukraine <onboarding@resend.dev>";
+const EMAIL_FROM = process.env.EMAIL_FROM || "United Europe Crypto <onboarding@resend.dev>";
 const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
 const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "";
 const EMAIL_VERIFICATION_REQUIRED = process.env.EMAIL_VERIFICATION_REQUIRED === "true";
@@ -272,11 +272,11 @@ function encryptForStorage(value) {
 
 async function sendVerificationEmail(email, code, purpose = "registration") {
   const action = purpose === "email_change" ? "зміни електронної пошти" : "реєстрації";
-  const subject = `Код підтвердження United Ukraine: ${code}`;
-  const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#111"><h2>United Ukraine</h2><p>Ваш код для ${action}:</p><div style="font-size:34px;font-weight:700;letter-spacing:8px;margin:24px 0">${code}</div><p>Код дійсний 10 хвилин. Якщо ви не робили цей запит, просто проігноруйте лист.</p></div>`;
+  const subject = `Код підтвердження United Europe Crypto: ${code}`;
+  const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#111"><h2>United Europe Crypto</h2><p>Ваш код для ${action}:</p><div style="font-size:34px;font-weight:700;letter-spacing:8px;margin:24px 0">${code}</div><p>Код дійсний 10 хвилин. Якщо ви не робили цей запит, просто проігноруйте лист.</p></div>`;
   if (BREVO_API_KEY && BREVO_SENDER_EMAIL) {
     await axios.post("https://api.brevo.com/v3/smtp/email", {
-      sender: { name: "United Ukraine", email: BREVO_SENDER_EMAIL },
+      sender: { name: "United Europe Crypto", email: BREVO_SENDER_EMAIL },
       to: [{ email }],
       subject,
       htmlContent: html

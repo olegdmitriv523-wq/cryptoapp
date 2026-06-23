@@ -22,7 +22,7 @@ const I18N = {
     pool: "Загальний пул", dailyChange: "Добова зміна", readLesson: "Прочитайте короткий урок і дайте правильну відповідь. Кожен тест можна пройти один раз.",
     reward10: "Винагорода становить $10", check: "Перевірити", mainTrade: "Основна торгівля",
     tradeButton: "Торгувати", locked: "Заблоковано", availableAll: "Доступна всім користувачам",
-    project: "United Ukraine", market: "Ринок", copy: "Скопійовано", back: "Назад"
+    project: "United Europe Crypto", market: "Ринок", copy: "Скопійовано", back: "Назад"
   },
   ru: {
     navHome: "Домой", navTrade: "Торговля", navAssets: "Активы", navLearning: "Обучение", navInfo: "Инфо",
@@ -33,7 +33,7 @@ const I18N = {
     pool: "Общий пул", dailyChange: "Суточное изменение", readLesson: "Прочитайте короткий урок и дайте правильный ответ. Каждый тест можно пройти один раз.",
     reward10: "Вознаграждение составляет $10", check: "Проверить", mainTrade: "Основная торговля",
     tradeButton: "Торговать", locked: "Заблокировано", availableAll: "Доступно всем пользователям",
-    project: "United Ukraine", market: "Рынок", copy: "Скопировано", back: "Назад"
+    project: "United Europe Crypto", market: "Рынок", copy: "Скопировано", back: "Назад"
   },
   kk: {
     navHome: "Басты бет", navTrade: "Сауда", navAssets: "Активтер", navLearning: "Оқу", navInfo: "Ақпарат",
@@ -44,7 +44,7 @@ const I18N = {
     pool: "Жалпы пул", dailyChange: "Күндік өзгеріс", readLesson: "Қысқа сабақты оқып, дұрыс жауап беріңіз. Әр тестті бір рет өтуге болады.",
     reward10: "Сыйақы $10", check: "Тексеру", mainTrade: "Негізгі сауда",
     tradeButton: "Саудалау", locked: "Бұғатталған", availableAll: "Барлық пайдаланушыларға қолжетімді",
-    project: "United Ukraine", market: "Нарық", copy: "Көшірілді", back: "Артқа"
+    project: "United Europe Crypto", market: "Нарық", copy: "Көшірілді", back: "Артқа"
   },
   pl: {
     navHome: "Start", navTrade: "Handel", navAssets: "Aktywa", navLearning: "Nauka", navInfo: "Info",
@@ -55,7 +55,7 @@ const I18N = {
     pool: "Pula ogólna", dailyChange: "Zmiana dzienna", readLesson: "Przeczytaj krótki materiał i wybierz poprawną odpowiedź. Każdy test można ukończyć raz.",
     reward10: "Nagroda wynosi $10", check: "Sprawdź", mainTrade: "Handel główny",
     tradeButton: "Handluj", locked: "Zablokowane", availableAll: "Dostępne dla wszystkich użytkowników",
-    project: "United Ukraine", market: "Rynek", copy: "Skopiowano", back: "Wstecz"
+    project: "United Europe Crypto", market: "Rynek", copy: "Skopiowano", back: "Wstecz"
   },
   ro: {
     navHome: "Acasă", navTrade: "Tranzacții", navAssets: "Active", navLearning: "Învățare", navInfo: "Info",
@@ -66,7 +66,7 @@ const I18N = {
     pool: "Fond total", dailyChange: "Schimbare zilnică", readLesson: "Citește lecția scurtă și alege răspunsul corect. Fiecare test poate fi făcut o singură dată.",
     reward10: "Recompensa este de $10", check: "Verifică", mainTrade: "Tranzacție principală",
     tradeButton: "Tranzacționează", locked: "Blocat", availableAll: "Disponibil tuturor utilizatorilor",
-    project: "United Ukraine", market: "Piață", copy: "Copiat", back: "Înapoi"
+    project: "United Europe Crypto", market: "Piață", copy: "Copiat", back: "Înapoi"
   },
   en: {
     navHome: "Home", navTrade: "Trade", navAssets: "Assets", navLearning: "Learning", navInfo: "Info",
@@ -77,7 +77,7 @@ const I18N = {
     pool: "Total pool", dailyChange: "Daily change", readLesson: "Read the short lesson and choose the correct answer. Each test can be completed once.",
     reward10: "The reward is $10", check: "Check", mainTrade: "Main trading",
     tradeButton: "Trade", locked: "Locked", availableAll: "Available to all users",
-    project: "United Ukraine", market: "Market", copy: "Copied", back: "Back"
+    project: "United Europe Crypto", market: "Market", copy: "Copied", back: "Back"
   },
   de: {
     navHome: "Start", navTrade: "Handel", navAssets: "Aktiva", navLearning: "Lernen", navInfo: "Info",
@@ -88,7 +88,7 @@ const I18N = {
     pool: "Gesamtpool", dailyChange: "Tagesänderung", readLesson: "Lesen Sie die kurze Lektion und wählen Sie die richtige Antwort. Jeder Test kann einmal abgeschlossen werden.",
     reward10: "Die Belohnung beträgt $10", check: "Prüfen", mainTrade: "Haupthandel",
     tradeButton: "Handeln", locked: "Gesperrt", availableAll: "Für alle Benutzer verfügbar",
-    project: "United Ukraine", market: "Markt", copy: "Kopiert", back: "Zurück"
+    project: "United Europe Crypto", market: "Markt", copy: "Kopiert", back: "Zurück"
   },
   fr: {
     navHome: "Accueil", navTrade: "Trading", navAssets: "Actifs", navLearning: "Formation", navInfo: "Infos",
@@ -99,7 +99,7 @@ const I18N = {
     pool: "Pool total", dailyChange: "Variation quotidienne", readLesson: "Lisez la courte leçon et choisissez la bonne réponse. Chaque test ne peut être terminé qu'une fois.",
     reward10: "La récompense est de $10", check: "Vérifier", mainTrade: "Trading principal",
     tradeButton: "Trader", locked: "Verrouillé", availableAll: "Disponible pour tous les utilisateurs",
-    project: "United Ukraine", market: "Marché", copy: "Copié", back: "Retour"
+    project: "United Europe Crypto", market: "Marché", copy: "Copié", back: "Retour"
   },
   pt: {
     navHome: "Início", navTrade: "Negociação", navAssets: "Ativos", navLearning: "Aprendizado", navInfo: "Info",
@@ -110,7 +110,7 @@ const I18N = {
     pool: "Pool total", dailyChange: "Mudança diária", readLesson: "Leia a lição curta e escolha a resposta correta. Cada teste pode ser concluído uma vez.",
     reward10: "A recompensa é de $10", check: "Verificar", mainTrade: "Negociação principal",
     tradeButton: "Negociar", locked: "Bloqueado", availableAll: "Disponível para todos os usuários",
-    project: "United Ukraine", market: "Mercado", copy: "Copiado", back: "Voltar"
+    project: "United Europe Crypto", market: "Mercado", copy: "Copiado", back: "Voltar"
   },
   es: {
     navHome: "Inicio", navTrade: "Trading", navAssets: "Activos", navLearning: "Aprendizaje", navInfo: "Info",
@@ -121,7 +121,7 @@ const I18N = {
     pool: "Pool total", dailyChange: "Cambio diario", readLesson: "Lee la lección corta y elige la respuesta correcta. Cada prueba se puede completar una vez.",
     reward10: "La recompensa es de $10", check: "Comprobar", mainTrade: "Trading principal",
     tradeButton: "Operar", locked: "Bloqueado", availableAll: "Disponible para todos los usuarios",
-    project: "United Ukraine", market: "Mercado", copy: "Copiado", back: "Atrás"
+    project: "United Europe Crypto", market: "Mercado", copy: "Copiado", back: "Atrás"
   },
   it: {
     navHome: "Home", navTrade: "Trading", navAssets: "Asset", navLearning: "Formazione", navInfo: "Info",
@@ -132,7 +132,7 @@ const I18N = {
     pool: "Pool totale", dailyChange: "Variazione giornaliera", readLesson: "Leggi la breve lezione e scegli la risposta corretta. Ogni test può essere completato una sola volta.",
     reward10: "La ricompensa è di $10", check: "Controlla", mainTrade: "Trading principale",
     tradeButton: "Fai trading", locked: "Bloccato", availableAll: "Disponibile per tutti gli utenti",
-    project: "United Ukraine", market: "Mercato", copy: "Copiato", back: "Indietro"
+    project: "United Europe Crypto", market: "Mercato", copy: "Copiato", back: "Indietro"
   }
 };
 
@@ -195,7 +195,6 @@ function applyTranslations(root = document.body) {
   const lang = currentLang();
   document.documentElement.lang = lang;
   protectCurrencyText(root);
-  if (lang === "uk") return;
 
   root.querySelectorAll("[data-i18n]").forEach(element => {
     element.textContent = tr(element.dataset.i18n);
@@ -203,6 +202,8 @@ function applyTranslations(root = document.body) {
   root.querySelectorAll("[data-i18n-placeholder]").forEach(element => {
     element.setAttribute("placeholder", tr(element.dataset.i18nPlaceholder));
   });
+
+  if (lang === "uk") return;
 
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode(node) {
@@ -227,11 +228,29 @@ function renderLanguageSelector() {
   select.innerHTML = APP_LANGUAGES.map(([code, label]) => `<option value="${code}">${label}</option>`).join("");
   select.value = currentLang();
   select.addEventListener("change", () => {
+    showLanguageLoading();
     localStorage.setItem("app_language", select.value);
+    sessionStorage.setItem("language_switching", "1");
     setTranslateCookie(select.value);
-    location.reload();
+    setTimeout(() => location.reload(), 80);
   });
   return select;
+}
+
+function showLanguageLoading() {
+  let overlay = document.querySelector(".language-loading");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.className = "language-loading";
+    overlay.innerHTML = `<div><img src="logo.png" alt="United Europe Crypto"><span>Translating...</span></div>`;
+    document.body.append(overlay);
+  }
+  overlay.classList.add("visible");
+}
+
+function hideLanguageLoading() {
+  sessionStorage.removeItem("language_switching");
+  document.querySelector(".language-loading")?.classList.remove("visible");
 }
 
 function protectCurrencyText(root = document.body) {
@@ -295,11 +314,13 @@ function loadFullPageTranslator() {
       includedLanguages: APP_LANGUAGES.map(([code]) => GOOGLE_LANG_CODES[code]).filter(Boolean).join(","),
       autoDisplay: false
     }, "google_translate_element");
+    setTimeout(hideLanguageLoading, 1200);
   };
 
   const script = document.createElement("script");
   script.src = "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
   script.async = true;
+  script.onerror = hideLanguageLoading;
   document.head.append(script);
 }
 
@@ -367,6 +388,7 @@ function showInstallInstructions() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  if (sessionStorage.getItem("language_switching") === "1") showLanguageLoading();
   const headLinks = [
     ["manifest", "manifest.json"],
     ["icon", "logo.png"],
@@ -385,7 +407,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ["mobile-web-app-capable", "yes"],
     ["apple-mobile-web-app-capable", "yes"],
     ["apple-mobile-web-app-status-bar-style", "black-translucent"],
-    ["apple-mobile-web-app-title", "United Ukraine"]
+    ["apple-mobile-web-app-title", "United Europe Crypto"]
   ].forEach(([name, content]) => {
     if (!document.head.querySelector(`meta[name="${name}"]`)) {
       const meta = document.createElement("meta");
@@ -402,7 +424,7 @@ document.addEventListener("DOMContentLoaded", () => {
   brand.className = "site-brand";
   brand.innerHTML = `
     <button type="button" aria-label="${tr("home")}">
-      <img src="logo.png" alt="United Ukraine">
+      <img src="logo.png" alt="United Europe Crypto">
     </button>
   `;
   brand.querySelector("button").addEventListener("click", () => location.href = "index.html");
@@ -434,6 +456,9 @@ document.addEventListener("DOMContentLoaded", () => {
   applyTranslations();
   observeCurrencyChanges();
   loadFullPageTranslator();
+  window.dispatchEvent(new CustomEvent("app-language-ready"));
+  if (currentLang() === "uk") hideLanguageLoading();
+  setTimeout(hideLanguageLoading, 3200);
 });
 
 window.appTranslate = { tr, applyTranslations, currentLang, protectCurrencyText };

@@ -54,9 +54,48 @@ body {
 
 .site-brand img {
   display: block;
-  width: 116px;
-  height: 72px;
+  width: 150px;
+  height: 84px;
   object-fit: contain;
+}
+
+.language-loading {
+  position: fixed;
+  z-index: 3000;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(3, 7, 18, .96);
+  color: var(--text);
+}
+
+.language-loading.visible {
+  display: flex;
+}
+
+.language-loading > div {
+  width: min(280px, calc(100% - 40px));
+  padding: 22px;
+  border: 1px solid #293246;
+  border-radius: 20px;
+  background: #0f172a;
+  text-align: center;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .38);
+}
+
+.language-loading img {
+  display: block;
+  width: 150px;
+  height: 84px;
+  margin: 0 auto 12px;
+  object-fit: contain;
+}
+
+.language-loading span {
+  color: #cbd5e1;
+  font-weight: 800;
+  letter-spacing: .04em;
 }
 
 .language-select {

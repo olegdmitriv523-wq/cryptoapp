@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "United Ukraine Crypto",
-  "short_name": "United Ukraine",
+  "name": "United Europe Crypto",
+  "short_name": "United Europe Crypto",
   "description": "Навчання, активи та торгівля криптовалютами",
   "start_url": "/loading.html?source=pwa",
   "scope": "/",
@@ -13,19 +13,19 @@
   "icons": [
     {
       "src": "/logo.png",
-      "sizes": "192x192",
+      "sizes": "1024x1024",
       "type": "image/png",
       "purpose": "any"
     },
     {
       "src": "/logo.png",
-      "sizes": "512x512",
+      "sizes": "1024x1024",
       "type": "image/png",
       "purpose": "any"
     },
     {
       "src": "/logo.png",
-      "sizes": "1254x1254",
+      "sizes": "1024x1024",
       "type": "image/png",
       "purpose": "any maskable"
     }
