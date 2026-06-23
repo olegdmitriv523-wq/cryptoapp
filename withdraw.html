@@ -1,212 +1,190 @@
 <!DOCTYPE html>
-
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
-<title>Withdraw</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Виведення коштів</title>
 <link rel="stylesheet" href="app.css">
-
 <style>
 body {
-background:#0b0f1a;
-color:white;
-font-family:Arial;
-text-align:center;
+  margin: 0;
+  background: #0b0f1a;
+  color: white;
+  font-family: Arial, sans-serif;
 }
-
-.box {
-margin-top:50px;
+.page {
+  width: min(720px, calc(100% - 28px));
+  margin: auto;
 }
-
+.top-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin: 8px 0 12px;
+}
+.back-btn {
+  border: 0;
+  border-radius: 12px;
+  padding: 12px 16px;
+  background: #1f2937;
+  color: #f8fafc;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.card {
+  padding: 22px;
+  border: 1px solid #293246;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #111827, #18233a);
+}
+h1 {
+  margin: 0 0 14px;
+  font-size: 34px;
+  text-align: center;
+}
+.hint {
+  color: #cbd5e1;
+  font-size: 18px;
+  line-height: 1.55;
+  text-align: center;
+}
+.balance-box {
+  margin: 16px 0;
+  padding: 16px;
+  border-radius: 14px;
+  background: #0b1220;
+  border: 1px solid #334155;
+  font-size: 22px;
+  font-weight: 800;
+  text-align: center;
+}
 input {
-display:block;
-margin:10px auto;
-padding:12px;
-width:260px;
-background:#111;
-color:white;
-border:none;
-border-radius:8px;
+  display: block;
+  width: 100%;
+  margin: 12px 0;
+  padding: 16px;
+  border: 1px solid #334155;
+  border-radius: 14px;
+  background: #0b1220;
+  color: white;
+  font-size: 20px;
 }
-
-.btn {
-padding:12px;
-background:red;
-border-radius:12px;
-cursor:pointer;
-font-size:16px;
+.submit-btn {
+  width: 100%;
+  margin-top: 12px;
+  padding: 16px;
+  border: 0;
+  border-radius: 15px;
+  background: linear-gradient(135deg, #ef4444, #f97316);
+  color: white;
+  font-size: 20px;
+  font-weight: 900;
+  cursor: pointer;
 }
-
-.btn.disabled {
-background:#555;
-cursor:not-allowed;
+.submit-btn.disabled {
+  background: #475569;
+  cursor: not-allowed;
 }
-
-.back {
-position:absolute;
-top:10px;
-left:10px;
-cursor:pointer;
-}
-
 .timer {
-margin-top:10px;
-color:orange;
+  min-height: 24px;
+  margin-top: 12px;
+  color: #f59e0b;
+  text-align: center;
+  font-size: 18px;
 }
 </style>
-
 </head>
-
 <body>
-
 <script>
-const API_URL = "https://cryptoapp-eqc5.onrender.com";
-let token = localStorage.getItem("token");
-
-if(!token){
-window.location.href = "login.html";
-}
+const API_URL = ["localhost", "127.0.0.1"].includes(location.hostname) ? location.origin : "https://cryptoapp-eqc5.onrender.com";
+const token = localStorage.getItem("token");
+if (!token) location.href = "login.html";
 </script>
 
-<div class="back" onclick="goBack()">⬅ Назад</div>
+<main class="page">
+  <div class="top-actions">
+    <button class="back-btn" onclick="goBack()">← Назад</button>
+  </div>
 
-<div class="box">
-
-<h2>Виведення коштів</h2>
-
-<input id="amount" placeholder="Сума ($)">
-<input id="wallet" placeholder="Адреса гаманця">
-
-<div id="btn" class="btn" onclick="withdraw()">Вивести</div>
-
-<div id="timer" class="timer"></div>
-
-</div>
+  <section class="card">
+    <h1>Виведення коштів</h1>
+    <p class="hint">Вкажіть суму та адресу гаманця. Заявка піде адміністратору, а баланс зміниться тільки після підтвердження.</p>
+    <div class="balance-box">Доступний баланс: $<span id="balance">0.00</span></div>
+    <input id="amount" type="number" min="1" step="0.01" placeholder="Сума ($)">
+    <input id="wallet" placeholder="Адреса гаманця">
+    <button id="btn" class="submit-btn" onclick="withdraw()">Вивести</button>
+    <div id="timer" class="timer"></div>
+  </section>
+</main>
 
 <script>
+let currentBalance = 0;
 
-// ===== ТАЙМЕР =====
-function checkTimer(){
-let last = localStorage.getItem("withdraw_time");
-
-if(!last) return;
-
-let diff = Date.now() - parseInt(last);
-let left = 3600000 - diff;
-
-if(left > 0){
-
-document.getElementById("btn").classList.add("disabled");
-
-setInterval(()=>{
-let l = 3600000 - (Date.now() - parseInt(last));
-
-if(l <= 0){
-location.reload();
-return;
+async function loadUser() {
+  try {
+    const response = await fetch(API_URL + "/me", { headers: { Authorization: token } });
+    if (response.status === 401) throw new Error("auth");
+    const user = await response.json();
+    currentBalance = Number(user.balance || 0);
+    document.getElementById("balance").textContent = currentBalance.toFixed(2);
+  } catch {
+    localStorage.removeItem("token");
+    location.href = "login.html";
+  }
 }
 
-let min = Math.floor(l / 60000);
-let sec = Math.floor((l % 60000) / 1000);
-
-document.getElementById("timer").innerText =
-"Спробуй через: " + min + "м " + sec + "с";
-
-},1000);
-
+function checkTimer() {
+  const last = Number(localStorage.getItem("withdraw_time") || 0);
+  if (!last) return;
+  const update = () => {
+    const left = 3600000 - (Date.now() - last);
+    if (left <= 0) {
+      document.getElementById("btn").classList.remove("disabled");
+      document.getElementById("timer").textContent = "";
+      return;
+    }
+    document.getElementById("btn").classList.add("disabled");
+    const min = Math.floor(left / 60000);
+    const sec = Math.floor((left % 60000) / 1000);
+    document.getElementById("timer").textContent = `Спробуйте через: ${min}м ${sec}с`;
+    setTimeout(update, 1000);
+  };
+  update();
 }
+
+async function withdraw() {
+  if (document.getElementById("btn").classList.contains("disabled")) return;
+  const amount = Number(document.getElementById("amount").value);
+  const wallet = document.getElementById("wallet").value.trim();
+  if (!Number.isFinite(amount) || amount <= 0 || !wallet) return alert("Заповніть всі поля");
+  if (amount > currentBalance) return alert("Недостатньо коштів");
+
+  try {
+    const response = await fetch(API_URL + "/withdraw", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: token },
+      body: JSON.stringify({ amount, wallet })
+    });
+    const data = await response.json();
+    if (data.success) {
+      localStorage.setItem("withdraw_time", Date.now());
+      alert("Заявку на виведення передано адміністратору. Баланс зміниться після підтвердження.");
+      location.href = "index.html";
+    } else {
+      alert(data.message || "Помилка");
+    }
+  } catch {
+    alert("Сервер не відповідає");
+  }
 }
 
+function goBack() {
+  location.href = "index.html";
+}
+
+loadUser();
 checkTimer();
-
-// ===== WITHDRAW =====
-async function withdraw(){
-
-if(document.getElementById("btn").classList.contains("disabled")){
-return;
-}
-
-let amount = parseFloat(document.getElementById("amount").value);
-let wallet = document.getElementById("wallet").value.trim();
-
-if(!amount || amount <= 0 || !wallet){
-alert("Заповни всі поля");
-return;
-}
-
-try {
-
-// ===== USER =====
-let resUser = await fetch(API_URL + "/me", {
-headers:{ Authorization: token }
-});
-
-if(!resUser.ok){
-throw new Error("auth");
-}
-
-let user = await resUser.json();
-
-if(!user || !user.id){
-throw new Error("auth");
-}
-
-if(amount > user.balance){
-alert("Недостатньо коштів");
-return;
-}
-
-// ===== WITHDRAW =====
-let res = await fetch(API_URL + "/withdraw", {
-method:"POST",
-headers:{
-"Content-Type":"application/json",
-Authorization: token
-},
-body:JSON.stringify({ amount, wallet })
-});
-
-if(!res.ok){
-throw new Error("server");
-}
-
-let data = await res.json();
-
-if(data.success){
-
-// 🔥 СТАВИМО ТАЙМЕР
-localStorage.setItem("withdraw_time", Date.now());
-
-alert("Заявку на виведення передано адміністратору. Баланс автоматично не змінюється.");
-
-window.location.href="index.html";
-
-}else{
-alert(data.message || "Помилка");
-}
-
-}catch(e){
-
-// 🔥 якщо токен помер
-if(e.message === "auth"){
-localStorage.removeItem("token");
-window.location.href = "login.html";
-return;
-}
-
-alert("Сервер не відповідає");
-
-}
-
-}
-
-// ===== BACK =====
-function goBack(){
-window.location.href="index.html";
-}
-
 </script>
-
 <script src="app-nav.js"></script>
 </body>
 </html>

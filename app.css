@@ -20,6 +20,17 @@ body {
 
 body[data-no-nav="true"] { padding-bottom: 24px !important; }
 
+.skiptranslate,
+.goog-te-banner-frame,
+.goog-te-balloon-frame,
+#goog-gt-tt {
+  display: none !important;
+}
+
+body {
+  top: 0 !important;
+}
+
 .site-brand {
   display: flex;
   justify-content: center;

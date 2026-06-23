@@ -165,6 +165,20 @@ const TEXT_KEYS = {
   "Назад": "back"
 };
 
+const GOOGLE_LANG_CODES = {
+  uk: "uk",
+  ru: "ru",
+  kk: "kk",
+  pl: "pl",
+  ro: "ro",
+  en: "en",
+  de: "de",
+  fr: "fr",
+  pt: "pt",
+  es: "es",
+  it: "it"
+};
+
 function currentLang() {
   const saved = localStorage.getItem("app_language") || "uk";
   return I18N[saved] ? saved : "uk";
@@ -210,9 +224,44 @@ function renderLanguageSelector() {
   select.value = currentLang();
   select.addEventListener("change", () => {
     localStorage.setItem("app_language", select.value);
+    setTranslateCookie(select.value);
     location.reload();
   });
   return select;
+}
+
+function setTranslateCookie(lang) {
+  const value = lang === "uk" ? "/uk/uk" : `/uk/${GOOGLE_LANG_CODES[lang] || "uk"}`;
+  document.cookie = `googtrans=${value};path=/;max-age=31536000;SameSite=Lax`;
+  const host = location.hostname.split(".").slice(-2).join(".");
+  if (host && host.includes(".")) {
+    document.cookie = `googtrans=${value};path=/;domain=.${host};max-age=31536000;SameSite=Lax`;
+  }
+}
+
+function loadFullPageTranslator() {
+  const lang = currentLang();
+  setTranslateCookie(lang);
+  if (lang === "uk") return;
+  if (document.getElementById("google_translate_element")) return;
+
+  const holder = document.createElement("div");
+  holder.id = "google_translate_element";
+  holder.style.cssText = "position:absolute;left:-9999px;top:-9999px;height:0;overflow:hidden;";
+  document.body.append(holder);
+
+  window.googleTranslateElementInit = () => {
+    new google.translate.TranslateElement({
+      pageLanguage: "uk",
+      includedLanguages: APP_LANGUAGES.map(([code]) => GOOGLE_LANG_CODES[code]).filter(Boolean).join(","),
+      autoDisplay: false
+    }, "google_translate_element");
+  };
+
+  const script = document.createElement("script");
+  script.src = "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
+  script.async = true;
+  document.head.append(script);
 }
 
 function renderInstallButton() {
@@ -291,6 +340,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   applyTranslations();
+  loadFullPageTranslator();
 });
 
 window.appTranslate = { tr, applyTranslations, currentLang };
