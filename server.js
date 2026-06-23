@@ -34,6 +34,8 @@ const CHAT_ID = process.env.TELEGRAM_CHAT_ID || "337179852";
 const ADMIN_KEY = process.env.ADMIN_KEY || "";
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const EMAIL_FROM = process.env.EMAIL_FROM || "United Ukraine <onboarding@resend.dev>";
+const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
+const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "";
 
 const PUBLIC_USER_FIELDS = "id,fullname,nickname,country,email,phone,balance,deposit,satellites,wallet_address,referrer_id";
 const QUIZ_ANSWERS = { 1: "b", 2: "c", 3: "a", 4: "b", 5: "c" };
@@ -121,13 +123,26 @@ function emailCodeDigest(code) {
 }
 
 async function sendVerificationEmail(email, code, purpose = "registration") {
-  if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY is not configured");
   const action = purpose === "email_change" ? "зміни електронної пошти" : "реєстрації";
+  const subject = `Код підтвердження United Ukraine: ${code}`;
+  const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#111"><h2>United Ukraine</h2><p>Ваш код для ${action}:</p><div style="font-size:34px;font-weight:700;letter-spacing:8px;margin:24px 0">${code}</div><p>Код дійсний 10 хвилин. Якщо ви не робили цей запит, просто проігноруйте лист.</p></div>`;
+  if (BREVO_API_KEY && BREVO_SENDER_EMAIL) {
+    await axios.post("https://api.brevo.com/v3/smtp/email", {
+      sender: { name: "United Ukraine", email: BREVO_SENDER_EMAIL },
+      to: [{ email }],
+      subject,
+      htmlContent: html
+    }, {
+      headers: { "api-key": BREVO_API_KEY, "Content-Type": "application/json", accept: "application/json" }
+    });
+    return;
+  }
+  if (!RESEND_API_KEY) throw new Error("Email provider is not configured");
   await axios.post("https://api.resend.com/emails", {
     from: EMAIL_FROM,
     to: [email],
-    subject: `Код підтвердження United Ukraine: ${code}`,
-    html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#111"><h2>United Ukraine</h2><p>Ваш код для ${action}:</p><div style="font-size:34px;font-weight:700;letter-spacing:8px;margin:24px 0">${code}</div><p>Код дійсний 10 хвилин. Якщо ви не робили цей запит, просто проігноруйте лист.</p></div>`
+    subject,
+    html
   }, {
     headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" }
   });
