@@ -31,6 +31,10 @@ body {
   top: 0 !important;
 }
 
+.notranslate {
+  unicode-bidi: isolate;
+}
+
 .site-brand {
   display: flex;
   justify-content: center;
@@ -83,6 +87,50 @@ body {
 }
 
 .install-app-btn.visible { display: block; }
+
+.install-modal {
+  position: fixed;
+  z-index: 2000;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(2, 6, 23, .76);
+}
+
+.install-modal.visible { display: flex; }
+
+.install-card {
+  width: min(460px, 100%);
+  padding: 22px;
+  border: 1px solid #334155;
+  border-radius: 18px;
+  background: #111827;
+  color: var(--text);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .35);
+}
+
+.install-card h2 {
+  margin: 0 0 12px;
+}
+
+.install-card p,
+.install-card li {
+  color: #cbd5e1;
+  line-height: 1.55;
+}
+
+.install-card button {
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #111827;
+  font-weight: 800;
+}
 
 .app-navbar {
   position: fixed;
