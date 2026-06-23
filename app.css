@@ -20,6 +20,14 @@ body {
 
 body[data-no-nav="true"] { padding-bottom: 24px !important; }
 
+html.app-language-pending body {
+  background: var(--bg);
+}
+
+html.app-language-pending body > :not(.language-loading) {
+  visibility: hidden !important;
+}
+
 .skiptranslate,
 .goog-te-banner-frame,
 .goog-te-balloon-frame,

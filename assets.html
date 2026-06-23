@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Активи</title>
 <link rel="stylesheet" href="app.css">
+<script src="language-boot.js"></script>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="logo.png">
 <link rel="apple-touch-icon" href="logo.png">
@@ -58,7 +59,7 @@ let poolChart;
 let lastPool;
 
 const money = value => "$" + Number(value || 0).toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2});
-const localText = key => window.appTranslate ? window.appTranslate.tr(key) : ({pool:"Загальний пул",dailyChange:"Добова зміна"}[key] || key);
+const localText = key => window.appTranslate ? window.appTranslate.tr(key) : ({pool:"Загальний пул",dailyChange:"Добова зміна",perDay:"за добу"}[key] || key);
 const escapeHtml = value => String(value ?? "").replace(/[&<>'"]/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[char]));
 const typeLabels = {
   deposit:"Поповнення",
@@ -88,7 +89,7 @@ function renderHistory(history) {
 function renderPool(pool) {
   lastPool = pool;
   document.getElementById("pool").textContent = money(pool.current);
-  document.getElementById("poolChange").textContent = `+${Number(pool.dailyChangePercent).toFixed(2)}% за добу`;
+  document.getElementById("poolChange").textContent = `+${Number(pool.dailyChangePercent).toFixed(2)}% ${localText("perDay")}`;
   if (poolChart) poolChart.destroy();
   poolChart = new Chart(document.getElementById("poolChart"), {
     type:"line",

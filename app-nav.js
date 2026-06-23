@@ -19,7 +19,7 @@ const I18N = {
     learning: "Навчання криптовалютам", info: "Про проєкт", deposit: "Поповнення", withdraw: "Виведення коштів",
     profile: "Дані користувача", logout: "Вийти", balance: "Баланс", wallet: "Гаманець", userData: "Дані користувача",
     addFunds: "Поповнити", withdrawShort: "Вивести", mainBalance: "Основний баланс", operationHistory: "Історія операцій і винагород",
-    pool: "Загальний пул", dailyChange: "Добова зміна", readLesson: "Прочитайте короткий урок і дайте правильну відповідь. Кожен тест можна пройти один раз.",
+    pool: "Загальний пул", dailyChange: "Добова зміна", perDay: "за добу", readLesson: "Прочитайте короткий урок і дайте правильну відповідь. Кожен тест можна пройти один раз.",
     reward10: "Винагорода становить $10", check: "Перевірити", mainTrade: "Основна торгівля",
     tradeButton: "Торгувати", locked: "Заблоковано", availableAll: "Доступна всім користувачам",
     project: "United Europe Crypto", market: "Ринок", copy: "Скопійовано", back: "Назад"
@@ -30,7 +30,7 @@ const I18N = {
     learning: "Обучение криптовалютам", info: "О проекте", deposit: "Пополнение", withdraw: "Вывод средств",
     profile: "Данные пользователя", logout: "Выйти", balance: "Баланс", wallet: "Кошелек", userData: "Данные пользователя",
     addFunds: "Пополнить", withdrawShort: "Вывести", mainBalance: "Основной баланс", operationHistory: "История операций и наград",
-    pool: "Общий пул", dailyChange: "Суточное изменение", readLesson: "Прочитайте короткий урок и дайте правильный ответ. Каждый тест можно пройти один раз.",
+    pool: "Общий пул", dailyChange: "Суточное изменение", perDay: "за сутки", readLesson: "Прочитайте короткий урок и дайте правильный ответ. Каждый тест можно пройти один раз.",
     reward10: "Вознаграждение составляет $10", check: "Проверить", mainTrade: "Основная торговля",
     tradeButton: "Торговать", locked: "Заблокировано", availableAll: "Доступно всем пользователям",
     project: "United Europe Crypto", market: "Рынок", copy: "Скопировано", back: "Назад"
@@ -41,7 +41,7 @@ const I18N = {
     learning: "Криптовалюта бойынша оқу", info: "Жоба туралы", deposit: "Толықтыру", withdraw: "Шығару",
     profile: "Пайдаланушы деректері", logout: "Шығу", balance: "Баланс", wallet: "Әмиян", userData: "Пайдаланушы деректері",
     addFunds: "Толықтыру", withdrawShort: "Шығару", mainBalance: "Негізгі баланс", operationHistory: "Операциялар мен сыйақылар тарихы",
-    pool: "Жалпы пул", dailyChange: "Күндік өзгеріс", readLesson: "Қысқа сабақты оқып, дұрыс жауап беріңіз. Әр тестті бір рет өтуге болады.",
+    pool: "Жалпы пул", dailyChange: "Күндік өзгеріс", perDay: "тәулігіне", readLesson: "Қысқа сабақты оқып, дұрыс жауап беріңіз. Әр тестті бір рет өтуге болады.",
     reward10: "Сыйақы $10", check: "Тексеру", mainTrade: "Негізгі сауда",
     tradeButton: "Саудалау", locked: "Бұғатталған", availableAll: "Барлық пайдаланушыларға қолжетімді",
     project: "United Europe Crypto", market: "Нарық", copy: "Көшірілді", back: "Артқа"
@@ -52,7 +52,7 @@ const I18N = {
     learning: "Nauka kryptowalut", info: "O projekcie", deposit: "Wpłata", withdraw: "Wypłata",
     profile: "Dane użytkownika", logout: "Wyloguj", balance: "Saldo", wallet: "Portfel", userData: "Dane użytkownika",
     addFunds: "Wpłać", withdrawShort: "Wypłać", mainBalance: "Saldo główne", operationHistory: "Historia operacji i nagród",
-    pool: "Pula ogólna", dailyChange: "Zmiana dzienna", readLesson: "Przeczytaj krótki materiał i wybierz poprawną odpowiedź. Każdy test można ukończyć raz.",
+    pool: "Pula ogólna", dailyChange: "Zmiana dzienna", perDay: "dziennie", readLesson: "Przeczytaj krótki materiał i wybierz poprawną odpowiedź. Każdy test można ukończyć raz.",
     reward10: "Nagroda wynosi $10", check: "Sprawdź", mainTrade: "Handel główny",
     tradeButton: "Handluj", locked: "Zablokowane", availableAll: "Dostępne dla wszystkich użytkowników",
     project: "United Europe Crypto", market: "Rynek", copy: "Skopiowano", back: "Wstecz"
@@ -63,7 +63,7 @@ const I18N = {
     learning: "Învățare despre criptomonede", info: "Despre proiect", deposit: "Depunere", withdraw: "Retragere",
     profile: "Date utilizator", logout: "Ieșire", balance: "Sold", wallet: "Portofel", userData: "Date utilizator",
     addFunds: "Depune", withdrawShort: "Retrage", mainBalance: "Sold principal", operationHistory: "Istoricul operațiunilor și recompenselor",
-    pool: "Fond total", dailyChange: "Schimbare zilnică", readLesson: "Citește lecția scurtă și alege răspunsul corect. Fiecare test poate fi făcut o singură dată.",
+    pool: "Fond total", dailyChange: "Schimbare zilnică", perDay: "pe zi", readLesson: "Citește lecția scurtă și alege răspunsul corect. Fiecare test poate fi făcut o singură dată.",
     reward10: "Recompensa este de $10", check: "Verifică", mainTrade: "Tranzacție principală",
     tradeButton: "Tranzacționează", locked: "Blocat", availableAll: "Disponibil tuturor utilizatorilor",
     project: "United Europe Crypto", market: "Piață", copy: "Copiat", back: "Înapoi"
@@ -74,7 +74,7 @@ const I18N = {
     learning: "Cryptocurrency Learning", info: "About the project", deposit: "Deposit", withdraw: "Withdraw",
     profile: "User data", logout: "Log out", balance: "Balance", wallet: "Wallet", userData: "User data",
     addFunds: "Deposit", withdrawShort: "Withdraw", mainBalance: "Main balance", operationHistory: "Operations and rewards history",
-    pool: "Total pool", dailyChange: "Daily change", readLesson: "Read the short lesson and choose the correct answer. Each test can be completed once.",
+    pool: "Total pool", dailyChange: "Daily change", perDay: "per day", readLesson: "Read the short lesson and choose the correct answer. Each test can be completed once.",
     reward10: "The reward is $10", check: "Check", mainTrade: "Main trading",
     tradeButton: "Trade", locked: "Locked", availableAll: "Available to all users",
     project: "United Europe Crypto", market: "Market", copy: "Copied", back: "Back"
@@ -85,7 +85,7 @@ const I18N = {
     learning: "Kryptowährungen lernen", info: "Über das Projekt", deposit: "Einzahlung", withdraw: "Auszahlung",
     profile: "Benutzerdaten", logout: "Abmelden", balance: "Saldo", wallet: "Wallet", userData: "Benutzerdaten",
     addFunds: "Einzahlen", withdrawShort: "Auszahlen", mainBalance: "Hauptsaldo", operationHistory: "Verlauf von Vorgängen und Belohnungen",
-    pool: "Gesamtpool", dailyChange: "Tagesänderung", readLesson: "Lesen Sie die kurze Lektion und wählen Sie die richtige Antwort. Jeder Test kann einmal abgeschlossen werden.",
+    pool: "Gesamtpool", dailyChange: "Tagesänderung", perDay: "pro Tag", readLesson: "Lesen Sie die kurze Lektion und wählen Sie die richtige Antwort. Jeder Test kann einmal abgeschlossen werden.",
     reward10: "Die Belohnung beträgt $10", check: "Prüfen", mainTrade: "Haupthandel",
     tradeButton: "Handeln", locked: "Gesperrt", availableAll: "Für alle Benutzer verfügbar",
     project: "United Europe Crypto", market: "Markt", copy: "Kopiert", back: "Zurück"
@@ -96,7 +96,7 @@ const I18N = {
     learning: "Formation crypto", info: "À propos du projet", deposit: "Dépôt", withdraw: "Retrait",
     profile: "Données utilisateur", logout: "Déconnexion", balance: "Solde", wallet: "Portefeuille", userData: "Données utilisateur",
     addFunds: "Déposer", withdrawShort: "Retirer", mainBalance: "Solde principal", operationHistory: "Historique des opérations et récompenses",
-    pool: "Pool total", dailyChange: "Variation quotidienne", readLesson: "Lisez la courte leçon et choisissez la bonne réponse. Chaque test ne peut être terminé qu'une fois.",
+    pool: "Pool total", dailyChange: "Variation quotidienne", perDay: "par jour", readLesson: "Lisez la courte leçon et choisissez la bonne réponse. Chaque test ne peut être terminé qu'une fois.",
     reward10: "La récompense est de $10", check: "Vérifier", mainTrade: "Trading principal",
     tradeButton: "Trader", locked: "Verrouillé", availableAll: "Disponible pour tous les utilisateurs",
     project: "United Europe Crypto", market: "Marché", copy: "Copié", back: "Retour"
@@ -107,7 +107,7 @@ const I18N = {
     learning: "Aprendizado sobre criptomoedas", info: "Sobre o projeto", deposit: "Depósito", withdraw: "Retirada",
     profile: "Dados do usuário", logout: "Sair", balance: "Saldo", wallet: "Carteira", userData: "Dados do usuário",
     addFunds: "Depositar", withdrawShort: "Retirar", mainBalance: "Saldo principal", operationHistory: "Histórico de operações e recompensas",
-    pool: "Pool total", dailyChange: "Mudança diária", readLesson: "Leia a lição curta e escolha a resposta correta. Cada teste pode ser concluído uma vez.",
+    pool: "Pool total", dailyChange: "Mudança diária", perDay: "por dia", readLesson: "Leia a lição curta e escolha a resposta correta. Cada teste pode ser concluído uma vez.",
     reward10: "A recompensa é de $10", check: "Verificar", mainTrade: "Negociação principal",
     tradeButton: "Negociar", locked: "Bloqueado", availableAll: "Disponível para todos os usuários",
     project: "United Europe Crypto", market: "Mercado", copy: "Copiado", back: "Voltar"
@@ -118,7 +118,7 @@ const I18N = {
     learning: "Aprendizaje de criptomonedas", info: "Sobre el proyecto", deposit: "Depósito", withdraw: "Retiro",
     profile: "Datos del usuario", logout: "Salir", balance: "Saldo", wallet: "Billetera", userData: "Datos del usuario",
     addFunds: "Depositar", withdrawShort: "Retirar", mainBalance: "Saldo principal", operationHistory: "Historial de operaciones y recompensas",
-    pool: "Pool total", dailyChange: "Cambio diario", readLesson: "Lee la lección corta y elige la respuesta correcta. Cada prueba se puede completar una vez.",
+    pool: "Pool total", dailyChange: "Cambio diario", perDay: "por día", readLesson: "Lee la lección corta y elige la respuesta correcta. Cada prueba se puede completar una vez.",
     reward10: "La recompensa es de $10", check: "Comprobar", mainTrade: "Trading principal",
     tradeButton: "Operar", locked: "Bloqueado", availableAll: "Disponible para todos los usuarios",
     project: "United Europe Crypto", market: "Mercado", copy: "Copiado", back: "Atrás"
@@ -129,7 +129,7 @@ const I18N = {
     learning: "Formazione sulle criptovalute", info: "Informazioni sul progetto", deposit: "Deposito", withdraw: "Prelievo",
     profile: "Dati utente", logout: "Esci", balance: "Saldo", wallet: "Wallet", userData: "Dati utente",
     addFunds: "Deposita", withdrawShort: "Preleva", mainBalance: "Saldo principale", operationHistory: "Storico operazioni e ricompense",
-    pool: "Pool totale", dailyChange: "Variazione giornaliera", readLesson: "Leggi la breve lezione e scegli la risposta corretta. Ogni test può essere completato una sola volta.",
+    pool: "Pool totale", dailyChange: "Variazione giornaliera", perDay: "al giorno", readLesson: "Leggi la breve lezione e scegli la risposta corretta. Ogni test può essere completato una sola volta.",
     reward10: "La ricompensa è di $10", check: "Controlla", mainTrade: "Trading principale",
     tradeButton: "Fai trading", locked: "Bloccato", availableAll: "Disponibile per tutti gli utenti",
     project: "United Europe Crypto", market: "Mercato", copy: "Copiato", back: "Indietro"
@@ -238,6 +238,7 @@ function renderLanguageSelector() {
 }
 
 function showLanguageLoading() {
+  document.documentElement.classList.add("app-language-pending");
   let overlay = document.querySelector(".language-loading");
   if (!overlay) {
     overlay = document.createElement("div");
@@ -249,8 +250,20 @@ function showLanguageLoading() {
 }
 
 function hideLanguageLoading() {
+  document.documentElement.classList.remove("app-language-pending");
   sessionStorage.removeItem("language_switching");
   document.querySelector(".language-loading")?.classList.remove("visible");
+}
+
+function waitForGoogleTranslation() {
+  const startedAt = Date.now();
+  const timer = setInterval(() => {
+    const translated = document.documentElement.className.includes("translated-") || document.body.className.includes("translated-");
+    if (translated || Date.now() - startedAt > 5200) {
+      clearInterval(timer);
+      hideLanguageLoading();
+    }
+  }, 180);
 }
 
 function protectCurrencyText(root = document.body) {
@@ -314,7 +327,7 @@ function loadFullPageTranslator() {
       includedLanguages: APP_LANGUAGES.map(([code]) => GOOGLE_LANG_CODES[code]).filter(Boolean).join(","),
       autoDisplay: false
     }, "google_translate_element");
-    setTimeout(hideLanguageLoading, 1200);
+    waitForGoogleTranslation();
   };
 
   const script = document.createElement("script");
@@ -346,25 +359,30 @@ function renderInstallButton() {
   button.type = "button";
   button.className = "install-app-btn";
   button.textContent = tr("install");
-  button.addEventListener("click", async () => {
-    if (window.deferredInstallPrompt) {
-      window.deferredInstallPrompt.prompt();
-      await window.deferredInstallPrompt.userChoice.catch(() => {});
-      window.deferredInstallPrompt = null;
-      button.classList.remove("visible");
-      return;
-    }
-    showInstallInstructions();
-  });
+  button.addEventListener("click", installApp);
   const show = () => button.classList.add("visible");
   show();
   if (window.deferredInstallPrompt) show();
-  window.addEventListener("beforeinstallprompt", event => {
-    event.preventDefault();
-    window.deferredInstallPrompt = event;
-    show();
-  });
+  window.addEventListener("pwa-install-ready", show);
   document.body.insertBefore(button, document.body.firstElementChild?.nextSibling || null);
+}
+
+async function installApp() {
+  if (window.deferredInstallPrompt) {
+    const promptEvent = window.deferredInstallPrompt;
+    window.deferredInstallPrompt = null;
+    promptEvent.prompt();
+    const choice = await promptEvent.userChoice.catch(() => null);
+    if (choice?.outcome === "accepted") {
+      document.querySelector(".install-app-btn")?.classList.remove("visible");
+    }
+    return;
+  }
+  if ("serviceWorker" in navigator) {
+    await navigator.serviceWorker.ready.catch(() => {});
+  }
+  if (window.deferredInstallPrompt) return installApp();
+  showInstallInstructions();
 }
 
 function showInstallInstructions() {
@@ -458,7 +476,7 @@ document.addEventListener("DOMContentLoaded", () => {
   loadFullPageTranslator();
   window.dispatchEvent(new CustomEvent("app-language-ready"));
   if (currentLang() === "uk") hideLanguageLoading();
-  setTimeout(hideLanguageLoading, 3200);
+  if (currentLang() !== "uk") setTimeout(hideLanguageLoading, 5600);
 });
 
 window.appTranslate = { tr, applyTranslations, currentLang, protectCurrencyText };

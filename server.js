@@ -110,7 +110,7 @@ const PUBLIC_FILES = new Set([
   "index.html", "login.html", "register.html", "terms.html", "loading.html",
   "trade.html", "assets.html", "learning.html", "info.html", "coin.html",
   "deposit.html", "withdraw.html", "profile.html", "admin.html", "app.css", "app-nav.js",
-  "pwa.js", "service-worker.js", "manifest.json", "logo.png"
+  "language-boot.js", "pwa.js", "service-worker.js", "manifest.json", "logo.png"
 ]);
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
 app.get("/:file", (req, res, next) => {
