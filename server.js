@@ -9,8 +9,102 @@ const crypto = require("crypto");
 const { createClient } = require("@supabase/supabase-js");
 
 const app = express();
-app.use(cors());
-app.use(express.json());
+app.set("trust proxy", 1);
+
+const IS_PRODUCTION = process.env.NODE_ENV === "production" || Boolean(process.env.RENDER);
+const APP_ORIGIN = process.env.APP_ORIGIN || "https://cryptoapp-eqc5.onrender.com";
+const ALLOWED_ORIGINS = new Set([
+  APP_ORIGIN,
+  "https://cryptoapp-eqc5.onrender.com",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000"
+]);
+
+function clientIp(req) {
+  let ip = req.headers["cf-connecting-ip"] || req.headers["x-real-ip"] || req.headers["x-forwarded-for"] || req.socket.remoteAddress || "";
+  if (Array.isArray(ip)) ip = ip[0] || "";
+  if (String(ip).includes(",")) ip = String(ip).split(",")[0].trim();
+  return String(ip).replace("::ffff:", "") || "unknown";
+}
+
+function enforceHttps(req, res, next) {
+  const proto = req.headers["x-forwarded-proto"];
+  if (IS_PRODUCTION && proto && proto !== "https") {
+    return res.redirect(301, `https://${req.headers.host}${req.originalUrl}`);
+  }
+  return next();
+}
+
+function securityHeaders(req, res, next) {
+  res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+  res.setHeader("Content-Security-Policy", [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://translate.google.com https://translate.googleapis.com https://www.gstatic.com",
+    "style-src 'self' 'unsafe-inline' https://translate.googleapis.com https://www.gstatic.com",
+    "img-src 'self' data: https:",
+    "connect-src 'self' https://cryptoapp-eqc5.onrender.com https://api.coingecko.com https://api.binance.com https://api.qrserver.com https://translate.google.com https://translate.googleapis.com https://*.googleapis.com",
+    "frame-src https://translate.google.com",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'"
+  ].join("; "));
+  next();
+}
+
+function createRateLimit({ windowMs, max, message }) {
+  const hits = new Map();
+  return (req, res, next) => {
+    const now = Date.now();
+    const key = `${clientIp(req)}:${req.route?.path || req.path}`;
+    const entry = hits.get(key) || { count: 0, resetAt: now + windowMs };
+    if (entry.resetAt <= now) {
+      entry.count = 0;
+      entry.resetAt = now + windowMs;
+    }
+    entry.count += 1;
+    hits.set(key, entry);
+    if (entry.count > max) {
+      res.setHeader("Retry-After", Math.ceil((entry.resetAt - now) / 1000));
+      return res.status(429).json({ success: false, message });
+    }
+    if (hits.size > 5000) {
+      for (const [storedKey, storedEntry] of hits.entries()) {
+        if (storedEntry.resetAt <= now) hits.delete(storedKey);
+      }
+    }
+    return next();
+  };
+}
+
+const globalLimiter = createRateLimit({ windowMs: 60 * 1000, max: 240, message: "Too many requests" });
+const authLimiter = createRateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: "Too many auth attempts" });
+const registerLimiter = createRateLimit({ windowMs: 15 * 60 * 1000, max: 8, message: "Too many registration attempts" });
+const actionLimiter = createRateLimit({ windowMs: 10 * 60 * 1000, max: 40, message: "Too many actions" });
+const adminLimiter = createRateLimit({ windowMs: 10 * 60 * 1000, max: 120, message: "Too many admin requests" });
+
+app.use(enforceHttps);
+app.use(securityHeaders);
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || ALLOWED_ORIGINS.has(origin)) return callback(null, true);
+    return callback(new Error("CORS blocked"));
+  },
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "x-admin-key"],
+  credentials: false,
+  maxAge: 86400
+}));
+app.use(express.json({ limit: "32kb", strict: true }));
+app.use((err, req, res, next) => {
+  if (err) return res.status(400).json({ success: false, message: "Invalid request" });
+  return next();
+});
+app.use(globalLimiter);
 
 const PUBLIC_FILES = new Set([
   "index.html", "login.html", "register.html", "terms.html", "loading.html",
@@ -52,7 +146,9 @@ function auth(req, res, next) {
   if (!token) return res.status(401).json({ success: false, message: "Unauthorized" });
 
   try {
-    req.userId = jwt.verify(token, SECRET).id;
+    const userId = Number(jwt.verify(token, SECRET).id);
+    if (!Number.isInteger(userId) || userId <= 0) throw new Error("Invalid user");
+    req.userId = userId;
     next();
   } catch {
     return res.status(401).json({ success: false, message: "Unauthorized" });
@@ -67,7 +163,9 @@ function adminAuth(req, res, next) {
 }
 
 async function findUser(id, fields = PUBLIC_USER_FIELDS) {
-  const { data } = await supabase.from("users").select(fields).eq("id", id).maybeSingle();
+  const userId = Number(id);
+  if (!Number.isInteger(userId) || userId <= 0) return null;
+  const { data } = await supabase.from("users").select(fields).eq("id", userId).maybeSingle();
   return data;
 }
 
@@ -77,6 +175,44 @@ function formatUserId(id) {
 
 function withDisplayId(user) {
   return user ? { ...user, display_id: formatUserId(user.id) } : user;
+}
+
+function cleanText(value, maxLength = 120) {
+  return String(value || "")
+    .replace(/[\u0000-\u001F\u007F]/g, "")
+    .replace(/[<>]/g, "")
+    .trim()
+    .slice(0, maxLength);
+}
+
+function cleanEmail(value) {
+  return String(value || "").trim().toLowerCase().slice(0, 160);
+}
+
+function cleanPhone(value) {
+  return String(value || "").replace(/\D/g, "").slice(0, 15);
+}
+
+function cleanWallet(value) {
+  return String(value || "").trim().replace(/[\u0000-\u001F\u007F\s<>]/g, "").slice(0, 160);
+}
+
+function isValidWallet(value) {
+  return /^[A-Za-z0-9:_\-.]{10,160}$/.test(value);
+}
+
+function positiveAmount(value, max = 1000000) {
+  const amount = Number(value);
+  return Number.isFinite(amount) && amount > 0 && amount <= max ? Number(amount.toFixed(2)) : null;
+}
+
+function safeJsonObject(value) {
+  try {
+    const parsed = JSON.parse(String(value || "{}"));
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
 }
 
 function poolRateForDay(dayNumber) {
@@ -125,6 +261,15 @@ function emailCodeDigest(code) {
   return crypto.createHash("sha256").update(`${code}:${SECRET}`).digest("hex");
 }
 
+function encryptForStorage(value) {
+  const key = crypto.createHash("sha256").update(SECRET).digest();
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
+  const encrypted = Buffer.concat([cipher.update(String(value), "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return `enc:gcm:${iv.toString("base64")}:${tag.toString("base64")}:${encrypted.toString("base64")}`;
+}
+
 async function sendVerificationEmail(email, code, purpose = "registration") {
   const action = purpose === "email_change" ? "зміни електронної пошти" : "реєстрації";
   const subject = `Код підтвердження United Ukraine: ${code}`;
@@ -153,12 +298,12 @@ async function sendVerificationEmail(email, code, purpose = "registration") {
 
 function registrationData(body) {
   return {
-    fullname: String(body.fullname || "").trim(),
-    nickname: String(body.nickname || "").trim(),
-    country: String(body.country || "").trim(),
-    phone: String(body.phone || "").replace(/\D/g, ""),
-    email: String(body.email || "").trim().toLowerCase(),
-    password: String(body.password || ""),
+    fullname: cleanText(body.fullname, 80),
+    nickname: cleanText(body.nickname, 40),
+    country: cleanText(body.country, 60),
+    phone: cleanPhone(body.phone),
+    email: cleanEmail(body.email),
+    password: String(body.password || "").slice(0, 200),
     referrerId: body.referrer_id ? Number(body.referrer_id) : null
   };
 }
@@ -174,9 +319,7 @@ async function validateRegistration(data) {
 }
 
 function requestIp(req) {
-  let ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "";
-  if (ip.includes(",")) ip = ip.split(",")[0].trim();
-  return ip.replace("::ffff:", "");
+  return clientIp(req);
 }
 
 async function tooManyAccounts(ip) {
@@ -209,7 +352,7 @@ async function createRegisteredUser(data, passwordHash, ip, emailVerified = fals
       deposit: 0,
       satellites: 0,
       wallet_address: wallet.address,
-      private_key: wallet.privateKey,
+      private_key: encryptForStorage(wallet.privateKey),
       email_code: null,
       email_verified: emailVerified,
       ip
@@ -260,7 +403,7 @@ app.get("/registration/settings", (req, res) => {
   res.json({ success: true, emailVerificationRequired: EMAIL_VERIFICATION_REQUIRED });
 });
 
-app.post("/register/start", async (req, res) => {
+app.post("/register/start", registerLimiter, async (req, res) => {
   try {
     const data = registrationData(req.body);
     const validationError = await validateRegistration(data);
@@ -291,7 +434,7 @@ app.post("/register/start", async (req, res) => {
   }
 });
 
-app.post("/register/verify", async (req, res) => {
+app.post("/register/verify", registerLimiter, async (req, res) => {
   try {
     const pending = jwt.verify(String(req.body.pendingToken || ""), SECRET);
     const code = String(req.body.code || "").trim();
@@ -312,10 +455,10 @@ app.post("/register/verify", async (req, res) => {
   }
 });
 
-app.post("/login", async (req, res) => {
+app.post("/login", authLimiter, async (req, res) => {
   try {
-    const email = String(req.body.email || "").trim().toLowerCase();
-    const password = String(req.body.password || "");
+    const email = cleanEmail(req.body.email);
+    const password = String(req.body.password || "").slice(0, 200);
     if (!email || !password) return res.json({ success: false });
 
     const { data: user } = await supabase.from("users").select("id,password").eq("email", email).maybeSingle();
@@ -335,13 +478,13 @@ app.get("/me", auth, async (req, res) => {
   return res.json(withDisplayId(user));
 });
 
-app.post("/profile/change-request", auth, async (req, res) => {
+app.post("/profile/change-request", actionLimiter, auth, async (req, res) => {
   try {
     const changes = {
-      fullname: String(req.body.fullname || "").trim(),
-      nickname: String(req.body.nickname || "").trim(),
-      country: String(req.body.country || "").trim(),
-      phone: String(req.body.phone || "").replace(/\D/g, "")
+      fullname: cleanText(req.body.fullname, 80),
+      nickname: cleanText(req.body.nickname, 40),
+      country: cleanText(req.body.country, 60),
+      phone: cleanPhone(req.body.phone)
     };
     if (!changes.fullname || !changes.nickname || !changes.country || changes.phone.length < 10 || changes.phone.length > 15) {
       return res.json({ success: false, message: "Invalid data" });
@@ -354,9 +497,9 @@ app.post("/profile/change-request", auth, async (req, res) => {
   }
 });
 
-app.post("/profile/email/start", auth, async (req, res) => {
+app.post("/profile/email/start", authLimiter, auth, async (req, res) => {
   try {
-    const email = String(req.body.email || "").trim().toLowerCase();
+    const email = cleanEmail(req.body.email);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.json({ success: false, message: "Invalid email" });
     const { data: existing } = await supabase.from("users").select("id").eq("email", email).maybeSingle();
     if (existing) return res.json({ success: false, message: "User exists" });
@@ -370,7 +513,7 @@ app.post("/profile/email/start", auth, async (req, res) => {
   }
 });
 
-app.post("/profile/email/verify", auth, async (req, res) => {
+app.post("/profile/email/verify", authLimiter, auth, async (req, res) => {
   try {
     const pending = jwt.verify(String(req.body.pendingToken || ""), SECRET);
     const code = String(req.body.code || "").trim();
@@ -424,10 +567,10 @@ app.get("/assets/summary", auth, async (req, res) => {
   }
 });
 
-app.post("/deposit", auth, async (req, res) => {
+app.post("/deposit", actionLimiter, auth, async (req, res) => {
   try {
-    const amount = Number(req.body.amount);
-    if (!Number.isFinite(amount) || amount <= 0) {
+    const amount = positiveAmount(req.body.amount);
+    if (!amount) {
       return res.json({ success: false, message: "Invalid amount" });
     }
     const user = await findUser(req.userId, "id,wallet_address");
@@ -441,12 +584,12 @@ app.post("/deposit", auth, async (req, res) => {
   }
 });
 
-app.post("/withdraw", auth, async (req, res) => {
+app.post("/withdraw", actionLimiter, auth, async (req, res) => {
   try {
-    const amount = Number(req.body.amount);
-    const wallet = String(req.body.wallet || "").trim();
+    const amount = positiveAmount(req.body.amount);
+    const wallet = cleanWallet(req.body.wallet);
     const user = await findUser(req.userId, "id,balance");
-    if (!user || !wallet || !Number.isFinite(amount) || amount <= 0 || Number(user.balance) < amount) {
+    if (!user || !isValidWallet(wallet) || !amount || Number(user.balance) < amount) {
       return res.json({ success: false, message: "Invalid withdrawal" });
     }
 
@@ -485,7 +628,7 @@ app.get("/quiz/progress", auth, async (req, res) => {
   return res.json({ success: true, completed, learningUnlocked, minDeposit: LEARNING_MIN_DEPOSIT, deposit: Number(user.deposit || 0) });
 });
 
-app.post("/quiz/complete", auth, async (req, res) => {
+app.post("/quiz/complete", actionLimiter, auth, async (req, res) => {
   try {
     const user = await findUser(req.userId, "id,balance,deposit");
     if (!user) return res.status(404).json({ success: false });
@@ -572,7 +715,7 @@ app.get("/trade/status", auth, async (req, res) => {
   return res.json({ success: true, ...status });
 });
 
-app.post("/trade/execute", auth, async (req, res) => {
+app.post("/trade/execute", actionLimiter, auth, async (req, res) => {
   try {
     const position = Number(req.body.position);
     if (!Number.isInteger(position) || position < 0 || position > 5) {
@@ -606,7 +749,7 @@ app.post("/trade/execute", auth, async (req, res) => {
   }
 });
 
-app.get("/admin/users", adminAuth, async (req, res) => {
+app.get("/admin/users", adminLimiter, adminAuth, async (req, res) => {
   const { data, error } = await supabase.from("users").select(PUBLIC_USER_FIELDS).order("id", { ascending: true });
   if (error) return res.status(500).json({ success: false, message: error.message });
   const counts = {};
@@ -616,7 +759,7 @@ app.get("/admin/users", adminAuth, async (req, res) => {
   return res.json((data || []).map(user => ({ ...withDisplayId(user), satellites: counts[user.id] || 0 })));
 });
 
-app.get("/admin/signals", adminAuth, async (req, res) => {
+app.get("/admin/signals", adminLimiter, adminAuth, async (req, res) => {
   const [{ data: signals }, { data: users }] = await Promise.all([
     supabase.from("signals").select("id,user_id,type,amount,wallet,status,created_at").order("created_at", { ascending: false }),
     supabase.from("users").select("id,fullname,nickname,email")
@@ -625,7 +768,7 @@ app.get("/admin/signals", adminAuth, async (req, res) => {
   return res.json((signals || []).map(signal => ({ ...signal, user: usersById[signal.user_id] || null })));
 });
 
-app.get("/admin/referrals", adminAuth, async (req, res) => {
+app.get("/admin/referrals", adminLimiter, adminAuth, async (req, res) => {
   const { data } = await supabase
     .from("users")
     .select("id,fullname,nickname,email,balance,referrer_id")
@@ -633,32 +776,32 @@ app.get("/admin/referrals", adminAuth, async (req, res) => {
   return res.json((data || []).map(withDisplayId));
 });
 
-app.post("/admin/add-balance", adminAuth, async (req, res) => {
+app.post("/admin/add-balance", adminLimiter, adminAuth, async (req, res) => {
   const user = await findUser(Number(req.body.user_id), "id,balance");
   const amount = Number(req.body.amount);
-  if (!user || !Number.isFinite(amount)) return res.json({ success: false });
+  if (!user || !Number.isFinite(amount) || Math.abs(amount) > 1000000) return res.json({ success: false });
   const balance = Number(user.balance || 0) + amount;
   await supabase.from("users").update({ balance }).eq("id", user.id);
   return res.json({ success: true, balance });
 });
 
-app.post("/admin/set-balance", adminAuth, async (req, res) => {
+app.post("/admin/set-balance", adminLimiter, adminAuth, async (req, res) => {
   const userId = Number(req.body.user_id);
   const amount = Number(req.body.amount);
-  if (!Number.isFinite(amount)) return res.json({ success: false });
+  if (!Number.isInteger(userId) || userId <= 0 || !Number.isFinite(amount) || amount < 0 || amount > 1000000) return res.json({ success: false });
   await supabase.from("users").update({ balance: amount }).eq("id", userId);
   return res.json({ success: true, balance: amount });
 });
 
-app.post("/admin/approve", adminAuth, async (req, res) => {
+app.post("/admin/approve", adminLimiter, adminAuth, async (req, res) => {
   try {
     const signalId = Number(req.body.id);
     const { data: signal } = await supabase.from("signals").select("id,user_id,type,amount,wallet,status").eq("id", signalId).maybeSingle();
     if (!signal || signal.status !== "pending") return res.json({ success: false, message: "Request unavailable" });
     if (signal.type === "deposit" || signal.type === "withdraw") {
-      const amount = Number(signal.amount || 0);
+      const amount = positiveAmount(signal.amount);
       const user = await findUser(signal.user_id, "id,balance,deposit");
-      if (!user || !Number.isFinite(amount) || amount <= 0) return res.json({ success: false, message: "Invalid request" });
+      if (!user || !amount) return res.json({ success: false, message: "Invalid request" });
       if (signal.type === "withdraw" && Number(user.balance || 0) < amount) {
         return res.json({ success: false, message: "Insufficient balance" });
       }
@@ -670,15 +813,21 @@ app.post("/admin/approve", adminAuth, async (req, res) => {
       const { error } = await supabase.from("users").update(updates).eq("id", signal.user_id);
       if (error) throw error;
     } else if (signal.type === "profile_update" || signal.type === "email_update") {
-      const changes = JSON.parse(signal.wallet || "{}");
+      const changes = safeJsonObject(signal.wallet);
       const allowed = signal.type === "email_update"
-        ? { email: String(changes.email || "").trim().toLowerCase(), email_verified: true }
+        ? { email: cleanEmail(changes.email), email_verified: true }
         : {
-            fullname: String(changes.fullname || "").trim(),
-            nickname: String(changes.nickname || "").trim(),
-            country: String(changes.country || "").trim(),
-            phone: String(changes.phone || "").replace(/\D/g, "")
+            fullname: cleanText(changes.fullname, 80),
+            nickname: cleanText(changes.nickname, 40),
+            country: cleanText(changes.country, 60),
+            phone: cleanPhone(changes.phone)
           };
+      if (signal.type === "email_update" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(allowed.email)) {
+        return res.json({ success: false, message: "Invalid email" });
+      }
+      if (signal.type === "profile_update" && (!allowed.fullname || !allowed.nickname || !allowed.country || allowed.phone.length < 10 || allowed.phone.length > 15)) {
+        return res.json({ success: false, message: "Invalid profile data" });
+      }
       const { error } = await supabase.from("users").update(allowed).eq("id", signal.user_id);
       if (error) throw error;
     }
@@ -690,12 +839,14 @@ app.post("/admin/approve", adminAuth, async (req, res) => {
   }
 });
 
-app.post("/admin/reject", adminAuth, async (req, res) => {
-  await supabase.from("signals").update({ status: "rejected" }).eq("id", Number(req.body.id));
+app.post("/admin/reject", adminLimiter, adminAuth, async (req, res) => {
+  const signalId = Number(req.body.id);
+  if (!Number.isInteger(signalId) || signalId <= 0) return res.json({ success: false });
+  await supabase.from("signals").update({ status: "rejected" }).eq("id", signalId);
   return res.json({ success: true });
 });
 
-app.post("/admin/delete-signal", adminAuth, async (req, res) => {
+app.post("/admin/delete-signal", adminLimiter, adminAuth, async (req, res) => {
   try {
     const signalId = Number(req.body.id);
     if (!Number.isInteger(signalId) || signalId <= 0) return res.json({ success: false, message: "Invalid signal" });
@@ -708,7 +859,7 @@ app.post("/admin/delete-signal", adminAuth, async (req, res) => {
   }
 });
 
-app.post("/admin/delete-user", adminAuth, async (req, res) => {
+app.post("/admin/delete-user", adminLimiter, adminAuth, async (req, res) => {
   try {
     const userId = Number(req.body.user_id);
     if (!Number.isInteger(userId) || userId <= 0) return res.json({ success: false, message: "Invalid user" });
