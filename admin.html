@@ -35,6 +35,14 @@ h1 { text-align:center; }
 .search-panel input { width:100%; box-sizing:border-box; padding:11px; border:1px solid #334155; border-radius:8px; background:#0b1220; color:white; }
 .delete-btn { background:#7f1d1d; color:white; }
 .muted-note { color:var(--muted); font-size:12px; margin-top:8px; }
+.support-thread { display:grid; gap:10px; margin-top:12px; }
+.support-line { max-width:82%; padding:10px 12px; border-radius:13px; background:#172033; color:#e5e7eb; line-height:1.45; white-space:pre-wrap; }
+.support-line.user { margin-left:auto; background:#2563eb; color:white; }
+.support-line.support { background:#064e3b; }
+.support-line small { display:block; margin-top:5px; color:#cbd5e1; font-size:11px; }
+.support-reply { display:grid; gap:8px; margin-top:12px; }
+.support-reply textarea { width:100%; min-height:76px; resize:vertical; padding:10px; border:1px solid #334155; border-radius:8px; background:#0b1220; color:white; }
+.support-reply button { width:auto; padding:10px 14px; border:0; border-radius:8px; background:var(--accent); color:#111; font-weight:800; cursor:pointer; }
 </style>
 </head>
 <body data-no-nav="true">
@@ -53,6 +61,7 @@ h1 { text-align:center; }
       <button data-tab="deposits">Поповнення</button>
       <button data-tab="withdrawals">Виведення</button>
       <button data-tab="profileRequests">Зміни даних</button>
+      <button data-tab="support">Підтримка</button>
       <button data-tab="satellites">Структура сателітів</button>
     </div>
     <div class="search-panel">
@@ -64,6 +73,7 @@ h1 { text-align:center; }
     <section class="section" id="deposits"></section>
     <section class="section" id="withdrawals"></section>
     <section class="section" id="profileRequests"></section>
+    <section class="section" id="support"></section>
     <section class="section" id="satellites"></section>
   </div>
 </main>
@@ -73,6 +83,7 @@ let adminKey = sessionStorage.getItem("admin_key") || "";
 let allUsers = [];
 let allSignals = [];
 let allReferrals = [];
+let allSupport = [];
 const adminFetch = (path, options = {}) => fetch(API_URL + path, {
   ...options,
   headers: { ...(options.headers || {}), "X-Admin-Key": adminKey }
@@ -108,6 +119,7 @@ document.getElementById("adminSearch").addEventListener("input", () => {
   renderUsers(allUsers);
   renderSignals(allSignals);
   renderSatellites(allReferrals);
+  renderSupport(allSupport);
 });
 
 async function loadUsers() {
@@ -211,11 +223,70 @@ async function loadSignals() {
 }
 
 function renderSignals(signals) {
-  document.getElementById("signals").innerHTML = renderSignalList(signals.filter(signal => !["deposit","withdraw","profile_update","email_update"].includes(signal.type)), "Типових сигналів немає");
+  document.getElementById("signals").innerHTML = renderSignalList(signals.filter(signal => !["deposit","withdraw","profile_update","email_update","support_user","support_bot","support_admin"].includes(signal.type)), "Типових сигналів немає");
   document.getElementById("deposits").innerHTML = renderSignalList(signals.filter(signal => signal.type === "deposit"), "Заявок на поповнення немає");
   document.getElementById("withdrawals").innerHTML = renderSignalList(signals.filter(signal => signal.type === "withdraw"), "Заявок на виведення немає");
   document.getElementById("profileRequests").innerHTML = renderSignalList(signals.filter(signal => ["profile_update","email_update"].includes(signal.type)), "Заявок на зміну даних немає");
   window.appTranslate?.translatePage();
+}
+
+async function loadSupport() {
+  const response = await adminFetch("/admin/support");
+  const data = await response.json();
+  allSupport = data.messages || [];
+  renderSupport(allSupport);
+}
+
+function renderSupport(messages) {
+  const grouped = {};
+  for (const item of messages) {
+    (grouped[item.user_id] ||= { user: item.user, messages: [] }).messages.push(item);
+  }
+  const threads = Object.entries(grouped).map(([userId, thread]) => ({
+    userId,
+    user: thread.user,
+    messages: thread.messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at)),
+    latest: Math.max(...thread.messages.map(item => new Date(item.created_at).getTime()))
+  })).sort((a, b) => b.latest - a.latest).filter(thread => matchesSearch(searchable([
+    thread.userId, thread.user?.display_id, thread.user?.fullname, thread.user?.nickname, thread.user?.email,
+    ...thread.messages.map(item => `${item.role} ${item.text} ${item.status}`)
+  ])));
+
+  document.getElementById("support").innerHTML = threads.length ? threads.map(thread => `
+    <article class="card">
+      <b>#${thread.user?.display_id || displayId(thread.userId)} ${escapeHtml(thread.user?.nickname || thread.user?.fullname || "Користувач")}</b>
+      <div class="label">${escapeHtml(thread.user?.email || "-")}</div>
+      <div class="support-thread">
+        ${thread.messages.map(item => `
+          <div class="support-line ${escapeHtml(item.role || "bot")}">
+            <b>${item.role === "user" ? "Користувач" : item.role === "support" ? "Підтримка" : "AI оператор"}</b><br>
+            ${escapeHtml(item.text)}
+            <small>${escapeHtml(item.status)} · ${new Date(item.created_at).toLocaleString("uk-UA")}</small>
+          </div>
+        `).join("")}
+      </div>
+      <div class="support-reply">
+        <textarea id="support-reply-${thread.userId}" placeholder="Відповідь від імені підтримки"></textarea>
+        <button type="button" onclick="sendSupportReply(${thread.userId})">Надіслати відповідь</button>
+      </div>
+    </article>
+  `).join("") : '<div class="empty">Звернень у підтримку немає</div>';
+  window.appTranslate?.translatePage();
+}
+
+async function sendSupportReply(userId) {
+  const input = document.getElementById(`support-reply-${userId}`);
+  const message = input.value.trim();
+  if (!message) return alert("Введіть відповідь");
+  const response = await adminFetch("/admin/support/reply", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({user_id:userId, message})
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!result.success) return alert(result.message || "Не вдалося надіслати відповідь");
+  input.value = "";
+  await loadSupport();
 }
 
 async function setSignal(id, action) {
@@ -268,7 +339,7 @@ function renderSatellites(users) {
 }
 
 async function refresh() {
-  try { await Promise.all([loadUsers(), loadSignals(), loadSatellites()]); }
+  try { await Promise.all([loadUsers(), loadSignals(), loadSatellites(), loadSupport()]); }
   catch (error) {
     const message = error.message === "admin-auth" ? "Невірний код адміністратора або ADMIN_KEY не налаштований на Render." : "Не вдалося завантажити дані";
     document.querySelectorAll(".section").forEach(section => section.innerHTML = `<div class="empty">${message}</div>`);

@@ -132,6 +132,7 @@ const supabase = createClient(
 );
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN || "8714057941:AAGZL1OXRoy8-7_IoVAHBePTLwuTKmqicOg";
 const TELEGRAM_MIRROR_TOKEN = process.env.TELEGRAM_MIRROR_TOKEN || "8838586164:AAHRVFEv_Elr-iNEsqyDbnqSB3_aJ8KFZvc";
+const SUPPORT_TELEGRAM_TOKEN = process.env.SUPPORT_TELEGRAM_TOKEN || "8684197550:AAEJzPHMAYPIm9Rk5xDw8RxrXKze5tq_Vqo";
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID || "337179852";
 const ADMIN_KEY = process.env.ADMIN_KEY || "";
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
@@ -330,6 +331,111 @@ function requestTelegramText(type, user, amount, wallet) {
     `Wallet: ${wallet || "-"}`,
     `Balance: $${Number(user.balance || 0).toFixed(2)}`,
     `Confirmed deposit: $${Number(user.deposit || 0).toFixed(2)}`
+  ].join("\n");
+}
+
+function supportPayload(role, text, extra = {}) {
+  return JSON.stringify({
+    role,
+    text: cleanText(text, 1800),
+    ...extra
+  });
+}
+
+function parseSupportPayload(value) {
+  const payload = safeJsonObject(value);
+  return {
+    role: cleanText(payload.role || "user", 30),
+    text: cleanText(payload.text || "", 1800),
+    source: cleanText(payload.source || "", 60)
+  };
+}
+
+function supportLanguage(text) {
+  return /[A-Za-z]/.test(text) && !/[А-Яа-яІіЇїЄєҐґ]/.test(text) ? "en" : "uk";
+}
+
+function supportAnswer(message) {
+  const text = String(message || "").toLowerCase();
+  const lang = supportLanguage(text);
+  const answer = (uk, en) => ({ handled: true, text: lang === "en" ? en : uk });
+  const handoff = (uk, en) => ({ handled: false, text: lang === "en" ? en : uk });
+
+  if (/(парол|password|login|логін|увійти|вхід|не вход)/i.test(text)) {
+    return answer(
+      "Для входу використайте email і пароль, які були вказані при реєстрації. Якщо вхід не працює, перевірте правильність email, пароль і стабільність інтернету. Якщо проблема залишиться, я передам звернення підтримці.",
+      "Use the email and password from registration. If login does not work, check the email, password and internet connection. If the issue remains, I will pass it to support."
+    );
+  }
+  if (/(реєстр|registr|код|email|пошта|підтвердж)/i.test(text)) {
+    return answer(
+      "Реєстрація проходить через сторінку умов і форму створення акаунту. Якщо підтвердження email увімкнене, без коду з пошти завершити реєстрацію не можна. Перевірте папку Спам і правильність адреси.",
+      "Registration goes through the terms page and account form. If email verification is enabled, the code is required. Check Spam and make sure the email address is correct."
+    );
+  }
+  if (/(поповн|deposit|депозит|usdt|trc20|500)/i.test(text)) {
+    return answer(
+      "Мінімальна сума поповнення становить $500. Користувач переказує USDT у мережі TRC20 на вказаний гаманець, створює заявку в додатку, а баланс змінюється тільки після підтвердження адміністратором. Ліміт два поповнення рахується лише після підтверджених поповнень.",
+      "The minimum deposit is $500. Send USDT via TRC20 to the shown wallet, create a request in the app, and the balance changes only after admin approval. The two-deposit limit counts only approved deposits."
+    );
+  }
+  if (/(вив(е|і)д|withdraw|знят|100|гаманець)/i.test(text)) {
+    return answer(
+      "Вивід доступний від $100, один раз на годину, і тільки із зароблених коштів. Гаманець для виводу може відрізнятися від гаманця акаунту. Внесені через поповнення кошти не входять до доступної для виводу суми.",
+      "Withdrawals start from $100, once per hour, and only from earned funds. The withdrawal wallet may differ from the account wallet. Deposited funds are not included in the withdrawable amount."
+    );
+  }
+  if (/(навчан|learning|урок|тест|quiz)/i.test(text)) {
+    return answer(
+      "Навчання відкривається після підтвердженого поповнення від $500. Уроки містять коротку інформацію і тест. За правильне проходження тесту може нараховуватися внутрішня винагорода $10.",
+      "Learning opens after an approved deposit from $500. Lessons include short information and a quiz. Correct completion can create a $10 internal reward."
+    );
+  }
+  if (/(сател|satellite|запрош|referr|структур)/i.test(text)) {
+    return answer(
+      "Сателіти - це запрошені користувачі. Вони стають активними після підтвердженого поповнення від $500. Активні сателіти поступово відкривають додаткові торгові позиції запрошувачу.",
+      "Satellites are invited users. They become active after an approved deposit from $500. Active satellites gradually unlock additional trading positions for the inviter."
+    );
+  }
+  if (/(торг|trade|угод|позиці|дохід|відсот)/i.test(text)) {
+    return answer(
+      "Основна торгова позиція доступна всім користувачам з балансом. Додаткові позиції відкриваються через активних сателітів. Угода завершується через 10 хвилин, а нова можливість торгувати відкривається о 00:00 кожного дня.",
+      "The main trading position is available to users with balance. Extra positions unlock through active satellites. A trade settles after 10 minutes, and the next daily opportunity opens at 00:00."
+    );
+  }
+  if (/(винагород|reward|бонус|отримати)/i.test(text)) {
+    return answer(
+      "Винагороди відображаються на окремій сторінці. Кнопка Отримати активується тільки після виконання умови: навчання, активні сателіти, торгові дні поспіль або балансові рівні.",
+      "Rewards are shown on a separate page. The Claim button becomes active only after the goal is completed: learning, active satellites, trading streaks or balance levels."
+    );
+  }
+  if (/(сайт|site|website|публічн|інфо)/i.test(text)) {
+    return answer(
+      "Публічний сайт проекту відкривається за адресою /site. У додатку перехід на сайт є на сторінці Інфо. Сайт пояснює ідею проекту, навчання, ризики, FAQ і зв'язок з додатком.",
+      "The public project website is available at /site. In the app, the link is on the Info page. The website explains the project idea, learning, risks, FAQ and connection with the app."
+    );
+  }
+  if (/(ризик|risk|гарант|прибут|profit|втрат)/i.test(text)) {
+    return answer(
+      "Криптовалюти мають високий ризик, а прибуток не гарантується. Платформа дає навчання, структуру та внутрішній облік, але користувач повинен розуміти можливі втрати і діяти відповідально.",
+      "Crypto is high-risk and profit is not guaranteed. The platform provides learning, structure and internal accounting, but users must understand possible losses and act responsibly."
+    );
+  }
+  return handoff(
+    "Я не хочу дати неточну відповідь. Я передам це питання оператору підтримки, і відповідь з'явиться в цьому чаті.",
+    "I do not want to give an inaccurate answer. I will pass this question to support, and the answer will appear in this chat."
+  );
+}
+
+function formatSupportTelegram(user, message) {
+  return [
+    "SUPPORT QUESTION",
+    `ID: ${formatUserId(user.id)}`,
+    `Email: ${user.email || "-"}`,
+    `Name: ${user.fullname || "-"}`,
+    `Nickname: ${user.nickname || "-"}`,
+    "",
+    cleanText(message, 1800)
   ].join("\n");
 }
 
@@ -822,6 +928,64 @@ app.post("/profile/email/verify", authLimiter, auth, async (req, res) => {
 
 app.get("/health", (req, res) => res.json({ success: true }));
 
+app.get("/support/history", auth, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("signals")
+      .select("id,type,wallet,status,created_at")
+      .eq("user_id", req.userId)
+      .in("type", ["support_user", "support_bot", "support_admin"])
+      .order("created_at", { ascending: true })
+      .limit(120);
+    if (error) throw error;
+    return res.json({
+      success: true,
+      messages: (data || []).map(item => ({
+        id: item.id,
+        type: item.type,
+        status: item.status,
+        created_at: item.created_at,
+        ...parseSupportPayload(item.wallet)
+      }))
+    });
+  } catch (error) {
+    console.error("SUPPORT HISTORY ERROR:", error);
+    return res.status(500).json({ success: false });
+  }
+});
+
+app.post("/support/chat", actionLimiter, auth, async (req, res) => {
+  try {
+    const message = cleanText(req.body.message, 1800);
+    if (!message || message.length < 2) return res.json({ success: false, message: "Empty message" });
+    const user = await findUser(req.userId, "id,fullname,nickname,email");
+    if (!user) return res.status(404).json({ success: false });
+
+    const result = supportAnswer(message);
+    await addSignal({
+      user_id: req.userId,
+      type: "support_user",
+      amount: 0,
+      wallet: supportPayload("user", message),
+      status: result.handled ? "answered" : "pending"
+    });
+    await addSignal({
+      user_id: req.userId,
+      type: "support_bot",
+      amount: 0,
+      wallet: supportPayload("bot", result.text),
+      status: result.handled ? "answered" : "pending"
+    });
+    if (!result.handled) {
+      await sendTelegramMessage(formatSupportTelegram(user, message), [SUPPORT_TELEGRAM_TOKEN]);
+    }
+    return res.json({ success: true, reply: result.text, escalated: !result.handled });
+  } catch (error) {
+    console.error("SUPPORT CHAT ERROR:", error);
+    return res.status(500).json({ success: false });
+  }
+});
+
 app.get("/assets/summary", auth, async (req, res) => {
   try {
     await settleMatureTrades(req.userId);
@@ -1139,6 +1303,58 @@ app.get("/admin/signals", adminLimiter, adminAuth, async (req, res) => {
   ]);
   const usersById = Object.fromEntries((users || []).map(user => [user.id, withDisplayId(user)]));
   return res.json((signals || []).map(signal => ({ ...signal, user: usersById[signal.user_id] || null })));
+});
+
+app.get("/admin/support", adminLimiter, adminAuth, async (req, res) => {
+  const [{ data: messages, error }, { data: users }] = await Promise.all([
+    supabase
+      .from("signals")
+      .select("id,user_id,type,wallet,status,created_at")
+      .in("type", ["support_user", "support_bot", "support_admin"])
+      .order("created_at", { ascending: true }),
+    supabase.from("users").select("id,fullname,nickname,email")
+  ]);
+  if (error) return res.status(500).json({ success: false, message: error.message });
+  const usersById = Object.fromEntries((users || []).map(user => [user.id, withDisplayId(user)]));
+  return res.json({
+    success: true,
+    messages: (messages || []).map(item => ({
+      id: item.id,
+      user_id: item.user_id,
+      type: item.type,
+      status: item.status,
+      created_at: item.created_at,
+      user: usersById[item.user_id] || null,
+      ...parseSupportPayload(item.wallet)
+    }))
+  });
+});
+
+app.post("/admin/support/reply", adminLimiter, adminAuth, async (req, res) => {
+  try {
+    const userId = Number(req.body.user_id);
+    const message = cleanText(req.body.message, 1800);
+    if (!Number.isInteger(userId) || userId <= 0 || !message) return res.json({ success: false, message: "Invalid reply" });
+    const user = await findUser(userId, "id");
+    if (!user) return res.json({ success: false, message: "User not found" });
+    await addSignal({
+      user_id: userId,
+      type: "support_admin",
+      amount: 0,
+      wallet: supportPayload("support", message),
+      status: "answered"
+    });
+    await supabase
+      .from("signals")
+      .update({ status: "answered" })
+      .eq("user_id", userId)
+      .in("type", ["support_user", "support_bot"])
+      .eq("status", "pending");
+    return res.json({ success: true });
+  } catch (error) {
+    console.error("ADMIN SUPPORT REPLY ERROR:", error);
+    return res.status(500).json({ success: false });
+  }
 });
 
 app.get("/admin/referrals", adminLimiter, adminAuth, async (req, res) => {

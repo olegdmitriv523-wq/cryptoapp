@@ -610,6 +610,108 @@ function showInstallInstructions() {
   document.body.append(modal);
 }
 
+const supportApiUrl = ["localhost", "127.0.0.1"].includes(location.hostname) ? location.origin : "https://cryptoapp-eqc5.onrender.com";
+
+function supportEscape(value) {
+  return String(value ?? "").replace(/[&<>'"]/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[char]));
+}
+
+function supportRoleLabel(role) {
+  if (role === "user") return "Ви";
+  if (role === "support") return "Підтримка";
+  return "AI оператор";
+}
+
+function renderSupportMessages(messages = []) {
+  const box = document.querySelector(".support-messages");
+  if (!box) return;
+  box.innerHTML = messages.length ? messages.map(item => `
+    <div class="support-msg ${supportEscape(item.role || "bot")}">
+      <b>${supportEscape(supportRoleLabel(item.role))}</b><br>
+      ${supportEscape(item.text)}
+      <small>${item.created_at ? new Date(item.created_at).toLocaleString() : ""}</small>
+    </div>
+  `).join("") : `<div class="support-msg bot"><b>AI оператор</b><br>Напишіть питання про додаток, поповнення, вивід, навчання або сателітів.</div>`;
+  box.scrollTop = box.scrollHeight;
+  window.appTranslate?.translatePage();
+}
+
+async function loadSupportHistory() {
+  const token = localStorage.getItem("token");
+  if (!token) return;
+  try {
+    const response = await fetch(supportApiUrl + "/support/history", { headers: { Authorization: token } });
+    const data = await response.json();
+    if (data.success) renderSupportMessages(data.messages || []);
+  } catch {}
+}
+
+async function sendSupportMessage() {
+  const input = document.querySelector(".support-input");
+  const text = input?.value.trim();
+  const token = localStorage.getItem("token");
+  if (!text || !token) return;
+  input.value = "";
+  renderSupportMessages([{ role: "user", text, created_at: new Date().toISOString() }, { role: "bot", text: "Пишу відповідь...", created_at: new Date().toISOString() }]);
+  try {
+    const response = await fetch(supportApiUrl + "/support/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: token },
+      body: JSON.stringify({ message: text })
+    });
+    const data = await response.json();
+    if (!data.success) throw new Error("support");
+    await loadSupportHistory();
+  } catch {
+    renderSupportMessages([{ role: "bot", text: "Підтримка тимчасово недоступна. Спробуйте ще раз трохи пізніше.", created_at: new Date().toISOString() }]);
+  }
+}
+
+function openSupportWidget() {
+  let modal = document.querySelector(".support-modal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.className = "support-modal";
+    modal.innerHTML = `
+      <div class="support-card">
+        <div class="support-head">
+          <div><b>AI оператор</b><span>Якщо питання складне, його побачить підтримка.</span></div>
+          <button type="button" class="support-close">x</button>
+        </div>
+        <div class="support-messages"></div>
+        <div class="support-form">
+          <textarea class="support-input" placeholder="Напишіть питання..."></textarea>
+          <button type="button" class="support-send">Надіслати</button>
+        </div>
+      </div>
+    `;
+    modal.addEventListener("click", event => {
+      if (event.target === modal || event.target.classList.contains("support-close")) modal.classList.remove("visible");
+    });
+    modal.querySelector(".support-send").addEventListener("click", sendSupportMessage);
+    modal.querySelector(".support-input").addEventListener("keydown", event => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        sendSupportMessage();
+      }
+    });
+    document.body.append(modal);
+  }
+  modal.classList.add("visible");
+  loadSupportHistory();
+}
+
+function renderSupportButton() {
+  if (document.body.dataset.noNav === "true" || !localStorage.getItem("token")) return;
+  if (document.querySelector(".support-fab")) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "support-fab";
+  button.textContent = "Підтримка";
+  button.addEventListener("click", openSupportWidget);
+  document.body.append(button);
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   if (sessionStorage.getItem("language_switching") === "1") showLanguageLoading();
   const headLinks = [
@@ -654,6 +756,7 @@ document.addEventListener("DOMContentLoaded", () => {
   brand.append(renderLanguageSelector());
   document.body.prepend(brand);
   renderInstallButton();
+  renderSupportButton();
   document.addEventListener("click", event => {
     const link = event.target.closest("a[href]");
     if (!link || link.target || link.href.startsWith("javascript:") || link.origin !== location.origin) return;
