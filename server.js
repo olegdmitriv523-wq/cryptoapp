@@ -107,12 +107,12 @@ app.use((err, req, res, next) => {
 app.use(globalLimiter);
 
 const PUBLIC_FILES = new Set([
-  "index.html", "login.html", "register.html", "terms.html", "loading.html",
+  "landing.html", "index.html", "login.html", "register.html", "terms.html", "loading.html",
   "trade.html", "assets.html", "learning.html", "info.html", "rewards.html", "coin.html",
   "deposit.html", "withdraw.html", "profile.html", "admin.html", "app.css", "app-nav.js",
   "language-boot.js", "pwa.js", "service-worker.js", "manifest.json", "logo.png"
 ]);
-app.get("/", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
+app.get("/", (req, res) => res.sendFile(path.join(__dirname, "landing.html")));
 app.get("/:file", (req, res, next) => {
   if (!PUBLIC_FILES.has(req.params.file)) return next();
   return res.sendFile(path.join(__dirname, req.params.file));

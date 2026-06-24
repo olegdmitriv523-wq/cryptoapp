@@ -1,6 +1,7 @@
-const CACHE_NAME = "united-europe-v12";
+const CACHE_NAME = "united-europe-v13";
 const APP_SHELL = [
   "/loading.html",
+  "/landing.html",
   "/login.html",
   "/register.html",
   "/terms.html",
@@ -47,7 +48,7 @@ self.addEventListener("fetch", event => {
     );
     return;
   }
-  const staticPath = url.pathname === "/" ? "/index.html" : url.pathname;
+  const staticPath = url.pathname === "/" ? "/landing.html" : url.pathname;
   const shouldCache = APP_SHELL.includes(staticPath);
   if (!shouldCache) return;
 

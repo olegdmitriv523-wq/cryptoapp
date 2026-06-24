@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#07111f">
+<meta name="description" content="United Europe Crypto is a crypto learning, asset tracking and structured participation platform.">
+<title>United Europe Crypto | Crypto. Together. Stronger.</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="logo.png">
+<link rel="apple-touch-icon" href="logo.png">
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #07111f;
+  --panel: rgba(15, 23, 42, .82);
+  --panel-strong: #0f172a;
+  --line: rgba(148, 163, 184, .18);
+  --text: #f8fafc;
+  --muted: #a7b3c7;
+  --gold: #f5c451;
+  --gold-2: #f97316;
+  --blue: #38bdf8;
+  --green: #22c55e;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 15% 10%, rgba(56, 189, 248, .22), transparent 34%),
+    radial-gradient(circle at 84% 4%, rgba(245, 196, 81, .18), transparent 30%),
+    radial-gradient(circle at 50% 70%, rgba(34, 197, 94, .10), transparent 34%),
+    linear-gradient(180deg, #06101f 0%, #07111f 48%, #030712 100%);
+  color: var(--text);
+  font-family: Inter, Arial, sans-serif;
+}
+a { color: inherit; text-decoration: none; }
+.shell { width: min(1180px, calc(100% - 32px)); margin: 0 auto; }
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: blur(18px);
+  background: rgba(7, 17, 31, .76);
+  border-bottom: 1px solid var(--line);
+}
+.topbar-inner {
+  min-height: 82px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.brand { display: flex; align-items: center; gap: 14px; font-weight: 900; letter-spacing: .03em; }
+.brand img { width: 58px; height: 58px; object-fit: contain; border-radius: 16px; box-shadow: 0 16px 44px rgba(245, 196, 81, .14); }
+.brand small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; letter-spacing: .28em; text-transform: uppercase; }
+.nav { display: flex; align-items: center; gap: 22px; color: var(--muted); font-size: 14px; font-weight: 700; }
+.nav a:hover { color: var(--gold); }
+.actions { display: flex; gap: 10px; align-items: center; }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 12px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-weight: 900;
+  cursor: pointer;
+}
+.btn.primary {
+  border: 0;
+  color: #111827;
+  background: linear-gradient(135deg, var(--gold), var(--gold-2));
+  box-shadow: 0 16px 40px rgba(249, 115, 22, .24);
+}
+.btn.ghost { background: rgba(15, 23, 42, .6); color: var(--text); }
+.hero { padding: 74px 0 46px; position: relative; overflow: hidden; }
+.hero-grid { display: grid; grid-template-columns: 1.08fr .92fr; gap: 42px; align-items: center; }
+.eyebrow {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px solid rgba(245, 196, 81, .28);
+  border-radius: 999px;
+  background: rgba(245, 196, 81, .08);
+  color: #fde68a;
+  font-size: 13px;
+  font-weight: 800;
+}
+h1 { margin: 22px 0 18px; font-size: clamp(44px, 7vw, 86px); line-height: .95; letter-spacing: -.06em; }
+.hero-text { max-width: 680px; color: #cbd5e1; font-size: 18px; line-height: 1.75; }
+.hero-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
+.trust-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; color: #cbd5e1; font-size: 13px; }
+.trust-row span { padding: 9px 12px; border: 1px solid var(--line); border-radius: 999px; background: rgba(15, 23, 42, .56); }
+.orb-card {
+  position: relative;
+  min-height: 520px;
+  border: 1px solid rgba(245, 196, 81, .22);
+  border-radius: 36px;
+  overflow: hidden;
+  background:
+    linear-gradient(145deg, rgba(15, 23, 42, .92), rgba(2, 6, 23, .82)),
+    radial-gradient(circle at top, rgba(56, 189, 248, .18), transparent 44%);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, .38);
+}
+.orb-card:before {
+  content: "";
+  position: absolute;
+  inset: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(245, 196, 81, .22);
+  background: radial-gradient(circle, rgba(56, 189, 248, .20), transparent 58%);
+  filter: blur(.2px);
+}
+.logo-mark {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+.logo-mark img { width: min(330px, 72%); height: auto; filter: drop-shadow(0 28px 50px rgba(245, 196, 81, .16)); }
+.ticker {
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  bottom: 22px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.ticker div {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(2, 6, 23, .64);
+}
+.ticker b { display: block; font-size: 18px; }
+.ticker span { color: var(--green); font-size: 12px; font-weight: 900; }
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  padding: 8px 0 56px;
+}
+.metric {
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: rgba(15, 23, 42, .62);
+}
+.metric strong { display: block; font-size: 28px; color: var(--gold); }
+.metric span { display: block; margin-top: 8px; color: var(--muted); line-height: 1.45; }
+.section { padding: 58px 0; }
+.section-head { max-width: 760px; margin-bottom: 26px; }
+.section-head h2 { margin: 0 0 12px; font-size: clamp(30px, 4vw, 48px); letter-spacing: -.04em; }
+.section-head p { margin: 0; color: var(--muted); line-height: 1.75; }
+.cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.card {
+  min-height: 220px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background: linear-gradient(180deg, rgba(15, 23, 42, .82), rgba(15, 23, 42, .48));
+}
+.card .num { color: var(--gold); font-weight: 900; letter-spacing: .12em; }
+.card h3 { margin: 18px 0 10px; font-size: 22px; }
+.card p { margin: 0; color: var(--muted); line-height: 1.7; }
+.logic {
+  display: grid;
+  grid-template-columns: .92fr 1.08fr;
+  gap: 18px;
+  align-items: stretch;
+}
+.panel {
+  padding: 28px;
+  border: 1px solid rgba(56, 189, 248, .20);
+  border-radius: 30px;
+  background: rgba(8, 16, 31, .76);
+}
+.panel h3 { margin: 0 0 16px; font-size: 28px; }
+.steps { display: grid; gap: 12px; }
+.step {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(2, 6, 23, .36);
+}
+.step b {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  color: #111827;
+  background: linear-gradient(135deg, var(--gold), var(--gold-2));
+}
+.step strong { display: block; margin-bottom: 4px; }
+.step span { color: var(--muted); line-height: 1.55; }
+.risk {
+  border: 1px solid rgba(245, 196, 81, .28);
+  background: linear-gradient(135deg, rgba(245, 196, 81, .10), rgba(56, 189, 248, .07));
+}
+.cta {
+  margin: 44px 0 70px;
+  padding: 38px;
+  border: 1px solid rgba(245, 196, 81, .28);
+  border-radius: 34px;
+  background:
+    radial-gradient(circle at right, rgba(245, 196, 81, .20), transparent 38%),
+    linear-gradient(135deg, rgba(15, 23, 42, .96), rgba(2, 6, 23, .92));
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: center;
+}
+.cta h2 { margin: 0 0 8px; font-size: 34px; }
+.cta p { margin: 0; color: var(--muted); line-height: 1.6; }
+footer {
+  padding: 26px 0 42px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 13px;
+}
+@media (max-width: 920px) {
+  .nav { display: none; }
+  .hero-grid, .logic { grid-template-columns: 1fr; }
+  .metrics, .cards { grid-template-columns: repeat(2, 1fr); }
+  .orb-card { min-height: 430px; }
+}
+@media (max-width: 620px) {
+  .topbar-inner { min-height: 72px; }
+  .brand small, .actions .ghost { display: none; }
+  .brand img { width: 48px; height: 48px; }
+  .hero { padding-top: 44px; }
+  .metrics, .cards, .ticker { grid-template-columns: 1fr; }
+  .ticker { position: relative; left: auto; right: auto; bottom: auto; margin: 260px 16px 16px; }
+  .orb-card { min-height: auto; }
+  .logo-mark { align-items: start; padding-top: 54px; }
+  .logo-mark img { width: 240px; }
+  .cta { display: block; padding: 26px; }
+  .cta .hero-cta { margin-top: 22px; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="shell topbar-inner">
+    <a class="brand" href="/">
+      <img src="logo.png" alt="United Europe Crypto">
+      <span>United Europe Crypto<small>Crypto. Together. Stronger.</small></span>
+    </a>
+    <nav class="nav" aria-label="Website navigation">
+      <a href="#ecosystem">Ecosystem</a>
+      <a href="#logic">Logic</a>
+      <a href="#rewards">Rewards</a>
+      <a href="#risk">Risk</a>
+    </nav>
+    <div class="actions">
+      <a class="btn ghost" href="login.html">Login</a>
+      <a class="btn primary" href="terms.html">Start</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="shell hero-grid">
+      <div>
+        <div class="eyebrow">Live crypto ecosystem · Education · Assets · Structured activity</div>
+        <h1>A modern crypto platform built for disciplined participation.</h1>
+        <p class="hero-text">
+          United Europe Crypto combines learning, asset accounting, controlled trading signals, satellite structure and rewards into one mobile-first platform. The project is designed around transparent rules, admin confirmation and step-by-step access instead of chaotic promises.
+        </p>
+        <div class="hero-cta">
+          <a class="btn primary" href="terms.html">Create account</a>
+          <a class="btn ghost" href="loading.html">Open platform</a>
+          <a class="btn ghost" href="#logic">How it works</a>
+        </div>
+        <div class="trust-row">
+          <span>Minimum deposit: $500</span>
+          <span>Withdrawals from earned funds</span>
+          <span>Daily trading reset at 00:00</span>
+          <span>Admin-approved balance changes</span>
+        </div>
+      </div>
+      <aside class="orb-card" aria-label="United Europe Crypto overview">
+        <div class="logo-mark"><img src="logo.png" alt="United Europe Crypto logo"></div>
+        <div class="ticker">
+          <div><b>BTC</b><span>Market access</span></div>
+          <div><b>USDT</b><span>TRC20 deposits</span></div>
+          <div><b>UEC</b><span>Member structure</span></div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <section class="shell metrics" aria-label="Platform metrics">
+    <div class="metric"><strong>$1,000,347</strong><span>Initial public pool indicator shown inside the app.</span></div>
+    <div class="metric"><strong>5</strong><span>Additional trading positions unlocked through active satellites.</span></div>
+    <div class="metric"><strong>10 min</strong><span>Trading result settlement time after a position is started.</span></div>
+    <div class="metric"><strong>$100</strong><span>Minimum withdrawal amount from earned internal balance.</span></div>
+  </section>
+
+  <section id="ecosystem" class="shell section">
+    <div class="section-head">
+      <h2>One ecosystem, several clear layers.</h2>
+      <p>The platform separates learning, funding requests, trading activity, rewards and account data. Each sensitive action creates a signal for the admin panel, so the structure stays controlled and traceable.</p>
+    </div>
+    <div class="cards">
+      <article class="card">
+        <div class="num">01</div>
+        <h3>Learning access</h3>
+        <p>Education opens after a confirmed deposit from $500. Lessons include short crypto explanations and tests with internal rewards for correct completion.</p>
+      </article>
+      <article class="card">
+        <div class="num">02</div>
+        <h3>Trading activity</h3>
+        <p>The main trading position is available to all users with balance. Additional positions unlock through active satellites and settle after 10 minutes.</p>
+      </article>
+      <article class="card">
+        <div class="num">03</div>
+        <h3>Admin confirmation</h3>
+        <p>Deposits, withdrawals and profile changes move through signals. Balances change only after approval, which makes accounting more predictable.</p>
+      </article>
+    </div>
+  </section>
+
+  <section id="logic" class="shell section logic">
+    <div class="panel">
+      <h3>Project logic</h3>
+      <p style="color:var(--muted);line-height:1.75;margin:0">
+        United Europe Crypto is based on the idea that organized communities can study market behavior, act with more discipline and build a clearer internal structure than isolated users. Larger coordinated capital and consistent participation may influence how opportunities are evaluated, while every user still carries market risk.
+      </p>
+    </div>
+    <div class="steps">
+      <div class="step"><b>1</b><span><strong>Register and verify.</strong>Create an account, accept risk terms and receive a platform ID.</span></div>
+      <div class="step"><b>2</b><span><strong>Submit deposit signal.</strong>Send USDT TRC20, create a request and wait for admin confirmation.</span></div>
+      <div class="step"><b>3</b><span><strong>Use learning and trading.</strong>Unlocked modules give structured activity, daily reset and transparent reward logic.</span></div>
+      <div class="step"><b>4</b><span><strong>Grow satellites.</strong>Invited users become active after confirmed deposits from $500 and unlock extra trading positions.</span></div>
+    </div>
+  </section>
+
+  <section id="rewards" class="shell section">
+    <div class="section-head">
+      <h2>Reward architecture.</h2>
+      <p>Rewards are tracked inside the app and become claimable only after the relevant goal is reached. The system includes learning, satellite, trading-streak and balance-level rewards.</p>
+    </div>
+    <div class="cards">
+      <article class="card"><div class="num">$10</div><h3>Learning tests</h3><p>Each correctly completed crypto lesson test can create an internal learning reward.</p></article>
+      <article class="card"><div class="num">$50+</div><h3>Satellite activity</h3><p>Invited users and referrers receive rewards only after confirmed satellite deposits from $500.</p></article>
+      <article class="card"><div class="num">10-100</div><h3>Trading streaks</h3><p>Consistent daily activity is measured and can unlock streak rewards over time.</p></article>
+    </div>
+  </section>
+
+  <section id="risk" class="shell section">
+    <div class="panel risk">
+      <h3>Risk-first position</h3>
+      <p style="color:#dbe4f0;line-height:1.75;margin:0">
+        Cryptocurrency markets are volatile. Digital asset prices can move sharply, liquidity can change, and operational delays are possible. United Europe Crypto should be understood as a structured platform with internal accounting and admin-reviewed requests, not as a guarantee of profit. Users should participate only with full awareness of crypto risks and possible losses.
+      </p>
+    </div>
+  </section>
+
+  <section class="shell cta">
+    <div>
+      <h2>Enter the platform.</h2>
+      <p>Open the public app, create an account through the terms page, or log in if you already have access.</p>
+    </div>
+    <div class="hero-cta">
+      <a class="btn primary" href="terms.html">Start registration</a>
+      <a class="btn ghost" href="login.html">Login</a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="shell">
+    United Europe Crypto. Crypto. Together. Stronger. All values shown in USD. Participation involves risk.
+  </div>
+</footer>
+
+<script>
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("service-worker.js").catch(() => {});
+</script>
+</body>
+</html>
