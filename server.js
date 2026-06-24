@@ -140,6 +140,7 @@ const LEARNING_MIN_DEPOSIT = 500;
 const ACTIVE_SATELLITE_MIN_DEPOSIT = 500;
 const MIN_DEPOSIT_AMOUNT = 500;
 const MAX_DEPOSIT_REQUESTS = 2;
+const MIN_WITHDRAW_AMOUNT = 100;
 const WITHDRAW_COOLDOWN_MS = 60 * 60 * 1000;
 const TRADE_RATES = [0.01, 0.01, 0.005, 0.0075, 0.0125, 0.02];
 const TRADE_SETTLE_MS = 10 * 60 * 1000;
@@ -921,6 +922,9 @@ app.post("/withdraw", actionLimiter, auth, async (req, res) => {
     if (!user || !isValidWallet(wallet) || !amount) {
       return res.json({ success: false, message: "Invalid withdrawal" });
     }
+    if (amount < MIN_WITHDRAW_AMOUNT) {
+      return res.json({ success: false, message: `Minimum withdrawal is $${MIN_WITHDRAW_AMOUNT}` });
+    }
     const since = new Date(Date.now() - WITHDRAW_COOLDOWN_MS).toISOString();
     const { count: recentCount, error: recentError } = await supabase
       .from("signals")
@@ -1164,6 +1168,9 @@ app.post("/admin/approve", adminLimiter, adminAuth, async (req, res) => {
       const amount = positiveAmount(signal.amount);
       const user = await findUser(signal.user_id, "id,balance,deposit");
       if (!user || !amount) return res.json({ success: false, message: "Invalid request" });
+      if (signal.type === "withdraw" && amount < MIN_WITHDRAW_AMOUNT) {
+        return res.json({ success: false, message: `Minimum withdrawal is $${MIN_WITHDRAW_AMOUNT}` });
+      }
       const earnedAvailable = Number((Number(user.balance || 0) - Number(user.deposit || 0)).toFixed(2));
       if (signal.type === "withdraw" && (Number(user.balance || 0) < amount || amount > earnedAvailable)) {
         return res.json({ success: false, message: "Only earned funds are available for withdrawal" });
