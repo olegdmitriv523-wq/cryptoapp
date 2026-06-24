@@ -811,12 +811,16 @@ app.get("/assets/summary", auth, async (req, res) => {
     const tradingEarned = history
       .filter(signal => signal.type.startsWith("trade_") && signal.status === "rewarded")
       .reduce((sum, signal) => sum + Number(signal.amount || 0), 0);
+    const taskEarned = history
+      .filter(signal => (signal.type.startsWith("quiz_") || signal.type.startsWith("reward_")) && ["rewarded", "approved"].includes(signal.status))
+      .reduce((sum, signal) => sum + Number(signal.amount || 0), 0);
 
     return res.json({
       success: true,
       balance: Number(user.balance || 0),
       deposit: Number(user.deposit || 0),
       tradingEarned: Number(tradingEarned.toFixed(2)),
+      taskEarned: Number(taskEarned.toFixed(2)),
       history,
       pool: getPoolSnapshot()
     });
@@ -898,7 +902,7 @@ app.post("/withdraw", actionLimiter, auth, async (req, res) => {
       .eq("user_id", user.id)
       .eq("type", "withdraw")
       .gte("created_at", since)
-      .in("status", ["pending", "approved"]);
+      .eq("status", "approved");
     if (recentError) throw recentError;
     if ((recentCount || 0) > 0) return res.json({ success: false, message: "Withdrawal is available once per hour" });
 

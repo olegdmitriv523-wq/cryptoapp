@@ -100,6 +100,7 @@ input {
 const API_URL = ["localhost", "127.0.0.1"].includes(location.hostname) ? location.origin : "https://cryptoapp-eqc5.onrender.com";
 const token = localStorage.getItem("token");
 if (!token) location.href = "login.html";
+localStorage.removeItem("withdraw_time");
 </script>
 
 <main class="page">
@@ -170,7 +171,6 @@ async function withdraw() {
     });
     const data = await response.json();
     if (data.success) {
-      localStorage.setItem("withdraw_time", Date.now());
       alert("Заявку на виведення передано адміністратору. Баланс зміниться після підтвердження.");
       location.href = "index.html";
     } else {
@@ -186,7 +186,6 @@ function goBack() {
 }
 
 loadUser();
-checkTimer();
 </script>
 <script src="app-nav.js"></script>
 </body>

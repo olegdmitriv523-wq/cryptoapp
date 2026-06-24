@@ -260,6 +260,18 @@ function hideLanguageLoading() {
   document.querySelector(".language-loading")?.classList.remove("visible");
 }
 
+function showAppLoading(message = "United Europe Crypto") {
+  let overlay = document.querySelector(".language-loading");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.className = "language-loading";
+    overlay.innerHTML = `<div><img src="logo.png" alt="United Europe Crypto"><span></span></div>`;
+    document.body.append(overlay);
+  }
+  overlay.querySelector("span").textContent = message;
+  overlay.classList.add("visible");
+}
+
 function waitForGoogleTranslation() {
   const startedAt = Date.now();
   const timer = setInterval(() => {
@@ -625,6 +637,13 @@ document.addEventListener("DOMContentLoaded", () => {
   brand.append(renderLanguageSelector());
   document.body.prepend(brand);
   renderInstallButton();
+  document.addEventListener("click", event => {
+    const link = event.target.closest("a[href]");
+    if (!link || link.target || link.href.startsWith("javascript:") || link.origin !== location.origin) return;
+    if (link.pathname === location.pathname && link.search === location.search) return;
+    showAppLoading("United Europe Crypto");
+  });
+  window.addEventListener("beforeunload", () => showAppLoading("United Europe Crypto"));
 
   if (document.body.dataset.noNav !== "true") {
     const items = [

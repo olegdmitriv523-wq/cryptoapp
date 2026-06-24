@@ -73,6 +73,19 @@ h1 {
   font-size: 16px;
   line-height: 1.5;
 }
+.instructions {
+  margin: 14px 0;
+  padding: 14px;
+  border: 1px solid #334155;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, .82);
+  color: #dbeafe;
+  text-align: left;
+  line-height: 1.55;
+}
+.instructions b { color: #fbbf24; }
+.instructions ol { margin: 8px 0 0; padding-left: 20px; }
+.instructions li { margin: 7px 0; }
 .qr img {
   width: 210px;
   height: 210px;
@@ -122,7 +135,17 @@ if (!token) location.href = "login.html";
       <img src="https://cryptologos.cc/logos/tether-usdt-logo.png" alt="USDT">
       <span>USDT TRC20</span>
     </div>
-    <p class="hint">Скопіюйте адресу гаманця або відскануйте QR-код. Мінімальна сума поповнення становить $500, а всього можна створити максимум дві активні або підтверджені заявки.</p>
+    <p class="hint">Скопіюйте адресу гаманця або відскануйте QR-код. Мінімальна сума поповнення становить $500. Ліміт спрацьовує після двох поповнень, підтверджених адміністратором.</p>
+    <div class="instructions">
+      <b>Як поповнити:</b>
+      <ol>
+        <li>У своєму криптогаманці або біржі виберіть валюту <b>USDT</b>.</li>
+        <li>Обов'язково виберіть мережу <b>TRC20</b>. Інша мережа може призвести до втрати переказу.</li>
+        <li>Скопіюйте адресу нижче або відскануйте QR-код.</li>
+        <li>Надішліть суму від $500, дочекайтеся підтвердження переказу у своєму гаманці.</li>
+        <li>Після оплати введіть суму в полі нижче й натисніть “Я оплатив”. Заявка піде адміністратору на перевірку.</li>
+      </ol>
+    </div>
     <div id="walletBox" class="wallet" onclick="copyWallet()">Завантаження гаманця...</div>
     <div class="qr"><img id="qr" alt="QR"></div>
     <input id="amount" type="number" min="500" step="0.01" placeholder="Введіть суму від $500" />

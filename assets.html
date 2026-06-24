@@ -36,6 +36,7 @@ body { margin:0; font-family:Arial,sans-serif; }
     <article class="card"><div class="title">Основний баланс</div><div class="value" id="balance">$0.00</div></article>
     <article class="card"><div class="title">Поповнення, підтверджені адміністратором</div><div class="value" id="deposit">$0.00</div></article>
     <article class="card"><div class="title">Зароблено торгівлею</div><div class="value green" id="tradingEarned">$0.00</div></article>
+    <article class="card"><div class="title">Зароблено додатковими завданнями</div><div class="value green" id="taskEarned">$0.00</div></article>
   </section>
 
   <section class="card">
@@ -127,6 +128,7 @@ async function loadAssets() {
     document.getElementById("balance").textContent = money(data.balance);
     document.getElementById("deposit").textContent = money(data.deposit);
     document.getElementById("tradingEarned").textContent = money(data.tradingEarned);
+    document.getElementById("taskEarned").textContent = money(data.taskEarned);
     renderHistory(data.history || []);
     renderPool(data.pool);
     window.appTranslate?.translatePage();
