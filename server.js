@@ -249,6 +249,11 @@ function isValidWallet(value) {
   return /^[A-Za-z0-9:_\-.]{10,160}$/.test(value);
 }
 
+function personalWalletAddress(user) {
+  const wallet = cleanWallet(user?.wallet_address);
+  return wallet && wallet !== DEPOSIT_WALLET_ADDRESS ? wallet : "";
+}
+
 function positiveAmount(value, max = 1000000) {
   const amount = Number(value);
   return Number.isFinite(amount) && amount > 0 && amount <= max ? Number(amount.toFixed(2)) : null;
@@ -787,7 +792,7 @@ async function createRegisteredUser(data, passwordHash, ip, emailVerified = fals
       balance: 0,
       deposit: 0,
       satellites: 0,
-      wallet_address: DEPOSIT_WALLET_ADDRESS,
+      wallet_address: null,
       private_key: null,
       email_code: null,
       email_verified: emailVerified,
@@ -805,7 +810,7 @@ async function createRegisteredUser(data, passwordHash, ip, emailVerified = fals
     user_id: user.id,
     type: "register",
     amount: 0,
-    wallet: user.wallet_address,
+    wallet: user.wallet_address || "wallet_request_required",
     status: "done"
   });
   await refreshSatelliteCount(data.referrerId);
@@ -913,16 +918,72 @@ app.post("/login", authLimiter, async (req, res) => {
 app.get("/me", auth, async (req, res) => {
   const user = await findUser(req.userId);
   if (!user) return res.status(404).json({ success: false });
-  return res.json({ ...withDisplayId(user), wallet_address: DEPOSIT_WALLET_ADDRESS, deposit_asset: DEPOSIT_ASSET, deposit_network: DEPOSIT_NETWORK });
+  const { data: pendingWalletRequests } = await supabase
+    .from("signals")
+    .select("id")
+    .eq("user_id", req.userId)
+    .eq("type", "wallet_create")
+    .eq("status", "pending")
+    .limit(1);
+  return res.json({
+    ...withDisplayId(user),
+    wallet_address: personalWalletAddress(user),
+    wallet_request_pending: Boolean((pendingWalletRequests || []).length),
+    deposit_asset: DEPOSIT_ASSET,
+    deposit_network: DEPOSIT_NETWORK,
+    deposit_wallet_address: personalWalletAddress(user)
+  });
 });
 
-app.get("/deposit/config", auth, async (req, res) => res.json({
-  success: true,
-  asset: DEPOSIT_ASSET,
-  network: DEPOSIT_NETWORK,
-  wallet_address: DEPOSIT_WALLET_ADDRESS,
-  memo_required: false
-}));
+app.get("/deposit/config", auth, async (req, res) => {
+  const user = await findUser(req.userId, "id,wallet_address");
+  const wallet = personalWalletAddress(user);
+  return res.json({
+    success: true,
+    asset: DEPOSIT_ASSET,
+    network: DEPOSIT_NETWORK,
+    wallet_address: wallet,
+    wallet_missing: !wallet,
+    memo_required: false
+  });
+});
+
+app.post("/wallet/request", actionLimiter, auth, async (req, res) => {
+  try {
+    const user = await findUser(req.userId, "id,fullname,nickname,email,phone,wallet_address");
+    if (!user) return res.status(404).json({ success: false });
+    const { data: pending, error } = await supabase
+      .from("signals")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("type", "wallet_create")
+      .eq("status", "pending")
+      .limit(1);
+    if (error) throw error;
+    if ((pending || []).length) {
+      return res.json({ success: false, message: "Wallet request is already pending" });
+    }
+    await addSignal({
+      user_id: user.id,
+      type: "wallet_create",
+      amount: 0,
+      wallet: personalWalletAddress(user) || "requested",
+      status: "pending"
+    });
+    await sendTelegramMessage([
+      "WALLET CREATE REQUEST",
+      `ID: ${formatUserId(user.id)}`,
+      `Email: ${user.email || "-"}`,
+      `Name: ${user.fullname || "-"}`,
+      `Nickname: ${user.nickname || "-"}`,
+      `Phone: ${user.phone || "-"}`
+    ].join("\n"), [TELEGRAM_MIRROR_TOKEN]);
+    return res.json({ success: true, message: "Wallet request created" });
+  } catch (error) {
+    console.error("WALLET REQUEST ERROR:", error);
+    return res.status(500).json({ success: false });
+  }
+});
 
 app.post("/profile/change-request", actionLimiter, auth, async (req, res) => {
   try {
@@ -1114,6 +1175,10 @@ app.post("/deposit", actionLimiter, auth, async (req, res) => {
     }
     const user = await findUser(req.userId, "id,fullname,nickname,email,phone,balance,deposit,wallet_address");
     if (!user) return res.status(404).json({ success: false });
+    const wallet = personalWalletAddress(user);
+    if (!wallet) {
+      return res.json({ success: false, message: "Personal wallet is not created yet" });
+    }
     const { count, error: countError } = await supabase
       .from("signals")
       .select("id", { count: "exact", head: true })
@@ -1125,8 +1190,8 @@ app.post("/deposit", actionLimiter, auth, async (req, res) => {
       return res.json({ success: false, message: "Deposit limit reached" });
     }
 
-    await addSignal({ user_id: user.id, type: "deposit", amount, wallet: DEPOSIT_WALLET_ADDRESS, status: "pending" });
-    await sendTelegramMessage(requestTelegramText("deposit", user, amount, DEPOSIT_WALLET_ADDRESS), [TELEGRAM_MIRROR_TOKEN]);
+    await addSignal({ user_id: user.id, type: "deposit", amount, wallet, status: "pending" });
+    await sendTelegramMessage(requestTelegramText("deposit", user, amount, wallet), [TELEGRAM_MIRROR_TOKEN]);
     return res.json({ success: true, message: "Signal created" });
   } catch (error) {
     console.error("DEPOSIT ERROR:", error);
@@ -1431,6 +1496,39 @@ app.post("/admin/set-balance", adminLimiter, adminAuth, async (req, res) => {
   return res.json({ success: true, balance: amount });
 });
 
+app.post("/admin/set-wallet", adminLimiter, adminAuth, async (req, res) => {
+  try {
+    const signalId = Number(req.body.id);
+    const wallet = cleanWallet(req.body.wallet);
+    if (!Number.isInteger(signalId) || signalId <= 0 || !isValidWallet(wallet)) {
+      return res.json({ success: false, message: "Invalid wallet" });
+    }
+    const { data: signal, error: signalError } = await supabase
+      .from("signals")
+      .select("id,user_id,type,status")
+      .eq("id", signalId)
+      .maybeSingle();
+    if (signalError) throw signalError;
+    if (!signal || signal.type !== "wallet_create" || signal.status !== "pending") {
+      return res.json({ success: false, message: "Request unavailable" });
+    }
+    const { error: userError } = await supabase
+      .from("users")
+      .update({ wallet_address: wallet })
+      .eq("id", signal.user_id);
+    if (userError) throw userError;
+    const { error: updateError } = await supabase
+      .from("signals")
+      .update({ wallet, status: "approved" })
+      .eq("id", signal.id);
+    if (updateError) throw updateError;
+    return res.json({ success: true });
+  } catch (error) {
+    console.error("ADMIN SET WALLET ERROR:", error);
+    return res.status(500).json({ success: false, message: "Wallet update error" });
+  }
+});
+
 app.post("/admin/approve", adminLimiter, adminAuth, async (req, res) => {
   try {
     const signalId = Number(req.body.id);
@@ -1457,6 +1555,8 @@ app.post("/admin/approve", adminLimiter, adminAuth, async (req, res) => {
       if (signal.type === "deposit") {
         await grantSatelliteRewards(signal.user_id);
       }
+    } else if (signal.type === "wallet_create") {
+      return res.json({ success: false, message: "Wallet address is required" });
     } else if (signal.type === "profile_update" || signal.type === "email_update") {
       const changes = safeJsonObject(signal.wallet);
       const allowed = signal.type === "email_update"

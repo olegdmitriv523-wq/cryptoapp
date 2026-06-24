@@ -160,14 +160,24 @@ if (!token) location.href = "login.html";
 </main>
 
 <script>
+let walletReady = false;
 async function loadWallet() {
   try {
     const response = await fetch(API_URL + "/deposit/config", { headers: { Authorization: token } });
     if (response.status === 401) throw new Error("auth");
     const data = await response.json();
-    const wallet = data.wallet_address || "NO WALLET";
+    const wallet = data.wallet_address || "";
+    walletReady = Boolean(wallet);
+    if (!walletReady) {
+      document.getElementById("walletBox").textContent = "Персональний гаманець ще не створено. Поверніться на головну сторінку та відправте запит адміністратору.";
+      document.getElementById("qr").removeAttribute("src");
+      document.querySelector(".submit-btn").disabled = true;
+      window.appTranslate?.translatePage();
+      return;
+    }
     document.getElementById("walletBox").textContent = wallet;
     document.getElementById("qr").src = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" + encodeURIComponent(wallet);
+    document.querySelector(".submit-btn").disabled = false;
     window.appTranslate?.translatePage();
   } catch {
     localStorage.removeItem("token");
@@ -177,11 +187,13 @@ async function loadWallet() {
 
 function copyWallet() {
   const text = document.getElementById("walletBox").textContent;
+  if (!walletReady) return;
   navigator.clipboard.writeText(text);
   alert("Скопійовано");
 }
 
 async function deposit() {
+  if (!walletReady) return alert("Спочатку потрібно отримати персональний гаманець від адміністратора");
   const amount = Number(document.getElementById("amount").value);
   if (!Number.isFinite(amount) || amount < 500) return alert("Мінімальна сума поповнення $500");
   try {

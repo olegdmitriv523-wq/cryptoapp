@@ -72,6 +72,35 @@ body {
   font-size: 36px;
   font-weight: 800;
 }
+.wallet-request {
+  margin: 12px 0 0;
+  padding: 14px 16px;
+  border: 1px solid #293246;
+  border-radius: 14px;
+  background: #111827;
+  color: #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.wallet-request strong {
+  color: #f8fafc;
+}
+.wallet-request button {
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: #22c55e;
+  color: #052e16;
+  font-weight: 800;
+  cursor: pointer;
+}
+.wallet-request button:disabled {
+  opacity: .65;
+  cursor: default;
+}
 .actions {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -140,6 +169,7 @@ body {
 .red { color: #ef4444; }
 @media (max-width: 620px) {
   .header { padding-top: 12px; }
+  .wallet-request { align-items: stretch; flex-direction: column; }
   .actions { grid-template-columns: 1fr; margin-top: 24px; }
   .balance { font-size: 31px; }
   .user-meta { font-size: 16px; }
@@ -172,6 +202,7 @@ if (!token) location.href = "login.html";
   </div>
 
   <div id="balance" class="balance"></div>
+  <div id="walletRequest" class="wallet-request"></div>
 
   <div class="actions">
     <div class="btn" onclick="goDeposit()" data-i18n="addFunds">Поповнити</div>
@@ -203,11 +234,42 @@ async function loadUser() {
     const percent = deposit > 0 ? (profit / deposit) * 100 : 0;
     const color = percent >= 0 ? "green" : "red";
     document.getElementById("balance").innerHTML = `${localText("balance")}: $${money(balance)} <span class="${color}">${percent.toFixed(2)}%</span>`;
+    renderWalletRequest(user);
     window.appTranslate?.translatePage();
   } catch {
     localStorage.removeItem("token");
     location.href = "login.html";
   }
+}
+
+function renderWalletRequest(user) {
+  const box = document.getElementById("walletRequest");
+  if (!box) return;
+  if (user.wallet_address) {
+    box.innerHTML = `<div><strong>Персональний гаманець для поповнення активний</strong><br>${user.wallet_address}</div>`;
+    return;
+  }
+  if (user.wallet_request_pending) {
+    box.innerHTML = `<div><strong>Запит на гаманець відправлено</strong><br>Адміністратор впише адресу, після чого вона з'явиться тут і на сторінці поповнення.</div><button type="button" disabled>Очікує</button>`;
+    return;
+  }
+  box.innerHTML = `<div><strong>Персональний гаманець для поповнення ще не створено</strong><br>Надішліть запит адміністратору.</div><button type="button" onclick="requestWallet()">Запросити гаманець</button>`;
+}
+
+async function requestWallet() {
+  const button = document.querySelector("#walletRequest button");
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Відправляємо...";
+  }
+  const response = await fetch(API_URL + "/wallet/request", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: token },
+    body: JSON.stringify({})
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!result.success) alert(result.message || "Не вдалося відправити запит");
+  await loadUser();
 }
 
 async function loadCoins() {

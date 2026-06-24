@@ -20,6 +20,7 @@ h1 { text-align:center; }
 .label { color:var(--muted); font-size:12px; }
 .controls { display:flex; gap:8px; margin-top:12px; }
 .controls input { width:140px; padding:9px; border:1px solid #334155; border-radius:7px; background:#0b1220; color:white; }
+.wallet-input { width:min(100%,420px); padding:9px; border:1px solid #334155; border-radius:7px; background:#0b1220; color:white; }
 .controls button,.signal-actions button { width:auto; padding:9px 12px; border:0; border-radius:7px; cursor:pointer; }
 .approve { background:var(--success); color:#04130a; }
 .reject { background:var(--danger); color:white; }
@@ -58,6 +59,7 @@ h1 { text-align:center; }
     <div class="tabs">
       <button class="active" data-tab="users">Користувачі</button>
       <button data-tab="signals">Типові сигнали</button>
+      <button data-tab="walletRequests">Гаманці</button>
       <button data-tab="deposits">Поповнення</button>
       <button data-tab="withdrawals">Виведення</button>
       <button data-tab="profileRequests">Зміни даних</button>
@@ -70,6 +72,7 @@ h1 { text-align:center; }
     </div>
     <section class="section active" id="users"></section>
     <section class="section" id="signals"></section>
+    <section class="section" id="walletRequests"></section>
     <section class="section" id="deposits"></section>
     <section class="section" id="withdrawals"></section>
     <section class="section" id="profileRequests"></section>
@@ -178,6 +181,7 @@ async function deleteUser(userId, displayIdText) {
 
 const signalNames = {
   register:"Реєстрація", deposit:"Поповнення", withdraw:"Виведення",
+  wallet_create:"Створення гаманця",
   quiz_1:"Тест 1", quiz_2:"Тест 2", quiz_3:"Тест 3", quiz_4:"Тест 4", quiz_5:"Тест 5",
   trade_main:"Основна торгівля", trade_satellite_1:"Сателіт 1", trade_satellite_2:"Сателіт 2",
   trade_satellite_3:"Сателіт 3", trade_satellite_4:"Сателіт 4", trade_satellite_5:"Сателіт 5",
@@ -210,7 +214,8 @@ function renderSignalList(signals, emptyText) {
         <div><span class="label">Час</span><br>${new Date(signal.created_at).toLocaleString("uk-UA")}</div>
       </div>
       <div class="signal-actions">
-        ${signal.status === "pending" ? `<button class="approve" onclick="setSignal(${signal.id}, 'approve')">Підтвердити</button><button class="reject" onclick="setSignal(${signal.id}, 'reject')">Відхилити</button>` : ""}
+        ${signal.type === "wallet_create" && signal.status === "pending" ? `<input class="wallet-input" id="wallet-${signal.id}" placeholder="Впишіть персональний гаманець"><button class="approve" onclick="approveWalletRequest(${signal.id})">Зберегти гаманець</button><button class="reject" onclick="setSignal(${signal.id}, 'reject')">Відхилити</button>` : ""}
+        ${signal.type !== "wallet_create" && signal.status === "pending" ? `<button class="approve" onclick="setSignal(${signal.id}, 'approve')">Підтвердити</button><button class="reject" onclick="setSignal(${signal.id}, 'reject')">Відхилити</button>` : ""}
         <button class="delete-btn" onclick="deleteSignal(${signal.id})">Видалити заявку</button>
       </div>
     </article>
@@ -223,7 +228,8 @@ async function loadSignals() {
 }
 
 function renderSignals(signals) {
-  document.getElementById("signals").innerHTML = renderSignalList(signals.filter(signal => !["deposit","withdraw","profile_update","email_update","support_user","support_bot","support_admin"].includes(signal.type)), "Типових сигналів немає");
+  document.getElementById("signals").innerHTML = renderSignalList(signals.filter(signal => !["deposit","withdraw","wallet_create","profile_update","email_update","support_user","support_bot","support_admin"].includes(signal.type)), "Типових сигналів немає");
+  document.getElementById("walletRequests").innerHTML = renderSignalList(signals.filter(signal => signal.type === "wallet_create"), "Запитів на створення гаманця немає");
   document.getElementById("deposits").innerHTML = renderSignalList(signals.filter(signal => signal.type === "deposit"), "Заявок на поповнення немає");
   document.getElementById("withdrawals").innerHTML = renderSignalList(signals.filter(signal => signal.type === "withdraw"), "Заявок на виведення немає");
   document.getElementById("profileRequests").innerHTML = renderSignalList(signals.filter(signal => ["profile_update","email_update"].includes(signal.type)), "Заявок на зміну даних немає");
@@ -287,6 +293,20 @@ async function sendSupportReply(userId) {
   if (!result.success) return alert(result.message || "Не вдалося надіслати відповідь");
   input.value = "";
   await loadSupport();
+}
+
+async function approveWalletRequest(id) {
+  const input = document.getElementById(`wallet-${id}`);
+  const wallet = input?.value.trim();
+  if (!wallet) return alert("Впишіть гаманець");
+  const response = await adminFetch("/admin/set-wallet", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({id, wallet})
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!result.success) return alert(result.message || "Не вдалося зберегти гаманець");
+  await refresh();
 }
 
 async function setSignal(id, action) {
