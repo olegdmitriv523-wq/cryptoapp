@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db/db");
 const bcrypt = require("bcrypt");
-const { Wallet } = require("ethers");
+const DEPOSIT_WALLET_ADDRESS = process.env.DEPOSIT_WALLET_ADDRESS || "TTL8GGSkoAne5QRdkizLbGnmaBKv3EPoiy";
 
 // 🔥 REGISTER
 router.post("/register", async (req, res) => {
@@ -17,13 +17,10 @@ router.post("/register", async (req, res) => {
 
     const hash = await bcrypt.hash(password, 10);
 
-    // 🔐 створення криптогаманця
-    const wallet = Wallet.createRandom();
-
     db.run(
       `INSERT INTO users (email, password, wallet, private_key, referrer_id)
        VALUES (?, ?, ?, ?, ?)`,
-      [email, hash, wallet.address, wallet.privateKey, referrer_id || null],
+      [email, hash, DEPOSIT_WALLET_ADDRESS, null, referrer_id || null],
       function (err) {
 
         if (err) {

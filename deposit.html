@@ -67,6 +67,11 @@ h1 {
   word-break: break-all;
   cursor: pointer;
 }
+.memo-note {
+  margin: 8px 0 0;
+  color: #fbbf24;
+  font-weight: 800;
+}
 .hint {
   margin: 12px 0;
   color: #cbd5e1;
@@ -147,6 +152,7 @@ if (!token) location.href = "login.html";
       </ol>
     </div>
     <div id="walletBox" class="wallet" onclick="copyWallet()">Завантаження гаманця...</div>
+    <div class="memo-note">memo не вимагається</div>
     <div class="qr"><img id="qr" alt="QR"></div>
     <input id="amount" type="number" min="500" step="0.01" placeholder="Введіть суму від $500" />
     <button class="submit-btn" onclick="deposit()">Я оплатив</button>
@@ -156,10 +162,10 @@ if (!token) location.href = "login.html";
 <script>
 async function loadWallet() {
   try {
-    const response = await fetch(API_URL + "/me", { headers: { Authorization: token } });
+    const response = await fetch(API_URL + "/deposit/config", { headers: { Authorization: token } });
     if (response.status === 401) throw new Error("auth");
-    const user = await response.json();
-    const wallet = user.wallet_address || "NO WALLET";
+    const data = await response.json();
+    const wallet = data.wallet_address || "NO WALLET";
     document.getElementById("walletBox").textContent = wallet;
     document.getElementById("qr").src = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" + encodeURIComponent(wallet);
     window.appTranslate?.translatePage();

