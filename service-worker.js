@@ -1,4 +1,4 @@
-const CACHE_NAME = "united-europe-v14";
+const CACHE_NAME = "united-europe-v15";
 const APP_SHELL = [
   "/loading.html",
   "/site/index.html",
@@ -43,17 +43,18 @@ self.addEventListener("fetch", event => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin || url.pathname === "/health") return;
   if (event.request.mode === "navigate") {
+    const fallbackPath = url.pathname === "/site" || url.pathname === "/site/" ? "/site/index.html" : "/loading.html";
     event.respondWith(
       fetch(event.request)
         .then(response => {
           if (response.ok) return response;
-          return caches.match("/loading.html").then(cached => cached || response);
+          return caches.match(fallbackPath).then(cached => cached || response);
         })
-        .catch(() => caches.match("/loading.html"))
+        .catch(() => caches.match(fallbackPath))
     );
     return;
   }
-  const staticPath = url.pathname === "/" ? "/site/index.html" : url.pathname;
+  const staticPath = url.pathname === "/" ? "/loading.html" : (url.pathname === "/site" || url.pathname === "/site/" ? "/site/index.html" : url.pathname);
   const shouldCache = APP_SHELL.includes(staticPath);
   if (!shouldCache) return;
 

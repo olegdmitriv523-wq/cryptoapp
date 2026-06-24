@@ -105,8 +105,10 @@ app.use((err, req, res, next) => {
   return next();
 });
 app.use(globalLimiter);
+app.get(["/site", "/site/"], (req, res) => res.sendFile(path.join(__dirname, "site", "index.html")));
 app.use("/site", express.static(path.join(__dirname, "site"), {
   index: false,
+  redirect: false,
   maxAge: IS_PRODUCTION ? "1h" : 0
 }));
 
@@ -116,8 +118,8 @@ const PUBLIC_FILES = new Set([
   "deposit.html", "withdraw.html", "profile.html", "admin.html", "app.css", "app-nav.js",
   "language-boot.js", "pwa.js", "service-worker.js", "manifest.json", "logo.png"
 ]);
-app.get("/", (req, res) => res.sendFile(path.join(__dirname, "site", "index.html")));
-app.get("/landing.html", (req, res) => res.redirect(302, "/"));
+app.get("/", (req, res) => res.sendFile(path.join(__dirname, "loading.html")));
+app.get("/landing.html", (req, res) => res.redirect(302, "/site"));
 app.get("/:file", (req, res, next) => {
   if (!PUBLIC_FILES.has(req.params.file)) return next();
   return res.sendFile(path.join(__dirname, req.params.file));
