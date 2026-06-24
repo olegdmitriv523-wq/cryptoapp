@@ -7,59 +7,119 @@
 <link rel="stylesheet" href="app.css">
 <script src="language-boot.js"></script>
 <style>
-body{margin:0;font-family:Arial,sans-serif}.rewards-page{width:min(920px,calc(100% - 28px));margin:auto;padding-bottom:130px}.hero,.reward-card{background:var(--panel);border:1px solid #293246;border-radius:16px;padding:20px;margin:14px 0}.hero{text-align:center;background:linear-gradient(135deg,#111827,#18233a)}.hero h1{margin:0 0 10px}.hero p,.reward-card p{color:#cbd5e1;line-height:1.65}.reward-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}.reward-card{margin:0}.reward-card h2{margin:0 0 10px;color:var(--accent);font-size:19px}.reward-list{display:grid;gap:10px;margin:0;padding:0;list-style:none}.reward-list li{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:11px 12px;border-radius:12px;background:var(--panel-soft);color:#e5e7eb}.reward-list strong{color:var(--success);white-space:nowrap}.note{border-color:#f59e0b;background:rgba(245,158,11,.08)}
+body{margin:0;font-family:Arial,sans-serif}.rewards-page{width:min(960px,calc(100% - 28px));margin:auto;padding-bottom:130px}.hero,.reward-card,.note{background:var(--panel);border:1px solid #293246;border-radius:16px;padding:20px;margin:14px 0}.hero{text-align:center;background:linear-gradient(135deg,#111827,#18233a)}.hero h1{margin:0 0 10px}.hero p,.reward-card p,.note p{color:#cbd5e1;line-height:1.65}.reward-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}.reward-card{margin:0}.reward-card h2{margin:0 0 10px;color:var(--accent);font-size:19px}.reward-list{display:grid;gap:10px;margin:0;padding:0;list-style:none}.reward-item{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:12px;border-radius:12px;background:var(--panel-soft);color:#e5e7eb}.reward-title{display:block;font-weight:800}.reward-progress{display:block;margin-top:4px;color:#94a3b8;font-size:13px}.reward-amount{color:var(--success);font-weight:900;white-space:nowrap}.claim-btn{grid-column:1/-1;border:0;border-radius:12px;padding:11px 14px;background:linear-gradient(135deg,#22c55e,#84cc16);color:#04130a;font-size:15px;font-weight:900;cursor:pointer}.claim-btn:disabled{background:#475569;color:#cbd5e1;cursor:not-allowed}.note{border-color:#f59e0b;background:rgba(245,158,11,.08)}.empty{padding:16px;border-radius:12px;background:var(--panel-soft);color:#cbd5e1;text-align:center}
 </style>
 </head>
 <body>
+<script>
+const API_URL = ["localhost", "127.0.0.1"].includes(location.hostname) ? location.origin : "https://cryptoapp-eqc5.onrender.com";
+const token = localStorage.getItem("token");
+if (!token) location.href = "login.html";
+</script>
+
 <main class="rewards-page">
   <section class="hero">
     <h1>Винагороди</h1>
-    <p>На цій сторінці зібрані основні винагороди платформи. Суми нараховуються тільки після виконання умов, а винагороди за сателітів активуються після підтвердженого адміністратором поповнення сателітом від $500.</p>
+    <p>Тут зібрані цілі платформи та винагороди за їх виконання. Кнопка “Отримати” стає активною тільки тоді, коли умову вже виконано. Суми вказані в доларах і не змінюються під час перекладу сторінки.</p>
   </section>
 
   <section class="reward-grid">
     <article class="reward-card">
       <h2>Баланс</h2>
-      <ul class="reward-list">
-        <li><span>Баланс від $500</span><strong>$75</strong></li>
-        <li><span>Баланс від $1,000</span><strong>$75</strong></li>
-        <li><span>Баланс від $2,000</span><strong>$100</strong></li>
-        <li><span>Баланс від $5,000</span><strong>$250</strong></li>
-        <li><span>Баланс від $10,000</span><strong>$750</strong></li>
-        <li><span>Баланс від $20,000</span><strong>$2,000</strong></li>
-        <li><span>Баланс від $50,000</span><strong>$5,000</strong></li>
-        <li><span>Баланс від $100,000</span><strong>$20,000</strong></li>
-      </ul>
+      <ul id="balanceRewards" class="reward-list"><li class="empty">Завантаження...</li></ul>
     </article>
 
     <article class="reward-card">
       <h2>Сателіти</h2>
-      <p>Запрошений користувач отримує $50 після підтвердженого поповнення від $500. Запрошувач отримує винагороду за перших 5 активних сателітів:</p>
-      <ul class="reward-list">
-        <li><span>1-й активний сателіт</span><strong>$75</strong></li>
-        <li><span>2-й активний сателіт</span><strong>$100</strong></li>
-        <li><span>3-й активний сателіт</span><strong>$125</strong></li>
-        <li><span>4-й активний сателіт</span><strong>$125</strong></li>
-        <li><span>5-й активний сателіт</span><strong>$250</strong></li>
-      </ul>
+      <p>Запрошений користувач отримує $50 після підтвердженого поповнення від $500. Запрошувач отримує винагороду за перших 5 активних сателітів, коли кожен із них має підтверджене поповнення від $500.</p>
+      <ul id="satelliteRewards" class="reward-list"><li class="empty">Завантаження...</li></ul>
     </article>
 
     <article class="reward-card">
       <h2>Торгівля</h2>
-      <ul class="reward-list">
-        <li><span>10 днів торгівлі підряд</span><strong>$10</strong></li>
-        <li><span>30 днів торгівлі підряд</span><strong>$25</strong></li>
-      </ul>
-      <p>Угода завершується через 10 хвилин після старту. Нова можливість торгувати відкривається о 00:00 кожного дня.</p>
+      <p>Дні торгівлі рахуються поспіль за завершеними угодами. Угода завершується через 10 хвилин після старту, а нова можливість торгувати відкривається о 00:00 кожного дня.</p>
+      <ul id="tradeRewards" class="reward-list"><li class="empty">Завантаження...</li></ul>
     </article>
   </section>
 
-  <section class="reward-card note">
+  <section class="note">
     <h2>Важливо</h2>
-    <p>Винагороди є внутрішніми обліковими показниками платформи. Поповнення, виведення та бонуси відображаються в історії активів після виконання умов і підтвердження потрібних дій.</p>
+    <p>Поповнення доступне максимум двічі, мінімальна сума однієї заявки становить $500. Вивести можна один раз на годину і тільки зароблені кошти, тобто суму понад підтверджені поповнення. Усі винагороди є внутрішніми обліковими показниками платформи.</p>
   </section>
 </main>
-<script>if(!localStorage.getItem("token"))location.href="login.html";</script>
+
+<script>
+const money = value => "$" + Number(value || 0).toLocaleString("en-US", { maximumFractionDigits: 0 });
+const numberText = value => Number(value || 0).toLocaleString("en-US", { maximumFractionDigits: 2 });
+const groups = {
+  balance: document.getElementById("balanceRewards"),
+  satellites: document.getElementById("satelliteRewards"),
+  trade: document.getElementById("tradeRewards")
+};
+
+function progressText(item) {
+  if (item.group === "balance") return `Прогрес: ${money(item.progress)} / ${money(item.target)}`;
+  if (item.group === "trade") return `Прогрес: ${numberText(item.progress)} / ${numberText(item.target)} днів`;
+  return `Прогрес: ${numberText(item.progress)} / ${numberText(item.target)}`;
+}
+
+function buttonText(item) {
+  if (item.claimed) return "Отримано";
+  if (item.eligible) return "Отримати";
+  return "Недоступно";
+}
+
+function renderGroup(group, rewards) {
+  const container = groups[group];
+  const items = rewards.filter(item => item.group === group);
+  if (!items.length) {
+    container.innerHTML = '<li class="empty">Немає винагород</li>';
+    return;
+  }
+  container.innerHTML = items.map(item => `
+    <li class="reward-item">
+      <span>
+        <span class="reward-title">${item.title}</span>
+        <span class="reward-progress">${progressText(item)}</span>
+      </span>
+      <strong class="reward-amount">${money(item.amount)}</strong>
+      <button class="claim-btn" ${item.eligible && !item.claimed ? "" : "disabled"} onclick="claimReward('${item.type}')">${buttonText(item)}</button>
+    </li>
+  `).join("");
+}
+
+async function loadRewards() {
+  try {
+    const response = await fetch(API_URL + "/rewards/status", { headers: { Authorization: token } });
+    if (response.status === 401) throw new Error("auth");
+    const data = await response.json();
+    if (!data.success) throw new Error("load");
+    renderGroup("balance", data.rewards);
+    renderGroup("satellites", data.rewards);
+    renderGroup("trade", data.rewards);
+    window.appTranslate?.translatePage();
+  } catch {
+    Object.values(groups).forEach(container => container.innerHTML = '<li class="empty">Не вдалося завантажити винагороди</li>');
+  }
+}
+
+async function claimReward(type) {
+  try {
+    const response = await fetch(API_URL + "/rewards/claim", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: token },
+      body: JSON.stringify({ type })
+    });
+    const data = await response.json();
+    alert(data.success ? "Винагороду нараховано" : (data.message || "Винагорода поки недоступна"));
+    await loadRewards();
+  } catch {
+    alert("Сервер не відповідає");
+  }
+}
+
+loadRewards();
+</script>
 <script src="app-nav.js"></script>
 </body>
 </html>

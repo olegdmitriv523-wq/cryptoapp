@@ -122,10 +122,10 @@ if (!token) location.href = "login.html";
       <img src="https://cryptologos.cc/logos/tether-usdt-logo.png" alt="USDT">
       <span>USDT TRC20</span>
     </div>
-    <p class="hint">Скопіюйте адресу гаманця або відскануйте QR-код. Після оплати вкажіть суму і натисніть кнопку нижче.</p>
+    <p class="hint">Скопіюйте адресу гаманця або відскануйте QR-код. Мінімальна сума поповнення становить $500, а всього можна створити максимум дві активні або підтверджені заявки.</p>
     <div id="walletBox" class="wallet" onclick="copyWallet()">Завантаження гаманця...</div>
     <div class="qr"><img id="qr" alt="QR"></div>
-    <input id="amount" type="number" min="1" step="0.01" placeholder="Введіть суму $" />
+    <input id="amount" type="number" min="500" step="0.01" placeholder="Введіть суму від $500" />
     <button class="submit-btn" onclick="deposit()">Я оплатив</button>
   </section>
 </main>
@@ -153,7 +153,7 @@ function copyWallet() {
 
 async function deposit() {
   const amount = Number(document.getElementById("amount").value);
-  if (!Number.isFinite(amount) || amount <= 0) return alert("Введіть суму");
+  if (!Number.isFinite(amount) || amount < 500) return alert("Мінімальна сума поповнення $500");
   try {
     const response = await fetch(API_URL + "/deposit", {
       method: "POST",
