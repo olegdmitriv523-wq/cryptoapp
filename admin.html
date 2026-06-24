@@ -79,7 +79,7 @@ const adminFetch = (path, options = {}) => fetch(API_URL + path, {
 });
 const escapeHtml = value => String(value ?? "-").replace(/[&<>'"]/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[char]));
 const money = value => Number(value || 0).toFixed(2);
-const displayId = value => value ? String(value).padStart(8, "0") : "-";
+const displayId = value => value ? "1568" + String(value).padStart(4, "0").slice(-4) : "-";
 const searchText = () => (document.getElementById("adminSearch")?.value || "").trim().toLowerCase();
 const searchable = values => values.map(value => String(value ?? "").toLowerCase()).join(" ");
 const matchesSearch = text => !searchText() || text.includes(searchText());

@@ -184,8 +184,8 @@ const GOOGLE_LANG_CODES = {
 };
 
 function currentLang() {
-  const saved = localStorage.getItem("app_language") || "uk";
-  return I18N[saved] ? saved : "uk";
+  const saved = localStorage.getItem("app_language") || "en";
+  return I18N[saved] ? saved : "en";
 }
 
 function tr(key) {
@@ -556,6 +556,18 @@ function renderInstallButton() {
 }
 
 async function installApp() {
+  const waitForInstallPrompt = (timeout = 2500) => new Promise(resolve => {
+    if (window.deferredInstallPrompt) return resolve(true);
+    const timer = setTimeout(() => {
+      window.removeEventListener("pwa-install-ready", ready);
+      resolve(Boolean(window.deferredInstallPrompt));
+    }, timeout);
+    function ready() {
+      clearTimeout(timer);
+      resolve(true);
+    }
+    window.addEventListener("pwa-install-ready", ready, { once: true });
+  });
   if (window.deferredInstallPrompt) {
     const promptEvent = window.deferredInstallPrompt;
     window.deferredInstallPrompt = null;
@@ -569,6 +581,7 @@ async function installApp() {
   if ("serviceWorker" in navigator) {
     await navigator.serviceWorker.ready.catch(() => {});
   }
+  await waitForInstallPrompt();
   if (window.deferredInstallPrompt) return installApp();
   showInstallInstructions();
 }

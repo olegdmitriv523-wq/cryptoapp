@@ -52,7 +52,7 @@ function renderPosition(position, option, title) {
   const subtitle = position === 0
     ? "Доступна всім користувачам"
     : satellite
-      ? `Сателіт #${satellite.display_id || String(satellite.id).padStart(8, "0")}: ${satellite.nickname || "без нікнейма"} · реальний баланс $${money(satellite.balance)} · підтверджене поповнення $${money(satellite.deposit)}${satellite.active ? "" : ` · активується від $${option.minDeposit || 500}`}`
+      ? `Сателіт #${satellite.display_id || "1568" + String(satellite.id).padStart(4, "0").slice(-4)}: ${satellite.nickname || "без нікнейма"} · реальний баланс $${money(satellite.balance)} · підтверджене поповнення $${money(satellite.deposit)}${satellite.active ? "" : ` · активується від $${option.minDeposit || 500}`}`
       : `Потрібен ${position}-й активний сателіт із підтвердженим поповненням від $${option.minDeposit || 500}`;
   const disabled = !option.unlocked || option.cooldown > 0 || option.pending > 0 || statusData.balance <= 0;
   const pending = pendingText(option.pending);

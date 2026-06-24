@@ -195,7 +195,7 @@ async function loadUser() {
     const user = await res.json();
 
     document.getElementById("wallet").textContent = `${localText("wallet")}: ${user.wallet_address || "немає гаманця"}`;
-    document.getElementById("userIdText").textContent = `ID: ${user.display_id || String(user.id).padStart(8, "0")}`;
+    document.getElementById("userIdText").textContent = `ID: ${user.display_id || "1568" + String(user.id).padStart(4, "0").slice(-4)}`;
 
     const balance = Number(user.balance || 0);
     const deposit = Number(user.deposit || 0);

@@ -134,6 +134,7 @@ const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "";
 const EMAIL_VERIFICATION_REQUIRED = process.env.EMAIL_VERIFICATION_REQUIRED === "true";
 
 const PUBLIC_USER_FIELDS = "id,fullname,nickname,country,email,phone,balance,deposit,satellites,wallet_address,referrer_id";
+const DISPLAY_ID_PREFIX = "1568";
 const QUIZ_ANSWERS = { 1: "b", 2: "c", 3: "a", 4: "b", 5: "c" };
 const LEARNING_MIN_DEPOSIT = 500;
 const ACTIVE_SATELLITE_MIN_DEPOSIT = 500;
@@ -190,7 +191,23 @@ async function findUser(id, fields = PUBLIC_USER_FIELDS) {
 }
 
 function formatUserId(id) {
-  return String(id).padStart(8, "0");
+  const sequence = Number(id);
+  if (!Number.isInteger(sequence) || sequence <= 0) return `${DISPLAY_ID_PREFIX}0000`;
+  return `${DISPLAY_ID_PREFIX}${String(sequence).padStart(4, "0").slice(-4)}`;
+}
+
+function parseUserId(value) {
+  const text = String(value || "").trim();
+  if (!text) return null;
+  if (/^\d{8}$/.test(text) && text.startsWith(DISPLAY_ID_PREFIX)) {
+    const sequence = Number(text.slice(4));
+    return Number.isInteger(sequence) && sequence > 0 ? sequence : null;
+  }
+  if (/^\d{1,4}$/.test(text)) {
+    const sequence = Number(text);
+    return Number.isInteger(sequence) && sequence > 0 ? sequence : null;
+  }
+  return null;
 }
 
 function withDisplayId(user) {
@@ -554,6 +571,7 @@ async function sendVerificationEmail(email, code, purpose = "registration") {
 }
 
 function registrationData(body) {
+  const referrerRaw = String(body.referrer_id || "").trim();
   return {
     fullname: cleanText(body.fullname, 80),
     nickname: cleanText(body.nickname, 40),
@@ -561,7 +579,8 @@ function registrationData(body) {
     phone: cleanPhone(body.phone),
     email: cleanEmail(body.email),
     password: String(body.password || "").slice(0, 200),
-    referrerId: body.referrer_id ? Number(body.referrer_id) : null
+    referrerProvided: Boolean(referrerRaw),
+    referrerId: parseUserId(referrerRaw)
   };
 }
 
@@ -570,7 +589,7 @@ async function validateRegistration(data) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) return "Invalid email";
   if (data.phone.length < 10 || data.phone.length > 15) return "Invalid phone";
   if (data.password.length < 6) return "Weak password";
-  if (data.referrerId && (!Number.isInteger(data.referrerId) || data.referrerId <= 0 || !(await findUser(data.referrerId, "id")))) return "Invalid referrer";
+  if (data.referrerProvided && (!Number.isInteger(data.referrerId) || data.referrerId <= 0 || !(await findUser(data.referrerId, "id")))) return "Invalid referrer";
   const { data: existing } = await supabase.from("users").select("id").eq("email", data.email).maybeSingle();
   return existing ? "User exists" : null;
 }

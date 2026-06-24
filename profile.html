@@ -46,13 +46,14 @@ const token=localStorage.getItem("token");
 if(!token)location.href="login.html";
 let emailPendingToken="";
 const api=(path,options={})=>fetch(API_URL+path,{...options,headers:{"Content-Type":"application/json",Authorization:token,...(options.headers||{})}});
+const displayUserId=value=>"1568"+String(value||0).padStart(4,"0").slice(-4);
 
 async function loadProfile(){
   const response=await api("/me");
   if(response.status===401)return location.href="login.html";
   const user=await response.json();
-  displayId.textContent=user.display_id||String(user.id).padStart(8,"0");
-  referrer.textContent=user.referrer_id?String(user.referrer_id).padStart(8,"0"):"Немає";
+  displayId.textContent=user.display_id||displayUserId(user.id);
+  referrer.textContent=user.referrer_id?displayUserId(user.referrer_id):"Немає";
   wallet.textContent=user.wallet_address||"Немає";
   fullname.value=user.fullname||"";nickname.value=user.nickname||"";country.value=user.country||"";phone.value=user.phone||"";email.value=user.email||"";
   window.appTranslate?.translatePage();

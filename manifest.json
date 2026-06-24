@@ -2,7 +2,7 @@
   "id": "/",
   "name": "United Europe Crypto",
   "short_name": "United Europe Crypto",
-  "description": "Навчання, активи та торгівля криптовалютами",
+  "description": "Cryptocurrency learning, assets and trading",
   "start_url": "/loading.html?source=pwa",
   "scope": "/",
   "display": "standalone",

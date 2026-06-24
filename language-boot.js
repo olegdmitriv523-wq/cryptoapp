@@ -15,10 +15,10 @@
 
   function savedLanguage() {
     try {
-      const lang = localStorage.getItem("app_language") || "uk";
-      return GOOGLE_LANG_CODES[lang] ? lang : "uk";
+      const lang = localStorage.getItem("app_language") || "en";
+      return GOOGLE_LANG_CODES[lang] ? lang : "en";
     } catch {
-      return "uk";
+      return "en";
     }
   }
 
