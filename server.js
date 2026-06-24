@@ -876,7 +876,7 @@ app.post("/deposit", actionLimiter, auth, async (req, res) => {
     }
 
     await addSignal({ user_id: user.id, type: "deposit", amount, wallet: user.wallet_address, status: "pending" });
-    await sendTelegramMessage(requestTelegramText("deposit", user, amount, user.wallet_address), [TELEGRAM_TOKEN, TELEGRAM_MIRROR_TOKEN]);
+    await sendTelegramMessage(requestTelegramText("deposit", user, amount, user.wallet_address), [TELEGRAM_MIRROR_TOKEN]);
     return res.json({ success: true, message: "Signal created" });
   } catch (error) {
     console.error("DEPOSIT ERROR:", error);
@@ -917,7 +917,7 @@ app.post("/withdraw", actionLimiter, auth, async (req, res) => {
     }
 
     await addSignal({ user_id: user.id, type: "withdraw", amount, wallet, status: "pending" });
-    await sendTelegramMessage(requestTelegramText("withdraw", user, amount, wallet), [TELEGRAM_TOKEN, TELEGRAM_MIRROR_TOKEN]);
+    await sendTelegramMessage(requestTelegramText("withdraw", user, amount, wallet), [TELEGRAM_MIRROR_TOKEN]);
     return res.json({ success: true, message: "Signal created" });
   } catch (error) {
     console.error("WITHDRAW ERROR:", error);
