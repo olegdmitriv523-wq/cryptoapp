@@ -192,6 +192,10 @@ function tr(key) {
   return (I18N[currentLang()] && I18N[currentLang()][key]) || I18N.uk[key] || key;
 }
 
+function googleTargetLang() {
+  return GOOGLE_LANG_CODES[currentLang()] || "uk";
+}
+
 function applyTranslations(root = document.body) {
   const lang = currentLang();
   document.documentElement.lang = lang;
@@ -267,6 +271,32 @@ function waitForGoogleTranslation() {
   }, 180);
 }
 
+function triggerGoogleTranslate() {
+  if (currentLang() === "uk") return true;
+  const combo = document.querySelector(".goog-te-combo");
+  if (!combo) return false;
+  const target = googleTargetLang();
+  if (combo.value !== target) combo.value = target;
+  combo.dispatchEvent(new Event("change"));
+  return true;
+}
+
+let translationRefreshTimer = null;
+let translationRefreshPauseUntil = 0;
+
+function scheduleFullPageTranslation(delay = 700) {
+  if (currentLang() === "uk") return;
+  if (Date.now() < translationRefreshPauseUntil) return;
+  clearTimeout(translationRefreshTimer);
+  translationRefreshTimer = setTimeout(() => {
+    translationRefreshPauseUntil = Date.now() + 2400;
+    protectCurrencyText(document.body);
+    if (!triggerGoogleTranslate()) {
+      setTimeout(triggerGoogleTranslate, 900);
+    }
+  }, delay);
+}
+
 function protectCurrencyText(root = document.body) {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode(node) {
@@ -328,6 +358,7 @@ function loadFullPageTranslator() {
       includedLanguages: APP_LANGUAGES.map(([code]) => GOOGLE_LANG_CODES[code]).filter(Boolean).join(","),
       autoDisplay: false
     }, "google_translate_element");
+    [250, 1200, 2600, 4600].forEach(delay => setTimeout(triggerGoogleTranslate, delay));
     waitForGoogleTranslation();
   };
 
@@ -346,9 +377,10 @@ function observeCurrencyChanges() {
     requestAnimationFrame(() => {
       pending = false;
       protectCurrencyText(document.body);
+      scheduleFullPageTranslation();
     });
   });
-  observer.observe(document.body, { childList: true, subtree: true });
+  observer.observe(document.body, { childList: true, subtree: true, characterData: true });
 }
 
 function renderInstallButton() {
@@ -476,9 +508,20 @@ document.addEventListener("DOMContentLoaded", () => {
   applyTranslations();
   observeCurrencyChanges();
   loadFullPageTranslator();
+  scheduleFullPageTranslation(1400);
+  setTimeout(() => window.appTranslate?.translatePage(), 3200);
   window.dispatchEvent(new CustomEvent("app-language-ready"));
   if (currentLang() === "uk") hideLanguageLoading();
   if (currentLang() !== "uk") setTimeout(hideLanguageLoading, 5600);
 });
 
-window.appTranslate = { tr, applyTranslations, currentLang, protectCurrencyText };
+window.appTranslate = {
+  tr,
+  applyTranslations,
+  currentLang,
+  protectCurrencyText,
+  translatePage() {
+    applyTranslations(document.body);
+    scheduleFullPageTranslation(100);
+  }
+};
