@@ -361,6 +361,42 @@ function supportAnswer(message) {
   const answer = (uk, en) => ({ handled: true, text: lang === "en" ? en : uk });
   const handoff = (uk, en) => ({ handled: false, text: lang === "en" ? en : uk });
 
+  if (/^(hi|hello|hey|привіт|вітаю|добрий день|доброго дня|добрий вечір|здравств|салам)\b/i.test(text)) {
+    return answer(
+      "Вітаю! Я AI оператор United Europe Crypto. Можу пояснити реєстрацію, поповнення, вивід, навчання, сателітів, торгівлю, винагороди, сайт проекту та ризики. Напишіть коротко, що саме цікавить.",
+      "Hello! I am the United Europe Crypto AI operator. I can explain registration, deposits, withdrawals, learning, satellites, trading, rewards, the project website and risks. Tell me what you want to know."
+    );
+  }
+  if (/(що ти вмієш|чим допоможеш|help|допоможи|помічник|оператор ai|ai оператор|support bot|підтримка може)/i.test(text)) {
+    return answer(
+      "Я можу швидко відповісти на загальні питання по додатку: як зареєструватися, як поповнити від $500, як вивести від $100 із заробленого, як працює навчання, сателіти, торгівля, винагороди та де знайти сайт проекту. Якщо питання стосується конкретної помилки або вашої заявки, я передам його підтримці.",
+      "I can answer general app questions: registration, deposits from $500, withdrawals from $100 earned funds, learning, satellites, trading, rewards and the project website. If the question is about a specific error or request, I will pass it to support."
+    );
+  }
+  if (/(як почати|з чого почати|start|почати|новач|перший раз|що робити)/i.test(text)) {
+    return answer(
+      "Почніть із трьох кроків: 1) прочитайте умови користування; 2) зареєструйте акаунт і збережіть email/пароль; 3) після входу перегляньте Інфо, Активи, Поповнення та Навчання. Навчання відкривається після підтвердженого поповнення від $500.",
+      "Start with three steps: 1) read the terms; 2) create an account and keep your email/password safe; 3) after login, check Info, Assets, Deposit and Learning. Learning opens after an approved deposit from $500."
+    );
+  }
+  if (/(що це|проєкт|проект|about|platform|платформа|united europe crypto|uec)/i.test(text)) {
+    return answer(
+      "United Europe Crypto - це платформа для навчання, внутрішнього обліку активів, заявок на поповнення/вивід, винагород, сателітної структури та моделювання торгової активності. Важливо: криптовалюти ризикові, прибуток не гарантується.",
+      "United Europe Crypto is a platform for learning, internal asset accounting, deposit/withdrawal requests, rewards, satellite structure and modeled trading activity. Important: crypto is risky and profit is not guaranteed."
+    );
+  }
+  if (/(дякую|спасиб|thanks|thank you|ок|окей|добре|зрозуміло)/i.test(text)) {
+    return answer(
+      "Будь ласка. Якщо потрібно, напишіть тему одним словом: реєстрація, поповнення, вивід, навчання, сателіти, торгівля, винагороди або сайт.",
+      "You are welcome. If needed, send one topic: registration, deposit, withdrawal, learning, satellites, trading, rewards or website."
+    );
+  }
+  if (/(оператор|адмін|людина|живий|manager|human|admin|скарг|помилка|не працює|не працю|завис|заявка не|баланс неправиль|не прийш)/i.test(text)) {
+    return handoff(
+      "Схоже, це питання потребує перевірки оператором. Я передам його підтримці, і відповідь з'явиться в цьому чаті.",
+      "This looks like a question that needs operator review. I will pass it to support, and the answer will appear in this chat."
+    );
+  }
   if (/(парол|password|login|логін|увійти|вхід|не вход)/i.test(text)) {
     return answer(
       "Для входу використайте email і пароль, які були вказані при реєстрації. Якщо вхід не працює, перевірте правильність email, пароль і стабільність інтернету. Якщо проблема залишиться, я передам звернення підтримці.",
@@ -421,9 +457,9 @@ function supportAnswer(message) {
       "Crypto is high-risk and profit is not guaranteed. The platform provides learning, structure and internal accounting, but users must understand possible losses and act responsibly."
     );
   }
-  return handoff(
-    "Я не хочу дати неточну відповідь. Я передам це питання оператору підтримки, і відповідь з'явиться в цьому чаті.",
-    "I do not want to give an inaccurate answer. I will pass this question to support, and the answer will appear in this chat."
+  return answer(
+    "Я можу відповісти на загальні питання про проект. Спробуйте уточнити тему: реєстрація, поповнення, вивід, навчання, сателіти, торгівля, винагороди, сайт або ризики. Якщо потрібна перевірка конкретного акаунту чи заявки, напишіть: оператор.",
+    "I can answer general questions about the project. Try one topic: registration, deposit, withdrawal, learning, satellites, trading, rewards, website or risks. If you need a specific account or request check, type: operator."
   );
 }
 
