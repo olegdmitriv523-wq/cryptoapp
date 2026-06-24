@@ -130,15 +130,17 @@ async function loadAssets() {
     document.getElementById("tradingEarned").textContent = money(data.tradingEarned);
     renderHistory(data.history || []);
     renderPool(data.pool);
+    window.appTranslate?.translatePage();
   } catch {
     document.getElementById("history").innerHTML = '<div class="empty red">Не вдалося завантажити активи</div>';
+    window.appTranslate?.translatePage();
   }
 }
 loadAssets();
 setInterval(loadAssets, 60000);
 window.addEventListener("app-language-ready", () => {
   if (lastPool) renderPool(lastPool);
-  window.appTranslate?.applyTranslations(document.body);
+  window.appTranslate?.translatePage();
 });
 </script>
 <script src="app-nav.js"></script>

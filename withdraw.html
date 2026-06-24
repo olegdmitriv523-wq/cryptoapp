@@ -128,6 +128,7 @@ async function loadUser() {
     const user = await response.json();
     currentEarned = Math.max(0, Number(user.balance || 0) - Number(user.deposit || 0));
     document.getElementById("balance").textContent = currentEarned.toFixed(2);
+    window.appTranslate?.translatePage();
   } catch {
     localStorage.removeItem("token");
     location.href = "login.html";
@@ -148,6 +149,7 @@ function checkTimer() {
     const min = Math.floor(left / 60000);
     const sec = Math.floor((left % 60000) / 1000);
     document.getElementById("timer").textContent = `Спробуйте через: ${min}м ${sec}с`;
+    window.appTranslate?.translatePage();
     setTimeout(update, 1000);
   };
   update();

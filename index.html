@@ -203,6 +203,7 @@ async function loadUser() {
     const percent = deposit > 0 ? (profit / deposit) * 100 : 0;
     const color = percent >= 0 ? "green" : "red";
     document.getElementById("balance").innerHTML = `${localText("balance")}: $${money(balance)} <span class="${color}">${percent.toFixed(2)}%</span>`;
+    window.appTranslate?.translatePage();
   } catch {
     localStorage.removeItem("token");
     location.href = "login.html";
@@ -226,6 +227,7 @@ async function loadCoins() {
         <div class="coin-price">$${Number(c.current_price).toLocaleString("en-US")}<br><span class="${color}">${c.price_change_percentage_24h.toFixed(2)}%</span></div>
       </div>`;
     }).join("");
+    window.appTranslate?.translatePage();
   } catch {
     document.getElementById("list").innerHTML = "";
   }

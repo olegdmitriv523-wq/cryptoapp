@@ -90,6 +90,7 @@ function markCompleted(id) {
   card.classList.add("done");
   card.querySelector("button").disabled = true;
   card.querySelector(".result").innerHTML = '<span class="reward">Пройдено · винагорода $10</span>';
+  window.appTranslate?.translatePage();
 }
 
 function setLearningLocked(data) {
@@ -98,6 +99,7 @@ function setLearningLocked(data) {
   note.textContent = `Навчання відкривається після підтвердженого поповнення від $${data.minDeposit || 500}. Зараз підтверджено: $${Number(data.deposit || 0).toFixed(2)}. Матеріали оновлюються кожного 1 числа місяця.`;
   document.querySelectorAll(".quiz button").forEach(button => button.disabled = true);
   document.querySelectorAll(".quiz .result").forEach(result => result.textContent = "Розділ поки заблокований.");
+  window.appTranslate?.translatePage();
 }
 
 async function loadProgress() {
@@ -128,6 +130,7 @@ async function submitQuiz(id) {
       : data.message === "Incorrect answer"
         ? "Неправильно. Перечитайте урок і спробуйте ще раз."
         : "Не вдалося перевірити відповідь.";
+    window.appTranslate?.translatePage();
   }
 }
 loadProgress();

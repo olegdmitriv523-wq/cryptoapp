@@ -283,6 +283,132 @@ function triggerGoogleTranslate() {
 
 let translationRefreshTimer = null;
 let translationRefreshPauseUntil = 0;
+let machineTranslationReady = true;
+let machineTranslationRunning = false;
+let machineTranslationFallbackUsed = false;
+const TRANSLATION_SPLIT = "[[UEC_SPLIT_42]]";
+const TRANSLATION_CACHE_PREFIX = "uec_translation_cache_";
+
+function shouldTranslateText(text) {
+  const value = String(text || "").replace(/\s+/g, " ").trim();
+  if (value.length < 2) return false;
+  if (/^[\d\s.,:+/%$€£¥#xX-]+$/.test(value)) return false;
+  if (/^(USD|USDT|TRC20|BTC|ETH|BNB|SOL|XRP|ADA|DOGE)$/i.test(value)) return false;
+  return /[А-Яа-яІіЇїЄєҐґ]/.test(value);
+}
+
+function translationCache(lang) {
+  try {
+    return JSON.parse(localStorage.getItem(TRANSLATION_CACHE_PREFIX + lang) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function saveTranslationCache(lang, cache) {
+  try {
+    const entries = Object.entries(cache).slice(-900);
+    localStorage.setItem(TRANSLATION_CACHE_PREFIX + lang, JSON.stringify(Object.fromEntries(entries)));
+  } catch {}
+}
+
+function translatableTextNodes(root = document.body) {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      if (!node.nodeValue || !shouldTranslateText(node.nodeValue)) return NodeFilter.FILTER_REJECT;
+      const parent = node.parentElement;
+      if (!parent) return NodeFilter.FILTER_REJECT;
+      if (["SCRIPT", "STYLE", "TEXTAREA", "OPTION", "SELECT"].includes(parent.tagName)) return NodeFilter.FILTER_REJECT;
+      if (parent.closest(".notranslate,[translate='no'],#google_translate_element,.goog-te-banner-frame,.language-select")) return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    }
+  });
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  return nodes;
+}
+
+function translatableAttributes(root = document.body) {
+  const elements = [...root.querySelectorAll("[placeholder], [title], [aria-label], img[alt]")];
+  const attrs = [];
+  for (const element of elements) {
+    if (element.closest(".notranslate,[translate='no'],#google_translate_element,.language-select")) continue;
+    for (const name of ["placeholder", "title", "aria-label", "alt"]) {
+      const value = element.getAttribute(name);
+      if (shouldTranslateText(value)) attrs.push({ element, name, value });
+    }
+  }
+  return attrs;
+}
+
+async function translateBatch(texts, lang) {
+  if (!texts.length) return [];
+  const joined = texts.join(`\n${TRANSLATION_SPLIT}\n`);
+  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=uk&tl=${encodeURIComponent(googleTargetLang())}&dt=t&q=${encodeURIComponent(joined)}`;
+  const response = await fetch(url, { cache: "force-cache" });
+  if (!response.ok) throw new Error("translation failed");
+  const data = await response.json();
+  const translated = (data?.[0] || []).map(part => part?.[0] || "").join("");
+  const parts = translated.split(TRANSLATION_SPLIT).map(part => part.trim());
+  return texts.map((text, index) => parts[index] || text);
+}
+
+async function machineTranslatePage(root = document.body) {
+  const lang = currentLang();
+  if (lang === "uk" || machineTranslationRunning) return true;
+  machineTranslationRunning = true;
+  try {
+    protectCurrencyText(root);
+    const cache = translationCache(lang);
+    const textNodes = translatableTextNodes(root).map(node => {
+      if (!node.__uecOriginalText || shouldTranslateText(node.nodeValue)) node.__uecOriginalText = node.__uecOriginalText || node.nodeValue;
+      return { node, original: node.__uecOriginalText };
+    }).filter(item => shouldTranslateText(item.original));
+    const attrs = translatableAttributes(root).map(item => {
+      const key = `data-uec-original-${item.name.replace(/[^a-z]/g, "-")}`;
+      const original = item.element.getAttribute(key) || item.value;
+      item.element.setAttribute(key, original);
+      return { ...item, original };
+    }).filter(item => shouldTranslateText(item.original));
+
+    const originals = [...new Set([...textNodes.map(item => item.original), ...attrs.map(item => item.original)])];
+    const missing = originals.filter(text => !cache[text]);
+    for (let index = 0; index < missing.length; index += 28) {
+      const chunk = [];
+      let length = 0;
+      for (const text of missing.slice(index, index + 28)) {
+        if (length + text.length > 2600 && chunk.length) break;
+        chunk.push(text);
+        length += text.length + TRANSLATION_SPLIT.length + 2;
+      }
+      const translated = await translateBatch(chunk, lang);
+      chunk.forEach((text, chunkIndex) => { cache[text] = translated[chunkIndex] || text; });
+      index += Math.max(0, chunk.length - 28);
+    }
+    saveTranslationCache(lang, cache);
+
+    for (const { node, original } of textNodes) {
+      if (cache[original] && node.nodeValue !== cache[original]) node.nodeValue = cache[original];
+    }
+    for (const { element, name, original } of attrs) {
+      if (cache[original] && element.getAttribute(name) !== cache[original]) element.setAttribute(name, cache[original]);
+    }
+    applyTranslations(root);
+    protectCurrencyText(root);
+    machineTranslationReady = true;
+    return true;
+  } catch {
+    machineTranslationReady = false;
+    if (!machineTranslationFallbackUsed) {
+      machineTranslationFallbackUsed = true;
+      loadGoogleTranslatorFallback();
+    }
+    return false;
+  } finally {
+    machineTranslationRunning = false;
+    hideLanguageLoading();
+  }
+}
 
 function scheduleFullPageTranslation(delay = 700) {
   if (currentLang() === "uk") return;
@@ -291,7 +417,13 @@ function scheduleFullPageTranslation(delay = 700) {
   translationRefreshTimer = setTimeout(() => {
     translationRefreshPauseUntil = Date.now() + 2400;
     protectCurrencyText(document.body);
-    if (!triggerGoogleTranslate()) {
+    machineTranslatePage(document.body).then(success => {
+      if (success) return;
+      if (!triggerGoogleTranslate()) {
+        setTimeout(triggerGoogleTranslate, 900);
+      }
+    });
+    if (!machineTranslationReady && !triggerGoogleTranslate()) {
       setTimeout(triggerGoogleTranslate, 900);
     }
   }, delay);
@@ -341,7 +473,7 @@ function setTranslateCookie(lang) {
   }
 }
 
-function loadFullPageTranslator() {
+function loadGoogleTranslatorFallback() {
   const lang = currentLang();
   setTranslateCookie(lang);
   if (lang === "uk") return;
@@ -367,6 +499,17 @@ function loadFullPageTranslator() {
   script.async = true;
   script.onerror = hideLanguageLoading;
   document.head.append(script);
+}
+
+function loadFullPageTranslator() {
+  const lang = currentLang();
+  setTranslateCookie(lang);
+  if (lang === "uk") return;
+  showLanguageLoading();
+  machineTranslatePage(document.body).then(success => {
+    if (!success) loadGoogleTranslatorFallback();
+  });
+  [400, 1400, 3200, 6200].forEach(delay => setTimeout(() => machineTranslatePage(document.body), delay));
 }
 
 function observeCurrencyChanges() {

@@ -139,6 +139,7 @@ async function loadWallet() {
     const wallet = user.wallet_address || "NO WALLET";
     document.getElementById("walletBox").textContent = wallet;
     document.getElementById("qr").src = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" + encodeURIComponent(wallet);
+    window.appTranslate?.translatePage();
   } catch {
     localStorage.removeItem("token");
     location.href = "login.html";

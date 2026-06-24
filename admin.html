@@ -89,12 +89,14 @@ async function loginAdmin() {
   const response = await adminFetch("/admin/users");
   if (!response.ok) {
     document.getElementById("accessMessage").textContent = "Невірний код або ADMIN_KEY не налаштований на Render.";
+    window.appTranslate?.translatePage();
     return;
   }
   sessionStorage.setItem("admin_key", adminKey);
   document.getElementById("adminAccess").hidden = true;
   document.getElementById("adminContent").hidden = false;
   await refresh();
+  window.appTranslate?.translatePage();
 }
 
 document.querySelectorAll("[data-tab]").forEach(button => button.addEventListener("click", () => {
@@ -140,6 +142,7 @@ function renderUsers(users) {
       </div>
     </article>
   `).join("") : '<div class="empty">Користувачів немає</div>';
+  window.appTranslate?.translatePage();
 }
 
 async function changeBalance(userId, mode) {
@@ -212,6 +215,7 @@ function renderSignals(signals) {
   document.getElementById("deposits").innerHTML = renderSignalList(signals.filter(signal => signal.type === "deposit"), "Заявок на поповнення немає");
   document.getElementById("withdrawals").innerHTML = renderSignalList(signals.filter(signal => signal.type === "withdraw"), "Заявок на виведення немає");
   document.getElementById("profileRequests").innerHTML = renderSignalList(signals.filter(signal => ["profile_update","email_update"].includes(signal.type)), "Заявок на зміну даних немає");
+  window.appTranslate?.translatePage();
 }
 
 async function setSignal(id, action) {
@@ -251,6 +255,7 @@ function renderSatellites(users) {
         <div class="label">Запрошений користувачем: ${displayId(user.referrer_id)}</div>
       </div>
     `).join("") : '<div class="empty">За пошуком нічого не знайдено</div>';
+    window.appTranslate?.translatePage();
     return;
   }
   const children = {};
@@ -259,6 +264,7 @@ function renderSatellites(users) {
   });
   const roots = users.filter(user => !user.referrer_id || !users.some(parent => parent.id === user.referrer_id));
   document.getElementById("satellites").innerHTML = roots.length ? roots.map(root => treeNode(root, children)).join("") : '<div class="empty">Структура порожня</div>';
+  window.appTranslate?.translatePage();
 }
 
 async function refresh() {
@@ -266,6 +272,7 @@ async function refresh() {
   catch (error) {
     const message = error.message === "admin-auth" ? "Невірний код адміністратора або ADMIN_KEY не налаштований на Render." : "Не вдалося завантажити дані";
     document.querySelectorAll(".section").forEach(section => section.innerHTML = `<div class="empty">${message}</div>`);
+    window.appTranslate?.translatePage();
   }
 }
 if (adminKey) {

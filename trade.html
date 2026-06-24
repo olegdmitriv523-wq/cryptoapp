@@ -72,6 +72,7 @@ async function loadStatus() {
     renderPosition(0, statusData.main, "Основна торгівля"),
     ...statusData.slots.map((slot, index) => renderPosition(index + 1, slot, `Позиція ${index + 1}`))
   ].join("");
+  window.appTranslate?.translatePage();
 }
 
 async function executeTrade(position) {
@@ -82,6 +83,7 @@ async function executeTrade(position) {
   document.getElementById("notice").textContent = data.success
     ? `Угода почалась. Очікуване нарахування $${money(data.reward)} буде доступне через 10 хвилин.`
     : ({"No balance":"Для торгівлі потрібен позитивний баланс.","Position locked":"Ця позиція ще заблокована.","Trade pending":"Попередня угода ще очікує завершення.","Cooldown active":"Позиція ще відновлюється."}[data.message] || "Не вдалося виконати угоду.");
+  window.appTranslate?.translatePage();
   await loadStatus();
 }
 loadStatus();

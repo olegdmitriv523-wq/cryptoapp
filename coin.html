@@ -339,6 +339,7 @@ PNL: <span style="color:${color}">${pnl.toFixed(2)}</span><br>
 });
 
 document.getElementById("positions").innerHTML = html;
+window.appTranslate?.translatePage();
 }
 
 function renderHistory(){
@@ -351,6 +352,7 @@ html+=`<div>${h.symbol} ${h.type} <span style="color:${c}">${h.pnl.toFixed(2)}</
 });
 
 document.getElementById("history").innerHTML = html;
+window.appTranslate?.translatePage();
 }
 
 // ===== LOOP =====

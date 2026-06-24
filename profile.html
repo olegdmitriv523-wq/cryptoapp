@@ -55,6 +55,7 @@ async function loadProfile(){
   referrer.textContent=user.referrer_id?String(user.referrer_id).padStart(8,"0"):"Немає";
   wallet.textContent=user.wallet_address||"Немає";
   fullname.value=user.fullname||"";nickname.value=user.nickname||"";country.value=user.country||"";phone.value=user.phone||"";email.value=user.email||"";
+  window.appTranslate?.translatePage();
 }
 
 profileForm.addEventListener("submit",async event=>{
@@ -62,14 +63,16 @@ profileForm.addEventListener("submit",async event=>{
   const payload={fullname:fullname.value.trim(),nickname:nickname.value.trim(),country:country.value.trim(),phone:phone.value.trim()};
   const data=await (await api("/profile/change-request",{method:"POST",body:JSON.stringify(payload)})).json();
   profileMessage.textContent=data.success?"Заявку надіслано адміністратору.":"Перевірте введені дані.";
+  window.appTranslate?.translatePage();
 });
 
 emailForm.addEventListener("submit",async event=>{
   event.preventDefault();emailButton.disabled=true;emailMessage.textContent="Надсилання коду...";
   try{
     const data=await (await api("/profile/email/start",{method:"POST",body:JSON.stringify({email:email.value.trim()})})).json();
-    if(!data.success)return emailMessage.textContent=data.message==="User exists"?"Ця пошта вже використовується.":"Не вдалося надіслати код.";
+    if(!data.success){emailMessage.textContent=data.message==="User exists"?"Ця пошта вже використовується.":"Не вдалося надіслати код.";window.appTranslate?.translatePage();return;}
     emailPendingToken=data.pendingToken;codeArea.classList.remove("hidden");emailMessage.textContent="Код надіслано. Він дійсний 10 хвилин.";emailCode.focus();
+    window.appTranslate?.translatePage();
   }finally{emailButton.disabled=false}
 });
 
@@ -77,6 +80,7 @@ verifyEmailButton.addEventListener("click",async()=>{
   const data=await (await api("/profile/email/verify",{method:"POST",body:JSON.stringify({pendingToken:emailPendingToken,code:emailCode.value.trim()})})).json();
   emailMessage.textContent=data.success?"Пошту підтверджено. Заявку надіслано адміністратору.":(data.message==="Code expired"?"Код прострочено.":"Неправильний код.");
   if(data.success)codeArea.classList.add("hidden");
+  window.appTranslate?.translatePage();
 });
 loadProfile();
 </script>
