@@ -1,4 +1,4 @@
-const CACHE_NAME = "united-europe-v7";
+const CACHE_NAME = "united-europe-v8";
 const APP_SHELL = [
   "/loading.html",
   "/login.html",

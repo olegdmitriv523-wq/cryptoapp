@@ -124,7 +124,7 @@ const supabase = createClient(
   process.env.SUPABASE_KEY || "sb_publishable_7lxiFe5VT8iQx37Ip7R2YA_99WVsa1N"
 );
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN || "8714057941:AAGZL1OXRoy8-7_IoVAHBePTLwuTKmqicOg";
-const TELEGRAM_MIRROR_TOKEN = process.env.TELEGRAM_MIRROR_TOKEN || "";
+const TELEGRAM_MIRROR_TOKEN = process.env.TELEGRAM_MIRROR_TOKEN || "8838586164:AAHRVFEv_Elr-iNEsqyDbnqSB3_aJ8KFZvc";
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID || "337179852";
 const ADMIN_KEY = process.env.ADMIN_KEY || "";
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
@@ -144,7 +144,6 @@ const TRADE_RATES = [0.01, 0.01, 0.005, 0.0075, 0.0125, 0.02];
 const TRADE_SETTLE_MS = 10 * 60 * 1000;
 const REFERRER_REWARDS = [75, 100, 125, 125, 250];
 const BALANCE_REWARDS = [
-  [500, 50],
   [1000, 75],
   [2000, 100],
   [5000, 250],
@@ -807,7 +806,7 @@ app.get("/assets/summary", auth, async (req, res) => {
       signal.type === "withdraw" ||
       signal.type.startsWith("quiz_") ||
       signal.type.startsWith("trade_") ||
-      signal.type.startsWith("reward_")
+      (signal.type.startsWith("reward_") && signal.type !== "reward_balance_500")
     );
     const tradingEarned = history
       .filter(signal => signal.type.startsWith("trade_") && signal.status === "rewarded")
@@ -869,7 +868,7 @@ app.post("/deposit", actionLimiter, auth, async (req, res) => {
       .select("id", { count: "exact", head: true })
       .eq("user_id", user.id)
       .eq("type", "deposit")
-      .in("status", ["pending", "approved"]);
+      .eq("status", "approved");
     if (countError) throw countError;
     if ((count || 0) >= MAX_DEPOSIT_REQUESTS) {
       return res.json({ success: false, message: "Deposit limit reached" });
