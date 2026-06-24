@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 620" role="img" aria-label="Digital crypto network">
+  <defs>
+    <radialGradient id="g1" cx="52%" cy="42%" r="62%">
+      <stop offset="0" stop-color="#38bdf8" stop-opacity=".42"/>
+      <stop offset=".48" stop-color="#1d4ed8" stop-opacity=".20"/>
+      <stop offset="1" stop-color="#020617" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" x2="1">
+      <stop offset="0" stop-color="#fde68a"/>
+      <stop offset="1" stop-color="#f97316"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="900" height="620" rx="44" fill="#07111f"/>
+  <circle cx="450" cy="310" r="270" fill="url(#g1)"/>
+  <g opacity=".38" stroke="#60a5fa" stroke-width="1.4">
+    <path d="M168 414 279 250 422 328 571 196 724 382 579 486 422 328 269 467 168 414Z"/>
+    <path d="M279 250 571 196M269 467 579 486M168 414 422 328 724 382"/>
+  </g>
+  <g filter="url(#glow)">
+    <circle cx="168" cy="414" r="9" fill="#38bdf8"/>
+    <circle cx="279" cy="250" r="10" fill="#facc15"/>
+    <circle cx="422" cy="328" r="13" fill="#38bdf8"/>
+    <circle cx="571" cy="196" r="10" fill="#facc15"/>
+    <circle cx="724" cy="382" r="12" fill="#38bdf8"/>
+    <circle cx="579" cy="486" r="8" fill="#facc15"/>
+    <circle cx="269" cy="467" r="8" fill="#38bdf8"/>
+  </g>
+  <g transform="translate(315 210)">
+    <rect width="270" height="190" rx="34" fill="#0f172a" stroke="#f5c451" stroke-opacity=".34"/>
+    <text x="135" y="76" text-anchor="middle" font-family="Arial, sans-serif" font-size="56" font-weight="900" fill="url(#gold)">UEC</text>
+    <text x="135" y="116" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="700" fill="#dbeafe">United Europe Crypto</text>
+    <text x="135" y="148" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" fill="#93c5fd">learning • signals • structure</text>
+  </g>
+</svg>

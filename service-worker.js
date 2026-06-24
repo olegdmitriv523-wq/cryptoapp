@@ -1,7 +1,12 @@
-const CACHE_NAME = "united-europe-v13";
+const CACHE_NAME = "united-europe-v14";
 const APP_SHELL = [
   "/loading.html",
-  "/landing.html",
+  "/site/index.html",
+  "/site/site.css",
+  "/site/site.js",
+  "/site/assets/hero-network.svg",
+  "/site/assets/market-chart.svg",
+  "/site/assets/education.svg",
   "/login.html",
   "/register.html",
   "/terms.html",
@@ -48,7 +53,7 @@ self.addEventListener("fetch", event => {
     );
     return;
   }
-  const staticPath = url.pathname === "/" ? "/landing.html" : url.pathname;
+  const staticPath = url.pathname === "/" ? "/site/index.html" : url.pathname;
   const shouldCache = APP_SHELL.includes(staticPath);
   if (!shouldCache) return;
 

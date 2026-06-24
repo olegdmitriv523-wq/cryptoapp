@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 460" role="img" aria-label="Crypto education illustration">
+  <defs>
+    <linearGradient id="card" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#111827"/>
+      <stop offset="1" stop-color="#020617"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" x2="1">
+      <stop offset="0" stop-color="#f5c451"/>
+      <stop offset="1" stop-color="#38bdf8"/>
+    </linearGradient>
+  </defs>
+  <rect width="760" height="460" rx="34" fill="#07111f"/>
+  <g transform="translate(82 70)">
+    <rect width="596" height="320" rx="30" fill="url(#card)" stroke="#334155"/>
+    <rect x="34" y="38" width="220" height="24" rx="12" fill="url(#accent)"/>
+    <rect x="34" y="88" width="500" height="18" rx="9" fill="#334155"/>
+    <rect x="34" y="122" width="430" height="18" rx="9" fill="#1e293b"/>
+    <rect x="34" y="156" width="470" height="18" rx="9" fill="#1e293b"/>
+    <g transform="translate(34 210)">
+      <rect width="150" height="72" rx="18" fill="#0f172a" stroke="#f5c451" stroke-opacity=".5"/>
+      <text x="75" y="44" text-anchor="middle" font-family="Arial" font-size="24" font-weight="900" fill="#f5c451">Quiz</text>
+    </g>
+    <g transform="translate(220 210)">
+      <rect width="150" height="72" rx="18" fill="#0f172a" stroke="#38bdf8" stroke-opacity=".5"/>
+      <text x="75" y="44" text-anchor="middle" font-family="Arial" font-size="24" font-weight="900" fill="#38bdf8">Risk</text>
+    </g>
+    <g transform="translate(406 210)">
+      <rect width="150" height="72" rx="18" fill="#0f172a" stroke="#22c55e" stroke-opacity=".5"/>
+      <text x="75" y="44" text-anchor="middle" font-family="Arial" font-size="24" font-weight="900" fill="#22c55e">Reward</text>
+    </g>
+  </g>
+</svg>
