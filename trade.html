@@ -40,6 +40,13 @@ function cooldownText(ms) {
   return `Повторно через ${hours} год ${minutes} хв`;
 }
 
+function pendingText(ms) {
+  if (!ms) return "";
+  const minutes = Math.floor(ms / 60000);
+  const seconds = Math.ceil((ms % 60000) / 1000);
+  return `Угода завершується через ${minutes} хв ${seconds} с`;
+}
+
 function renderPosition(position, option, title) {
   const satellite = option.satellite;
   const subtitle = position === 0
@@ -47,9 +54,10 @@ function renderPosition(position, option, title) {
     : satellite
       ? `Сателіт #${satellite.display_id || String(satellite.id).padStart(8, "0")}: ${satellite.nickname || "без нікнейма"} · реальний баланс $${money(satellite.balance)} · підтверджене поповнення $${money(satellite.deposit)}${satellite.active ? "" : ` · активується від $${option.minDeposit || 500}`}`
       : `Потрібен ${position}-й активний сателіт із підтвердженим поповненням від $${option.minDeposit || 500}`;
-  const disabled = !option.unlocked || option.cooldown > 0 || statusData.balance <= 0;
+  const disabled = !option.unlocked || option.cooldown > 0 || option.pending > 0 || statusData.balance <= 0;
+  const pending = pendingText(option.pending);
   return `<article class="trade-card${option.unlocked ? "" : " locked"}">
-    <div><h2>${title}</h2><div class="details">${subtitle}<br>Винагорода: ${(option.rate * 100).toFixed(1)}% від вашого балансу<br>${cooldownText(option.cooldown)}</div></div>
+    <div><h2>${title}</h2><div class="details">${subtitle}<br>Винагорода: ${(option.rate * 100).toFixed(1)}% від вашого балансу<br>${pending || cooldownText(option.cooldown)}</div></div>
     <button ${disabled ? "disabled" : ""} onclick="executeTrade(${position})">${option.unlocked ? "Торгувати" : "Заблоковано"}</button>
   </article>`;
 }
@@ -72,11 +80,12 @@ async function executeTrade(position) {
   });
   const data = await response.json();
   document.getElementById("notice").textContent = data.success
-    ? `Угода завершена. Нараховано $${money(data.reward)}.`
-    : ({"No balance":"Для торгівлі потрібен позитивний баланс.","Position locked":"Ця позиція ще заблокована.","Cooldown active":"Позиція ще відновлюється."}[data.message] || "Не вдалося виконати угоду.");
+    ? `Угода почалась. Очікуване нарахування $${money(data.reward)} буде доступне через 10 хвилин.`
+    : ({"No balance":"Для торгівлі потрібен позитивний баланс.","Position locked":"Ця позиція ще заблокована.","Trade pending":"Попередня угода ще очікує завершення.","Cooldown active":"Позиція ще відновлюється."}[data.message] || "Не вдалося виконати угоду.");
   await loadStatus();
 }
 loadStatus();
+setInterval(loadStatus, 30000);
 </script>
 <script src="app-nav.js"></script>
 </body>

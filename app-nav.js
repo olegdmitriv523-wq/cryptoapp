@@ -14,7 +14,7 @@ const APP_LANGUAGES = [
 
 const I18N = {
   uk: {
-    navHome: "Додому", navTrade: "Торгівля", navAssets: "Активи", navLearning: "Навчання", navInfo: "Інфо",
+    navHome: "Додому", navTrade: "Торгівля", navAssets: "Активи", navRewards: "Винагороди", navLearning: "Навчання", navInfo: "Інфо",
     install: "Встановити додаток на головний екран", installTitle: "Встановлення додатку", installClose: "Зрозуміло", installIos: "На iPhone натисніть Поділитися, потім На початковий екран.", installAndroid: "На Android натисніть Встановити або Додати на головний екран у меню браузера.", home: "Додому", trade: "Торгівля", assets: "Активи",
     learning: "Навчання криптовалютам", info: "Про проєкт", deposit: "Поповнення", withdraw: "Виведення коштів",
     profile: "Дані користувача", logout: "Вийти", balance: "Баланс", wallet: "Гаманець", userData: "Дані користувача",
@@ -25,7 +25,7 @@ const I18N = {
     project: "United Europe Crypto", market: "Ринок", copy: "Скопійовано", back: "Назад"
   },
   ru: {
-    navHome: "Домой", navTrade: "Торговля", navAssets: "Активы", navLearning: "Обучение", navInfo: "Инфо",
+    navHome: "Домой", navTrade: "Торговля", navAssets: "Активы", navRewards: "Награды", navLearning: "Обучение", navInfo: "Инфо",
     install: "Установить приложение на главный экран", installTitle: "Установка приложения", installClose: "Понятно", installIos: "На iPhone нажмите Поделиться, затем На экран Домой.", installAndroid: "На Android нажмите Установить или Добавить на главный экран в меню браузера.", home: "Домой", trade: "Торговля", assets: "Активы",
     learning: "Обучение криптовалютам", info: "О проекте", deposit: "Пополнение", withdraw: "Вывод средств",
     profile: "Данные пользователя", logout: "Выйти", balance: "Баланс", wallet: "Кошелек", userData: "Данные пользователя",
@@ -36,7 +36,7 @@ const I18N = {
     project: "United Europe Crypto", market: "Рынок", copy: "Скопировано", back: "Назад"
   },
   kk: {
-    navHome: "Басты бет", navTrade: "Сауда", navAssets: "Активтер", navLearning: "Оқу", navInfo: "Ақпарат",
+    navHome: "Басты бет", navTrade: "Сауда", navAssets: "Активтер", navRewards: "Сыйақылар", navLearning: "Оқу", navInfo: "Ақпарат",
     install: "Қолданбаны басты экранға орнату", installTitle: "Қолданбаны орнату", installClose: "Түсінікті", installIos: "iPhone-да Бөлісу түймесін, содан кейін Басты экранға қосу түймесін басыңыз.", installAndroid: "Android-та браузер мәзірінен Орнату немесе Басты экранға қосу түймесін басыңыз.", home: "Басты бет", trade: "Сауда", assets: "Активтер",
     learning: "Криптовалюта бойынша оқу", info: "Жоба туралы", deposit: "Толықтыру", withdraw: "Шығару",
     profile: "Пайдаланушы деректері", logout: "Шығу", balance: "Баланс", wallet: "Әмиян", userData: "Пайдаланушы деректері",
@@ -47,7 +47,7 @@ const I18N = {
     project: "United Europe Crypto", market: "Нарық", copy: "Көшірілді", back: "Артқа"
   },
   pl: {
-    navHome: "Start", navTrade: "Handel", navAssets: "Aktywa", navLearning: "Nauka", navInfo: "Info",
+    navHome: "Start", navTrade: "Handel", navAssets: "Aktywa", navRewards: "Nagrody", navLearning: "Nauka", navInfo: "Info",
     install: "Zainstaluj aplikację na ekranie głównym", installTitle: "Instalacja aplikacji", installClose: "Rozumiem", installIos: "Na iPhonie kliknij Udostępnij, a potem Do ekranu początkowego.", installAndroid: "Na Androidzie kliknij Zainstaluj lub Dodaj do ekranu głównego w menu przeglądarki.", home: "Start", trade: "Handel", assets: "Aktywa",
     learning: "Nauka kryptowalut", info: "O projekcie", deposit: "Wpłata", withdraw: "Wypłata",
     profile: "Dane użytkownika", logout: "Wyloguj", balance: "Saldo", wallet: "Portfel", userData: "Dane użytkownika",
@@ -58,7 +58,7 @@ const I18N = {
     project: "United Europe Crypto", market: "Rynek", copy: "Skopiowano", back: "Wstecz"
   },
   ro: {
-    navHome: "Acasă", navTrade: "Tranzacții", navAssets: "Active", navLearning: "Învățare", navInfo: "Info",
+    navHome: "Acasă", navTrade: "Tranzacții", navAssets: "Active", navRewards: "Recompense", navLearning: "Învățare", navInfo: "Info",
     install: "Instalează aplicația pe ecranul principal", installTitle: "Instalarea aplicației", installClose: "Am înțeles", installIos: "Pe iPhone apăsați Partajare, apoi Adăugați la ecranul principal.", installAndroid: "Pe Android apăsați Instalare sau Adăugați la ecranul principal din meniul browserului.", home: "Acasă", trade: "Tranzacții", assets: "Active",
     learning: "Învățare despre criptomonede", info: "Despre proiect", deposit: "Depunere", withdraw: "Retragere",
     profile: "Date utilizator", logout: "Ieșire", balance: "Sold", wallet: "Portofel", userData: "Date utilizator",
@@ -69,7 +69,7 @@ const I18N = {
     project: "United Europe Crypto", market: "Piață", copy: "Copiat", back: "Înapoi"
   },
   en: {
-    navHome: "Home", navTrade: "Trade", navAssets: "Assets", navLearning: "Learning", navInfo: "Info",
+    navHome: "Home", navTrade: "Trade", navAssets: "Assets", navRewards: "Rewards", navLearning: "Learning", navInfo: "Info",
     install: "Install the app on the home screen", installTitle: "Install the app", installClose: "Got it", installIos: "On iPhone, tap Share, then Add to Home Screen.", installAndroid: "On Android, tap Install or Add to Home screen in the browser menu.", home: "Home", trade: "Trading", assets: "Assets",
     learning: "Cryptocurrency Learning", info: "About the project", deposit: "Deposit", withdraw: "Withdraw",
     profile: "User data", logout: "Log out", balance: "Balance", wallet: "Wallet", userData: "User data",
@@ -80,7 +80,7 @@ const I18N = {
     project: "United Europe Crypto", market: "Market", copy: "Copied", back: "Back"
   },
   de: {
-    navHome: "Start", navTrade: "Handel", navAssets: "Aktiva", navLearning: "Lernen", navInfo: "Info",
+    navHome: "Start", navTrade: "Handel", navAssets: "Aktiva", navRewards: "Prämien", navLearning: "Lernen", navInfo: "Info",
     install: "App zum Startbildschirm hinzufügen", installTitle: "App installieren", installClose: "Verstanden", installIos: "Tippen Sie auf dem iPhone auf Teilen und dann auf Zum Home-Bildschirm.", installAndroid: "Tippen Sie auf Android im Browsermenü auf Installieren oder Zum Startbildschirm hinzufügen.", home: "Start", trade: "Handel", assets: "Aktiva",
     learning: "Kryptowährungen lernen", info: "Über das Projekt", deposit: "Einzahlung", withdraw: "Auszahlung",
     profile: "Benutzerdaten", logout: "Abmelden", balance: "Saldo", wallet: "Wallet", userData: "Benutzerdaten",
@@ -91,7 +91,7 @@ const I18N = {
     project: "United Europe Crypto", market: "Markt", copy: "Kopiert", back: "Zurück"
   },
   fr: {
-    navHome: "Accueil", navTrade: "Trading", navAssets: "Actifs", navLearning: "Formation", navInfo: "Infos",
+    navHome: "Accueil", navTrade: "Trading", navAssets: "Actifs", navRewards: "Récompenses", navLearning: "Formation", navInfo: "Infos",
     install: "Installer l'application sur l'écran d'accueil", installTitle: "Installer l'application", installClose: "Compris", installIos: "Sur iPhone, touchez Partager, puis Sur l'écran d'accueil.", installAndroid: "Sur Android, touchez Installer ou Ajouter à l'écran d'accueil dans le menu du navigateur.", home: "Accueil", trade: "Trading", assets: "Actifs",
     learning: "Formation crypto", info: "À propos du projet", deposit: "Dépôt", withdraw: "Retrait",
     profile: "Données utilisateur", logout: "Déconnexion", balance: "Solde", wallet: "Portefeuille", userData: "Données utilisateur",
@@ -102,7 +102,7 @@ const I18N = {
     project: "United Europe Crypto", market: "Marché", copy: "Copié", back: "Retour"
   },
   pt: {
-    navHome: "Início", navTrade: "Negociação", navAssets: "Ativos", navLearning: "Aprendizado", navInfo: "Info",
+    navHome: "Início", navTrade: "Negociação", navAssets: "Ativos", navRewards: "Recompensas", navLearning: "Aprendizado", navInfo: "Info",
     install: "Instalar o app na tela inicial", installTitle: "Instalar o app", installClose: "Entendi", installIos: "No iPhone, toque em Compartilhar e depois Adicionar à Tela de Início.", installAndroid: "No Android, toque em Instalar ou Adicionar à tela inicial no menu do navegador.", home: "Início", trade: "Negociação", assets: "Ativos",
     learning: "Aprendizado sobre criptomoedas", info: "Sobre o projeto", deposit: "Depósito", withdraw: "Retirada",
     profile: "Dados do usuário", logout: "Sair", balance: "Saldo", wallet: "Carteira", userData: "Dados do usuário",
@@ -113,7 +113,7 @@ const I18N = {
     project: "United Europe Crypto", market: "Mercado", copy: "Copiado", back: "Voltar"
   },
   es: {
-    navHome: "Inicio", navTrade: "Trading", navAssets: "Activos", navLearning: "Aprendizaje", navInfo: "Info",
+    navHome: "Inicio", navTrade: "Trading", navAssets: "Activos", navRewards: "Recompensas", navLearning: "Aprendizaje", navInfo: "Info",
     install: "Instalar la app en la pantalla principal", installTitle: "Instalar la app", installClose: "Entendido", installIos: "En iPhone, toca Compartir y luego Añadir a pantalla de inicio.", installAndroid: "En Android, toca Instalar o Añadir a pantalla de inicio en el menú del navegador.", home: "Inicio", trade: "Trading", assets: "Activos",
     learning: "Aprendizaje de criptomonedas", info: "Sobre el proyecto", deposit: "Depósito", withdraw: "Retiro",
     profile: "Datos del usuario", logout: "Salir", balance: "Saldo", wallet: "Billetera", userData: "Datos del usuario",
@@ -124,7 +124,7 @@ const I18N = {
     project: "United Europe Crypto", market: "Mercado", copy: "Copiado", back: "Atrás"
   },
   it: {
-    navHome: "Home", navTrade: "Trading", navAssets: "Asset", navLearning: "Formazione", navInfo: "Info",
+    navHome: "Home", navTrade: "Trading", navAssets: "Asset", navRewards: "Ricompense", navLearning: "Formazione", navInfo: "Info",
     install: "Installa l'app sulla schermata principale", installTitle: "Installa l'app", installClose: "Capito", installIos: "Su iPhone tocca Condividi, poi Aggiungi alla schermata Home.", installAndroid: "Su Android tocca Installa o Aggiungi alla schermata Home nel menu del browser.", home: "Home", trade: "Trading", assets: "Asset",
     learning: "Formazione sulle criptovalute", info: "Informazioni sul progetto", deposit: "Deposito", withdraw: "Prelievo",
     profile: "Dati utente", logout: "Esci", balance: "Saldo", wallet: "Wallet", userData: "Dati utente",
@@ -141,6 +141,7 @@ const TEXT_KEYS = {
   "Торгівля": "trade",
   "Торгівля криптовалютами": "trade",
   "Активи": "assets",
+  "Винагороди": "navRewards",
   "Навчання": "navLearning",
   "Навчання криптовалютам": "learning",
   "Інфо": "navInfo",
@@ -455,6 +456,7 @@ document.addEventListener("DOMContentLoaded", () => {
       ["index.html", "🏠", "navHome"],
       ["trade.html", "📊", "navTrade"],
       ["assets.html", "💼", "navAssets"],
+      ["rewards.html", "🏆", "navRewards"],
       ["learning.html", "🎓", "navLearning"],
       ["info.html", "ℹ️", "navInfo"]
     ];

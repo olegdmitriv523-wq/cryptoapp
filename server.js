@@ -108,7 +108,7 @@ app.use(globalLimiter);
 
 const PUBLIC_FILES = new Set([
   "index.html", "login.html", "register.html", "terms.html", "loading.html",
-  "trade.html", "assets.html", "learning.html", "info.html", "coin.html",
+  "trade.html", "assets.html", "learning.html", "info.html", "rewards.html", "coin.html",
   "deposit.html", "withdraw.html", "profile.html", "admin.html", "app.css", "app-nav.js",
   "language-boot.js", "pwa.js", "service-worker.js", "manifest.json", "logo.png"
 ]);
@@ -137,7 +137,22 @@ const QUIZ_ANSWERS = { 1: "b", 2: "c", 3: "a", 4: "b", 5: "c" };
 const LEARNING_MIN_DEPOSIT = 500;
 const ACTIVE_SATELLITE_MIN_DEPOSIT = 500;
 const TRADE_RATES = [0.01, 0.01, 0.005, 0.0075, 0.0125, 0.02];
-const TRADE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const TRADE_SETTLE_MS = 10 * 60 * 1000;
+const REFERRER_REWARDS = [75, 100, 125, 125, 250];
+const BALANCE_REWARDS = [
+  [500, 75],
+  [1000, 75],
+  [2000, 100],
+  [5000, 250],
+  [10000, 750],
+  [20000, 2000],
+  [50000, 5000],
+  [100000, 20000]
+];
+const TRADE_STREAK_REWARDS = [
+  [10, 10],
+  [30, 25]
+];
 const POOL_BASE = 1000347;
 const POOL_START_DAY = Date.UTC(2026, 5, 22) / 86400000;
 
@@ -255,6 +270,136 @@ function getPoolSnapshot(days = 30) {
 async function addSignal(signal) {
   const { error } = await supabase.from("signals").insert([signal]);
   if (error) throw error;
+}
+
+function dayKey(date = new Date()) {
+  return date.toLocaleDateString("en-CA", { timeZone: "Europe/Kyiv" });
+}
+
+function nextMidnightKyivMs(now = Date.now()) {
+  const current = dayKey(new Date(now));
+  let low = now;
+  let high = now + 36 * 60 * 60 * 1000;
+  while (dayKey(new Date(high)) === current) high += 12 * 60 * 60 * 1000;
+  while (high - low > 1000) {
+    const mid = Math.floor((low + high) / 2);
+    if (dayKey(new Date(mid)) === current) low = mid;
+    else high = mid;
+  }
+  return high;
+}
+
+async function grantRewardOnce(userId, type, amount, wallet) {
+  const user = await findUser(userId, "id,balance");
+  if (!user || !Number.isFinite(Number(amount)) || Number(amount) <= 0) return false;
+  const { data: existing } = await supabase
+    .from("signals")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("type", type)
+    .eq("wallet", wallet)
+    .limit(1)
+    .maybeSingle();
+  if (existing) return false;
+
+  const newBalance = Number((Number(user.balance || 0) + Number(amount)).toFixed(2));
+  const { error } = await supabase.from("users").update({ balance: newBalance }).eq("id", user.id);
+  if (error) throw error;
+  await addSignal({ user_id: user.id, type, amount: Number(amount), wallet, status: "rewarded" });
+  return true;
+}
+
+async function grantBalanceRewards(userId) {
+  for (const [threshold, reward] of BALANCE_REWARDS) {
+    const user = await findUser(userId, "id,balance");
+    if (!user || Number(user.balance || 0) < threshold) continue;
+    await grantRewardOnce(user.id, `reward_balance_${threshold}`, reward, `balance:${threshold}`);
+  }
+}
+
+async function grantSatelliteRewards(satelliteId) {
+  const satellite = await findUser(satelliteId, "id,referrer_id,deposit");
+  if (!satellite || Number(satellite.deposit || 0) < ACTIVE_SATELLITE_MIN_DEPOSIT) return;
+
+  if (satellite.referrer_id) {
+    await grantRewardOnce(satellite.id, "reward_invited_satellite", 50, `satellite:${satellite.id}`);
+
+    const { data: activeSatellites } = await supabase
+      .from("users")
+      .select("id,deposit")
+      .eq("referrer_id", satellite.referrer_id)
+      .gte("deposit", ACTIVE_SATELLITE_MIN_DEPOSIT)
+      .order("id", { ascending: true })
+      .limit(5);
+    for (const [index, activeSatellite] of (activeSatellites || []).entries()) {
+      if (index >= REFERRER_REWARDS.length) break;
+      await grantRewardOnce(
+        satellite.referrer_id,
+        `reward_referrer_satellite_${index + 1}`,
+        REFERRER_REWARDS[index],
+        `satellite:${activeSatellite.id}`
+      );
+    }
+    await grantBalanceRewards(satellite.referrer_id);
+  }
+
+  await grantBalanceRewards(satellite.id);
+}
+
+async function grantTradeStreakRewards(userId) {
+  const { data } = await supabase
+    .from("signals")
+    .select("created_at")
+    .eq("user_id", userId)
+    .like("type", "trade_%")
+    .eq("status", "rewarded")
+    .order("created_at", { ascending: false })
+    .limit(90);
+  const days = [...new Set((data || []).map(item => dayKey(new Date(item.created_at))))];
+  let streak = 0;
+  let cursor = new Date();
+  while (days.includes(dayKey(cursor))) {
+    streak += 1;
+    cursor = new Date(cursor.getTime() - 24 * 60 * 60 * 1000);
+  }
+  for (const [daysRequired, reward] of TRADE_STREAK_REWARDS) {
+    if (streak >= daysRequired) {
+      await grantRewardOnce(userId, `reward_trade_streak_${daysRequired}`, reward, `trade_streak:${daysRequired}`);
+    }
+  }
+  await grantBalanceRewards(userId);
+}
+
+async function settleMatureTrades(userId) {
+  const cutoff = new Date(Date.now() - TRADE_SETTLE_MS).toISOString();
+  const { data: pending } = await supabase
+    .from("signals")
+    .select("id,amount")
+    .eq("user_id", userId)
+    .like("type", "trade_%")
+    .eq("status", "pending")
+    .lte("created_at", cutoff)
+    .order("created_at", { ascending: true });
+
+  for (const trade of pending || []) {
+    const { data: updated } = await supabase
+      .from("signals")
+      .update({ status: "rewarded" })
+      .eq("id", trade.id)
+      .eq("status", "pending")
+      .select("id")
+      .maybeSingle();
+    if (!updated) continue;
+    const user = await findUser(userId, "id,balance");
+    if (!user) continue;
+    const balance = Number((Number(user.balance || 0) + Number(trade.amount || 0)).toFixed(2));
+    await supabase.from("users").update({ balance }).eq("id", user.id);
+  }
+
+  if ((pending || []).length) {
+    await grantTradeStreakRewards(userId);
+    await grantBalanceRewards(userId);
+  }
 }
 
 function emailCodeDigest(code) {
@@ -533,6 +678,7 @@ app.get("/health", (req, res) => res.json({ success: true }));
 
 app.get("/assets/summary", auth, async (req, res) => {
   try {
+    await settleMatureTrades(req.userId);
     const user = await findUser(req.userId, "id,balance,deposit");
     if (!user) return res.status(404).json({ success: false });
 
@@ -547,7 +693,8 @@ app.get("/assets/summary", auth, async (req, res) => {
       signal.type === "deposit" ||
       signal.type === "withdraw" ||
       signal.type.startsWith("quiz_") ||
-      signal.type.startsWith("trade_")
+      signal.type.startsWith("trade_") ||
+      signal.type.startsWith("reward_")
     );
     const tradingEarned = history
       .filter(signal => signal.type.startsWith("trade_") && signal.status === "rewarded")
@@ -665,6 +812,7 @@ app.post("/quiz/complete", actionLimiter, auth, async (req, res) => {
 });
 
 async function tradeStatus(userId) {
+  await settleMatureTrades(userId);
   const user = await findUser(userId, "id,balance");
   if (!user) return null;
 
@@ -680,27 +828,38 @@ async function tradeStatus(userId) {
   }));
   const { data: trades } = await supabase
     .from("signals")
-    .select("type,created_at")
+    .select("type,created_at,status")
     .eq("user_id", userId)
     .like("type", "trade_%")
     .order("created_at", { ascending: false });
 
   const lastByType = {};
+  const pendingByType = {};
   for (const trade of trades || []) {
     if (!lastByType[trade.type]) lastByType[trade.type] = new Date(trade.created_at).getTime();
+    if (trade.status === "pending" && !pendingByType[trade.type]) {
+      pendingByType[trade.type] = Math.max(0, TRADE_SETTLE_MS - (Date.now() - new Date(trade.created_at).getTime()));
+    }
   }
   const now = Date.now();
-  const cooldown = type => Math.max(0, TRADE_COOLDOWN_MS - (now - (lastByType[type] || 0)));
+  const today = dayKey(new Date(now));
+  const cooldown = type => {
+    const last = lastByType[type] || 0;
+    if (!last || dayKey(new Date(last)) !== today) return 0;
+    return Math.max(0, nextMidnightKyivMs(now) - now);
+  };
 
   return {
     balance: Number(user.balance || 0),
-    main: { unlocked: true, cooldown: cooldown("trade_main"), rate: TRADE_RATES[0] },
+    main: { unlocked: true, cooldown: cooldown("trade_main"), pending: pendingByType.trade_main || 0, rate: TRADE_RATES[0] },
     slots: Array.from({ length: 5 }, (_, index) => {
       const satellite = referrals?.[index] || null;
+      const type = `trade_satellite_${index + 1}`;
       return {
         position: index + 1,
         unlocked: Boolean(satellite?.active),
-        cooldown: cooldown(`trade_satellite_${index + 1}`),
+        cooldown: cooldown(type),
+        pending: pendingByType[type] || 0,
         rate: TRADE_RATES[index + 1],
         satellite,
         minDeposit: ACTIVE_SATELLITE_MIN_DEPOSIT
@@ -726,23 +885,20 @@ app.post("/trade/execute", actionLimiter, auth, async (req, res) => {
 
     const option = position === 0 ? status.main : status.slots[position - 1];
     if (!option.unlocked) return res.json({ success: false, message: "Position locked" });
+    if (option.pending > 0) return res.json({ success: false, message: "Trade pending", pending: option.pending });
     if (option.cooldown > 0) return res.json({ success: false, message: "Cooldown active", cooldown: option.cooldown });
-
-    const reward = Number((status.balance * option.rate).toFixed(2));
-    const newBalance = Number((status.balance + reward).toFixed(2));
-    const { error } = await supabase.from("users").update({ balance: newBalance }).eq("id", req.userId);
-    if (error) throw error;
 
     const type = position === 0 ? "trade_main" : `trade_satellite_${position}`;
     const satellite = position === 0 ? null : option.satellite;
+    const reward = Number((status.balance * option.rate).toFixed(2));
     await addSignal({
       user_id: req.userId,
       type,
       amount: reward,
       wallet: satellite ? String(satellite.id) : "main",
-      status: "rewarded"
+      status: "pending"
     });
-    return res.json({ success: true, reward, balance: newBalance });
+    return res.json({ success: true, pending: true, reward, balance: status.balance, completesIn: TRADE_SETTLE_MS });
   } catch (error) {
     console.error("TRADE ERROR:", error);
     return res.status(500).json({ success: false, message: "Server error" });
@@ -812,6 +968,10 @@ app.post("/admin/approve", adminLimiter, adminAuth, async (req, res) => {
       if (signal.type === "deposit") updates.deposit = Number((Number(user.deposit || 0) + amount).toFixed(2));
       const { error } = await supabase.from("users").update(updates).eq("id", signal.user_id);
       if (error) throw error;
+      if (signal.type === "deposit") {
+        await grantSatelliteRewards(signal.user_id);
+        await grantBalanceRewards(signal.user_id);
+      }
     } else if (signal.type === "profile_update" || signal.type === "email_update") {
       const changes = safeJsonObject(signal.wallet);
       const allowed = signal.type === "email_update"

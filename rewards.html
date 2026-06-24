@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Винагороди</title>
+<link rel="stylesheet" href="app.css">
+<script src="language-boot.js"></script>
+<style>
+body{margin:0;font-family:Arial,sans-serif}.rewards-page{width:min(920px,calc(100% - 28px));margin:auto;padding-bottom:130px}.hero,.reward-card{background:var(--panel);border:1px solid #293246;border-radius:16px;padding:20px;margin:14px 0}.hero{text-align:center;background:linear-gradient(135deg,#111827,#18233a)}.hero h1{margin:0 0 10px}.hero p,.reward-card p{color:#cbd5e1;line-height:1.65}.reward-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}.reward-card{margin:0}.reward-card h2{margin:0 0 10px;color:var(--accent);font-size:19px}.reward-list{display:grid;gap:10px;margin:0;padding:0;list-style:none}.reward-list li{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:11px 12px;border-radius:12px;background:var(--panel-soft);color:#e5e7eb}.reward-list strong{color:var(--success);white-space:nowrap}.note{border-color:#f59e0b;background:rgba(245,158,11,.08)}
+</style>
+</head>
+<body>
+<main class="rewards-page">
+  <section class="hero">
+    <h1>Винагороди</h1>
+    <p>На цій сторінці зібрані основні винагороди платформи. Суми нараховуються тільки після виконання умов, а винагороди за сателітів активуються після підтвердженого адміністратором поповнення сателітом від $500.</p>
+  </section>
+
+  <section class="reward-grid">
+    <article class="reward-card">
+      <h2>Баланс</h2>
+      <ul class="reward-list">
+        <li><span>Баланс від $500</span><strong>$75</strong></li>
+        <li><span>Баланс від $1,000</span><strong>$75</strong></li>
+        <li><span>Баланс від $2,000</span><strong>$100</strong></li>
+        <li><span>Баланс від $5,000</span><strong>$250</strong></li>
+        <li><span>Баланс від $10,000</span><strong>$750</strong></li>
+        <li><span>Баланс від $20,000</span><strong>$2,000</strong></li>
+        <li><span>Баланс від $50,000</span><strong>$5,000</strong></li>
+        <li><span>Баланс від $100,000</span><strong>$20,000</strong></li>
+      </ul>
+    </article>
+
+    <article class="reward-card">
+      <h2>Сателіти</h2>
+      <p>Запрошений користувач отримує $50 після підтвердженого поповнення від $500. Запрошувач отримує винагороду за перших 5 активних сателітів:</p>
+      <ul class="reward-list">
+        <li><span>1-й активний сателіт</span><strong>$75</strong></li>
+        <li><span>2-й активний сателіт</span><strong>$100</strong></li>
+        <li><span>3-й активний сателіт</span><strong>$125</strong></li>
+        <li><span>4-й активний сателіт</span><strong>$125</strong></li>
+        <li><span>5-й активний сателіт</span><strong>$250</strong></li>
+      </ul>
+    </article>
+
+    <article class="reward-card">
+      <h2>Торгівля</h2>
+      <ul class="reward-list">
+        <li><span>10 днів торгівлі підряд</span><strong>$10</strong></li>
+        <li><span>30 днів торгівлі підряд</span><strong>$25</strong></li>
+      </ul>
+      <p>Угода завершується через 10 хвилин після старту. Нова можливість торгувати відкривається о 00:00 кожного дня.</p>
+    </article>
+  </section>
+
+  <section class="reward-card note">
+    <h2>Важливо</h2>
+    <p>Винагороди є внутрішніми обліковими показниками платформи. Поповнення, виведення та бонуси відображаються в історії активів після виконання умов і підтвердження потрібних дій.</p>
+  </section>
+</main>
+<script>if(!localStorage.getItem("token"))location.href="login.html";</script>
+<script src="app-nav.js"></script>
+</body>
+</html>

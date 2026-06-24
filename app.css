@@ -186,7 +186,7 @@ body {
   right: 0;
   bottom: 0;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   padding: 10px 4px max(10px, env(safe-area-inset-bottom));
   border-top: 1px solid #293246;
   background: rgba(3, 7, 18, .97);
@@ -197,21 +197,21 @@ body {
   color: var(--muted);
   text-align: center;
   text-decoration: none;
-  font: 12px/1.15 Arial, sans-serif;
+  font: 11px/1.12 Arial, sans-serif;
 }
 
 .app-nav-icon {
   display: block;
   margin-bottom: 5px;
-  font-size: 60px;
+  font-size: 48px;
   line-height: 1;
 }
 
 .app-nav-item.active { color: var(--accent); }
 
 @media (max-width: 520px) {
-  .app-nav-icon { font-size: 54px; }
-  .app-nav-item { font-size: 11px; }
+  .app-nav-icon { font-size: 40px; }
+  .app-nav-item { font-size: 10px; }
   .language-select {
     right: 8px;
     max-width: 92px;
