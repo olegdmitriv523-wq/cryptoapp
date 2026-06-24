@@ -1,4 +1,4 @@
-const CACHE_NAME = "united-europe-v10";
+const CACHE_NAME = "united-europe-v11";
 const APP_SHELL = [
   "/loading.html",
   "/login.html",
@@ -38,7 +38,12 @@ self.addEventListener("fetch", event => {
   if (url.origin !== self.location.origin || url.pathname === "/health") return;
   if (event.request.mode === "navigate") {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match("/loading.html"))
+      fetch(event.request)
+        .then(response => {
+          if (response.ok) return response;
+          return caches.match("/loading.html").then(cached => cached || response);
+        })
+        .catch(() => caches.match("/loading.html"))
     );
     return;
   }

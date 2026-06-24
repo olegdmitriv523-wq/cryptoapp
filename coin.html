@@ -116,6 +116,13 @@ let history = [];
 
 let leverage = 1;
 let currentPrice = 0;
+let lastCoinTranslate = 0;
+
+function translateCoinPage() {
+  if (Date.now() - lastCoinTranslate < 5000) return;
+  lastCoinTranslate = Date.now();
+  window.appTranslate?.translatePage();
+}
 
 // ===== LOAD USER FROM SERVER =====
 async function loadUser(){
@@ -339,7 +346,6 @@ PNL: <span style="color:${color}">${pnl.toFixed(2)}</span><br>
 });
 
 document.getElementById("positions").innerHTML = html;
-window.appTranslate?.translatePage();
 }
 
 function renderHistory(){
@@ -352,7 +358,6 @@ html+=`<div>${h.symbol} ${h.type} <span style="color:${c}">${h.pnl.toFixed(2)}</
 });
 
 document.getElementById("history").innerHTML = html;
-window.appTranslate?.translatePage();
 }
 
 // ===== LOOP =====
@@ -375,6 +380,7 @@ positions.splice(i,1);
 renderPositions();
 renderHistory();
 drawPosition();
+translateCoinPage();
 
 },1000);
 

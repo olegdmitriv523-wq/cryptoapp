@@ -306,6 +306,10 @@ function shouldTranslateText(text) {
   if (value.length < 2) return false;
   if (/^[\d\s.,:+/%$€£¥#xX-]+$/.test(value)) return false;
   if (/^(USD|USDT|TRC20|BTC|ETH|BNB|SOL|XRP|ADA|DOGE)$/i.test(value)) return false;
+  CURRENCY_PATTERN.lastIndex = 0;
+  const hasCurrency = CURRENCY_PATTERN.test(value);
+  CURRENCY_PATTERN.lastIndex = 0;
+  if (hasCurrency) return false;
   return /[А-Яа-яІіЇїЄєҐґ]/.test(value);
 }
 

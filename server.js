@@ -296,10 +296,17 @@ async function addSignal(signal) {
 
 async function sendTelegramMessage(text, tokens = [TELEGRAM_TOKEN]) {
   const uniqueTokens = [...new Set(tokens.filter(Boolean))];
-  await Promise.allSettled(uniqueTokens.map(token => axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
+  const results = await Promise.allSettled(uniqueTokens.map(token => axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
     chat_id: CHAT_ID,
     text
   })));
+  results.forEach((result, index) => {
+    if (result.status === "rejected") {
+      const tokenLabel = `${uniqueTokens[index].slice(0, 8)}...`;
+      const details = result.reason?.response?.data || result.reason?.message || result.reason;
+      console.error("TELEGRAM SEND ERROR:", tokenLabel, details);
+    }
+  });
 }
 
 function requestTelegramText(type, user, amount, wallet) {

@@ -100,7 +100,6 @@ input {
 const API_URL = ["localhost", "127.0.0.1"].includes(location.hostname) ? location.origin : "https://cryptoapp-eqc5.onrender.com";
 const token = localStorage.getItem("token");
 if (!token) location.href = "login.html";
-localStorage.removeItem("withdraw_time");
 </script>
 
 <main class="page">
@@ -134,26 +133,6 @@ async function loadUser() {
     localStorage.removeItem("token");
     location.href = "login.html";
   }
-}
-
-function checkTimer() {
-  const last = Number(localStorage.getItem("withdraw_time") || 0);
-  if (!last) return;
-  const update = () => {
-    const left = 3600000 - (Date.now() - last);
-    if (left <= 0) {
-      document.getElementById("btn").classList.remove("disabled");
-      document.getElementById("timer").textContent = "";
-      return;
-    }
-    document.getElementById("btn").classList.add("disabled");
-    const min = Math.floor(left / 60000);
-    const sec = Math.floor((left % 60000) / 1000);
-    document.getElementById("timer").textContent = `Спробуйте через: ${min}м ${sec}с`;
-    window.appTranslate?.translatePage();
-    setTimeout(update, 1000);
-  };
-  update();
 }
 
 async function withdraw() {
