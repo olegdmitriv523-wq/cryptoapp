@@ -251,7 +251,7 @@ function isValidWallet(value) {
 
 function personalWalletAddress(user) {
   const wallet = cleanWallet(user?.wallet_address);
-  return wallet && wallet !== DEPOSIT_WALLET_ADDRESS ? wallet : "";
+  return wallet;
 }
 
 function positiveAmount(value, max = 1000000) {
