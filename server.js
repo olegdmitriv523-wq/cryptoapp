@@ -938,12 +938,20 @@ app.get("/me", auth, async (req, res) => {
 app.get("/deposit/config", auth, async (req, res) => {
   const user = await findUser(req.userId, "id,wallet_address");
   const wallet = personalWalletAddress(user);
+  const { data: pendingWalletRequests } = await supabase
+    .from("signals")
+    .select("id")
+    .eq("user_id", req.userId)
+    .eq("type", "wallet_create")
+    .eq("status", "pending")
+    .limit(1);
   return res.json({
     success: true,
     asset: DEPOSIT_ASSET,
     network: DEPOSIT_NETWORK,
     wallet_address: wallet,
     wallet_missing: !wallet,
+    wallet_request_pending: Boolean((pendingWalletRequests || []).length),
     memo_required: false
   });
 });
