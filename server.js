@@ -1504,6 +1504,78 @@ app.post("/admin/set-balance", adminLimiter, adminAuth, async (req, res) => {
   return res.json({ success: true, balance: amount });
 });
 
+app.post("/admin/update-user", adminLimiter, adminAuth, async (req, res) => {
+  try {
+    const userId = Number(req.body.user_id);
+    const current = await findUser(userId, "id,email,referrer_id");
+    if (!current) return res.json({ success: false, message: "User not found" });
+
+    const fullname = cleanText(req.body.fullname, 80);
+    const nickname = cleanText(req.body.nickname, 40);
+    const country = cleanText(req.body.country, 60);
+    const phone = cleanPhone(req.body.phone);
+    const email = cleanEmail(req.body.email);
+    const wallet = cleanWallet(req.body.wallet_address);
+    const balance = Number(req.body.balance);
+    const deposit = Number(req.body.deposit);
+    const referrerText = String(req.body.referrer_id || "").trim();
+    const referrerId = parseUserId(referrerText);
+
+    if (!fullname || !nickname || !country || phone.length < 10 || phone.length > 15) {
+      return res.json({ success: false, message: "Invalid profile data" });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.json({ success: false, message: "Invalid email" });
+    }
+    if (wallet && !isValidWallet(wallet)) {
+      return res.json({ success: false, message: "Invalid wallet" });
+    }
+    if (!Number.isFinite(balance) || balance < 0 || balance > 1000000 || !Number.isFinite(deposit) || deposit < 0 || deposit > 1000000) {
+      return res.json({ success: false, message: "Invalid balance or deposit" });
+    }
+    if (referrerText && !referrerId) {
+      return res.json({ success: false, message: "Invalid referrer ID" });
+    }
+    if (referrerId === userId) {
+      return res.json({ success: false, message: "Referrer cannot be the same user" });
+    }
+    if (referrerId) {
+      const referrer = await findUser(referrerId, "id");
+      if (!referrer) return res.json({ success: false, message: "Referrer not found" });
+    }
+    if (email !== current.email) {
+      const { data: existing, error: existingError } = await supabase
+        .from("users")
+        .select("id")
+        .eq("email", email)
+        .neq("id", userId)
+        .maybeSingle();
+      if (existingError) throw existingError;
+      if (existing) return res.json({ success: false, message: "Email already exists" });
+    }
+
+    const updates = {
+      fullname,
+      nickname,
+      country,
+      phone,
+      email,
+      wallet_address: wallet || null,
+      balance: Number(balance.toFixed(2)),
+      deposit: Number(deposit.toFixed(2)),
+      referrer_id: referrerId || null
+    };
+    const { error } = await supabase.from("users").update(updates).eq("id", userId);
+    if (error) throw error;
+    await refreshSatelliteCount(current.referrer_id);
+    await refreshSatelliteCount(referrerId);
+    return res.json({ success: true });
+  } catch (error) {
+    console.error("ADMIN UPDATE USER ERROR:", error);
+    return res.status(500).json({ success: false, message: "User update error" });
+  }
+});
+
 app.post("/admin/set-wallet", adminLimiter, adminAuth, async (req, res) => {
   try {
     const signalId = Number(req.body.id);

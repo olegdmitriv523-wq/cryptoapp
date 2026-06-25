@@ -22,6 +22,11 @@ h1 { text-align:center; }
 .controls input { width:140px; padding:9px; border:1px solid #334155; border-radius:7px; background:#0b1220; color:white; }
 .wallet-input { width:min(100%,420px); padding:9px; border:1px solid #334155; border-radius:7px; background:#0b1220; color:white; }
 .controls button,.signal-actions button { width:auto; padding:9px 12px; border:0; border-radius:7px; cursor:pointer; }
+.user-edit { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:8px; margin-top:14px; padding-top:12px; border-top:1px solid #273248; }
+.user-edit label { display:grid; gap:4px; color:var(--muted); font-size:12px; }
+.user-edit input { width:100%; box-sizing:border-box; padding:9px; border:1px solid #334155; border-radius:7px; background:#0b1220; color:white; }
+.user-edit-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+.user-edit-actions button { width:auto; padding:9px 12px; border:0; border-radius:7px; cursor:pointer; }
 .approve { background:var(--success); color:#04130a; }
 .reject { background:var(--danger); color:white; }
 .pending { color:var(--accent); }
@@ -134,7 +139,7 @@ async function loadUsers() {
 
 function renderUsers(users) {
   const filtered = users.filter(user => matchesSearch(searchable([
-    user.id, user.display_id, user.fullname, user.nickname, user.email, user.phone, user.country, user.balance, user.referrer_id
+    user.id, user.display_id, user.fullname, user.nickname, user.email, user.phone, user.country, user.balance, user.deposit, user.wallet_address, user.referrer_id
   ])));
   document.getElementById("users").innerHTML = filtered.length ? filtered.map(user => `
     <article class="card">
@@ -146,18 +151,57 @@ function renderUsers(users) {
         <div><span class="label">Телефон</span><br>${escapeHtml(user.phone)}</div>
         <div><span class="label">Країна</span><br>${escapeHtml(user.country)}</div>
         <div><span class="label">Баланс</span><br>$${money(user.balance)}</div>
+        <div><span class="label">Депозит</span><br>$${money(user.deposit)}</div>
+        <div><span class="label">Персональний гаманець</span><br>${escapeHtml(user.wallet_address || "-")}</div>
         <div><span class="label">Запрошений користувачем</span><br>${displayId(user.referrer_id)}</div>
         <div><span class="label">Сателіти</span><br>${user.satellites || 0}</div>
       </div>
-      <div class="controls">
-        <input id="balance-${user.id}" type="number" step="0.01" placeholder="Сума">
-        <button class="approve" onclick="changeBalance(${user.id}, 'add')">Додати</button>
-        <button onclick="changeBalance(${user.id}, 'set')">Встановити</button>
+      <div class="user-edit">
+        <label>Повне ім'я<input id="edit-fullname-${user.id}" value="${escapeHtml(user.fullname || "")}"></label>
+        <label>Нікнейм<input id="edit-nickname-${user.id}" value="${escapeHtml(user.nickname || "")}"></label>
+        <label>Email<input id="edit-email-${user.id}" type="email" value="${escapeHtml(user.email || "")}"></label>
+        <label>Телефон<input id="edit-phone-${user.id}" value="${escapeHtml(user.phone || "")}"></label>
+        <label>Країна<input id="edit-country-${user.id}" value="${escapeHtml(user.country || "")}"></label>
+        <label>Баланс<input id="edit-balance-${user.id}" type="number" step="0.01" value="${Number(user.balance || 0)}"></label>
+        <label>Депозит<input id="edit-deposit-${user.id}" type="number" step="0.01" value="${Number(user.deposit || 0)}"></label>
+        <label>Реферер ID<input id="edit-referrer-${user.id}" value="${user.referrer_id ? displayId(user.referrer_id) : ""}" placeholder="15680001 або пусто"></label>
+        <label>Персональний гаманець<input id="edit-wallet-${user.id}" value="${escapeHtml(user.wallet_address || "")}" placeholder="Адреса гаманця"></label>
+      </div>
+      <div class="user-edit-actions">
+        <button class="approve" onclick="updateUser(${user.id})">Зберегти дані</button>
         <button class="delete-btn" onclick="deleteUser(${user.id}, '${escapeHtml(user.display_id || displayId(user.id))}')">Видалити користувача</button>
+      </div>
+      <div class="controls">
+        <input id="balance-${user.id}" type="number" step="0.01" placeholder="Сума до балансу">
+        <button onclick="changeBalance(${user.id}, 'add')">Швидко додати баланс</button>
       </div>
     </article>
   `).join("") : '<div class="empty">Користувачів немає</div>';
   window.appTranslate?.translatePage();
+}
+
+async function updateUser(userId) {
+  const value = name => document.getElementById(`edit-${name}-${userId}`).value.trim();
+  const payload = {
+    user_id: userId,
+    fullname: value("fullname"),
+    nickname: value("nickname"),
+    email: value("email"),
+    phone: value("phone"),
+    country: value("country"),
+    balance: Number(value("balance")),
+    deposit: Number(value("deposit")),
+    referrer_id: value("referrer"),
+    wallet_address: value("wallet")
+  };
+  const response = await adminFetch("/admin/update-user", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(payload)
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!result.success) return alert(result.message || "Не вдалося зберегти дані користувача");
+  await refresh();
 }
 
 async function changeBalance(userId, mode) {
