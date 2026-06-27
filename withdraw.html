@@ -109,6 +109,31 @@ input {
   color: #fbbf24;
   text-align: center;
 }
+.saved-wallet-box {
+  display: none;
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  background: #0b1220;
+  color: #cbd5e1;
+  word-break: break-all;
+}
+.saved-wallet-box b {
+  color: #f8fafc;
+}
+.saved-withdraw-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 14px;
+  border: 0;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #22c55e, #14b8a6);
+  color: #04130a;
+  font-size: 18px;
+  font-weight: 900;
+  cursor: pointer;
+}
 </style>
 </head>
 <body>
@@ -128,6 +153,8 @@ if (!token) location.href = "login.html";
     <p class="hint">Вкажіть суму та адресу будь-якого гаманця для виводу. Мінімальна сума виводу становить $100. Вивести можна один раз на годину і тільки зароблені кошти, тобто суму понад підтверджені поповнення та заявки, які очікують рішення адміністратора.</p>
     <div class="balance-box">Доступно для виведення: $<span id="balance">0.00</span></div>
     <input id="amount" type="number" min="100" step="0.01" placeholder="Сума від $100">
+    <div id="savedWalletBox" class="saved-wallet-box"><b>Збережений гаманець</b><br><span id="savedWalletText"></span></div>
+    <button id="savedWithdrawBtn" class="saved-withdraw-btn" type="button" onclick="withdrawToSavedWallet()" hidden>Вивести на збережений гаманець</button>
     <input id="wallet" placeholder="Адреса будь-якого гаманця для виводу">
     <button class="save-wallet-btn" type="button" onclick="saveWithdrawWallet()">Зберегти гаманець для виводу</button>
     <div id="walletMessage" class="wallet-message"></div>
@@ -138,6 +165,22 @@ if (!token) location.href = "login.html";
 
 <script>
 let currentEarned = 0;
+let savedWithdrawWallet = "";
+
+function renderSavedWallet(wallet) {
+  savedWithdrawWallet = wallet || "";
+  const box = document.getElementById("savedWalletBox");
+  const text = document.getElementById("savedWalletText");
+  const button = document.getElementById("savedWithdrawBtn");
+  if (!savedWithdrawWallet) {
+    box.style.display = "none";
+    button.hidden = true;
+    return;
+  }
+  text.textContent = savedWithdrawWallet;
+  box.style.display = "block";
+  button.hidden = false;
+}
 
 async function loadUser() {
   try {
@@ -152,6 +195,9 @@ async function loadUser() {
     if (walletData.success && walletData.wallet) {
       document.getElementById("wallet").value = walletData.wallet;
       document.getElementById("walletMessage").textContent = "Збережений гаманець підставлено";
+      renderSavedWallet(walletData.wallet);
+    } else {
+      renderSavedWallet("");
     }
     const pendingWithdraw = (summary.history || [])
       .filter(item => item.type === "withdraw" && item.status === "pending")
@@ -180,7 +226,17 @@ async function saveWithdrawWallet() {
   });
   const data = await response.json().catch(() => ({}));
   message.textContent = data.success ? "Гаманець збережено" : (data.message || "Не вдалося зберегти гаманець");
+  if (data.success) {
+    document.getElementById("wallet").value = data.wallet || wallet;
+    renderSavedWallet(data.wallet || wallet);
+  }
   window.appTranslate?.translatePage();
+}
+
+async function withdrawToSavedWallet() {
+  if (!savedWithdrawWallet) return alert("Спочатку збережіть гаманець для виводу");
+  document.getElementById("wallet").value = savedWithdrawWallet;
+  await withdraw();
 }
 
 async function withdraw() {
