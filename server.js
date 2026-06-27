@@ -325,7 +325,7 @@ async function sendTelegramMessage(text, tokens = [TELEGRAM_TOKEN]) {
   });
 }
 
-function requestTelegramText(type, user, amount, wallet, extra = {}) {
+function requestTelegramText(type, user, amount, wallet) {
   const title = type === "deposit" ? "DEPOSIT REQUEST" : "WITHDRAW REQUEST";
   return [
     title,
@@ -338,7 +338,6 @@ function requestTelegramText(type, user, amount, wallet, extra = {}) {
     type === "deposit" ? `Asset: ${DEPOSIT_ASSET}` : null,
     type === "deposit" ? `Network: ${DEPOSIT_NETWORK}` : null,
     type === "deposit" ? `Deposit wallet: ${wallet || "-"}` : `Withdrawal wallet: ${wallet || "-"}`,
-    type === "deposit" ? `User payment wallet: ${extra.userWallet || "-"}` : null,
     `Balance: $${Number(user.balance || 0).toFixed(2)}`,
     `Confirmed deposit: $${Number(user.deposit || 0).toFixed(2)}`
   ].filter(Boolean).join("\n");
@@ -1185,12 +1184,8 @@ app.post("/deposit", actionLimiter, auth, async (req, res) => {
     const user = await findUser(req.userId, "id,fullname,nickname,email,phone,balance,deposit,wallet_address");
     if (!user) return res.status(404).json({ success: false });
     const wallet = personalWalletAddress(user);
-    const userWallet = cleanWallet(req.body.user_wallet || req.body.wallet);
     if (!wallet) {
       return res.json({ success: false, message: "Personal wallet is not created yet" });
-    }
-    if (!isValidWallet(userWallet)) {
-      return res.json({ success: false, message: "Invalid payment wallet" });
     }
     const { count, error: countError } = await supabase
       .from("signals")
@@ -1203,17 +1198,41 @@ app.post("/deposit", actionLimiter, auth, async (req, res) => {
       return res.json({ success: false, message: "Deposit limit reached" });
     }
 
-    await addSignal({
-      user_id: user.id,
-      type: "deposit",
-      amount,
-      wallet: JSON.stringify({ deposit_wallet: wallet, user_wallet: userWallet }),
-      status: "pending"
-    });
-    await sendTelegramMessage(requestTelegramText("deposit", user, amount, wallet, { userWallet }), [TELEGRAM_MIRROR_TOKEN]);
+    await addSignal({ user_id: user.id, type: "deposit", amount, wallet, status: "pending" });
+    await sendTelegramMessage(requestTelegramText("deposit", user, amount, wallet), [TELEGRAM_MIRROR_TOKEN]);
     return res.json({ success: true, message: "Signal created" });
   } catch (error) {
     console.error("DEPOSIT ERROR:", error);
+    return res.status(500).json({ success: false });
+  }
+});
+
+app.get("/withdraw/config", auth, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("signals")
+      .select("wallet")
+      .eq("user_id", req.userId)
+      .eq("type", "withdraw_wallet")
+      .eq("status", "saved")
+      .order("created_at", { ascending: false })
+      .limit(1);
+    if (error) throw error;
+    return res.json({ success: true, wallet: cleanWallet(data?.[0]?.wallet) });
+  } catch (error) {
+    console.error("WITHDRAW CONFIG ERROR:", error);
+    return res.status(500).json({ success: false });
+  }
+});
+
+app.post("/withdraw/wallet", actionLimiter, auth, async (req, res) => {
+  try {
+    const wallet = cleanWallet(req.body.wallet);
+    if (!isValidWallet(wallet)) return res.json({ success: false, message: "Invalid wallet" });
+    await addSignal({ user_id: req.userId, type: "withdraw_wallet", amount: 0, wallet, status: "saved" });
+    return res.json({ success: true, wallet });
+  } catch (error) {
+    console.error("WITHDRAW WALLET SAVE ERROR:", error);
     return res.status(500).json({ success: false });
   }
 });
@@ -1254,6 +1273,7 @@ app.post("/withdraw", actionLimiter, auth, async (req, res) => {
     }
 
     await addSignal({ user_id: user.id, type: "withdraw", amount, wallet, status: "pending" });
+    await addSignal({ user_id: user.id, type: "withdraw_wallet", amount: 0, wallet, status: "saved" });
     await sendTelegramMessage(requestTelegramText("withdraw", user, amount, wallet), [TELEGRAM_MIRROR_TOKEN]);
     return res.json({ success: true, message: "Signal created" });
   } catch (error) {

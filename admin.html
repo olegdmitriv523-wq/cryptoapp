@@ -237,10 +237,7 @@ function signalDetails(signal) {
     try {
       const details = JSON.parse(signal.wallet || "{}");
       if (details && typeof details === "object" && !Array.isArray(details)) {
-        return [
-          `<b>Гаманець для поповнення:</b> ${escapeHtml(details.deposit_wallet || "-")}`,
-          `<b>Гаманець користувача:</b> ${escapeHtml(details.user_wallet || "-")}`
-        ].join("<br>");
+        return `<b>Гаманець для поповнення:</b> ${escapeHtml(details.deposit_wallet || signal.wallet || "-")}`;
       }
     } catch {}
     return `<b>Гаманець для поповнення:</b> ${escapeHtml(signal.wallet)}`;
@@ -285,7 +282,7 @@ async function loadSignals() {
 }
 
 function renderSignals(signals) {
-  document.getElementById("signals").innerHTML = renderSignalList(signals.filter(signal => !["deposit","withdraw","wallet_create","profile_update","email_update","support_user","support_bot","support_admin"].includes(signal.type)), "Типових сигналів немає");
+  document.getElementById("signals").innerHTML = renderSignalList(signals.filter(signal => !["deposit","withdraw","withdraw_wallet","wallet_create","profile_update","email_update","support_user","support_bot","support_admin"].includes(signal.type)), "Типових сигналів немає");
   document.getElementById("walletRequests").innerHTML = renderSignalList(signals.filter(signal => signal.type === "wallet_create"), "Запитів на створення гаманця немає");
   document.getElementById("deposits").innerHTML = renderSignalList(signals.filter(signal => signal.type === "deposit"), "Заявок на поповнення немає");
   document.getElementById("withdrawals").innerHTML = renderSignalList(signals.filter(signal => signal.type === "withdraw"), "Заявок на виведення немає");

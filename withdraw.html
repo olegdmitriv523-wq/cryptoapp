@@ -93,6 +93,22 @@ input {
   text-align: center;
   font-size: 18px;
 }
+.save-wallet-btn {
+  width: 100%;
+  padding: 12px;
+  border: 0;
+  border-radius: 12px;
+  background: #334155;
+  color: white;
+  font-weight: 800;
+  cursor: pointer;
+}
+.wallet-message {
+  min-height: 22px;
+  margin-top: 8px;
+  color: #fbbf24;
+  text-align: center;
+}
 </style>
 </head>
 <body>
@@ -113,6 +129,8 @@ if (!token) location.href = "login.html";
     <div class="balance-box">Доступно для виведення: $<span id="balance">0.00</span></div>
     <input id="amount" type="number" min="100" step="0.01" placeholder="Сума від $100">
     <input id="wallet" placeholder="Адреса будь-якого гаманця для виводу">
+    <button class="save-wallet-btn" type="button" onclick="saveWithdrawWallet()">Зберегти гаманець для виводу</button>
+    <div id="walletMessage" class="wallet-message"></div>
     <button id="btn" class="submit-btn" onclick="withdraw()">Вивести</button>
     <div id="timer" class="timer"></div>
   </section>
@@ -123,10 +141,18 @@ let currentEarned = 0;
 
 async function loadUser() {
   try {
-    const response = await fetch(API_URL + "/assets/summary", { headers: { Authorization: token } });
+    const [response, walletResponse] = await Promise.all([
+      fetch(API_URL + "/assets/summary", { headers: { Authorization: token } }),
+      fetch(API_URL + "/withdraw/config", { headers: { Authorization: token } })
+    ]);
     if (response.status === 401) throw new Error("auth");
     const summary = await response.json();
     if (!summary.success) throw new Error("summary");
+    const walletData = await walletResponse.json().catch(() => ({}));
+    if (walletData.success && walletData.wallet) {
+      document.getElementById("wallet").value = walletData.wallet;
+      document.getElementById("walletMessage").textContent = "Збережений гаманець підставлено";
+    }
     const pendingWithdraw = (summary.history || [])
       .filter(item => item.type === "withdraw" && item.status === "pending")
       .reduce((sum, item) => sum + Number(item.amount || 0), 0);
@@ -137,6 +163,24 @@ async function loadUser() {
     localStorage.removeItem("token");
     location.href = "login.html";
   }
+}
+
+async function saveWithdrawWallet() {
+  const wallet = document.getElementById("wallet").value.trim();
+  const message = document.getElementById("walletMessage");
+  if (!wallet) {
+    message.textContent = "Вкажіть гаманець для збереження";
+    return;
+  }
+  message.textContent = "Збереження...";
+  const response = await fetch(API_URL + "/withdraw/wallet", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: token },
+    body: JSON.stringify({ wallet })
+  });
+  const data = await response.json().catch(() => ({}));
+  message.textContent = data.success ? "Гаманець збережено" : (data.message || "Не вдалося зберегти гаманець");
+  window.appTranslate?.translatePage();
 }
 
 async function withdraw() {
