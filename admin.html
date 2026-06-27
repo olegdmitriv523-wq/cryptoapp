@@ -233,6 +233,19 @@ const signalNames = {
 };
 
 function signalDetails(signal) {
+  if (signal.type === "deposit") {
+    try {
+      const details = JSON.parse(signal.wallet || "{}");
+      if (details && typeof details === "object" && !Array.isArray(details)) {
+        return [
+          `<b>Гаманець для поповнення:</b> ${escapeHtml(details.deposit_wallet || "-")}`,
+          `<b>Гаманець користувача:</b> ${escapeHtml(details.user_wallet || "-")}`
+        ].join("<br>");
+      }
+    } catch {}
+    return `<b>Гаманець для поповнення:</b> ${escapeHtml(signal.wallet)}`;
+  }
+  if (signal.type === "withdraw") return `<b>Гаманець для виводу:</b> ${escapeHtml(signal.wallet)}`;
   if (signal.type !== "profile_update" && signal.type !== "email_update") return escapeHtml(signal.wallet);
   try {
     const changes = JSON.parse(signal.wallet || "{}");

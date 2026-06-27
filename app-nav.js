@@ -5,6 +5,8 @@ const APP_LANGUAGES = [
   ["pl", "Polski"],
   ["ro", "Română"],
   ["en", "English"],
+  ["ar", "العربية"],
+  ["hi", "हिन्दी"],
   ["de", "Deutsch"],
   ["fr", "Français"],
   ["pt", "Português"],
@@ -78,6 +80,28 @@ const I18N = {
     reward10: "The reward is $10", check: "Check", mainTrade: "Main trading",
     tradeButton: "Trade", locked: "Locked", availableAll: "Available to all users",
     project: "United Europe Crypto", market: "Market", copy: "Copied", back: "Back"
+  },
+  ar: {
+    navHome: "الرئيسية", navTrade: "التداول", navAssets: "الأصول", navRewards: "المكافآت", navLearning: "التعلم", navInfo: "معلومات",
+    install: "ثبّت التطبيق على الشاشة الرئيسية", installTitle: "تثبيت التطبيق", installClose: "حسنا", installIos: "على iPhone اضغط مشاركة ثم إضافة إلى الشاشة الرئيسية.", installAndroid: "على Android اضغط تثبيت أو إضافة إلى الشاشة الرئيسية من قائمة المتصفح.", home: "الرئيسية", trade: "التداول", assets: "الأصول",
+    learning: "تعلم العملات الرقمية", info: "حول المشروع", deposit: "الإيداع", withdraw: "السحب",
+    profile: "بيانات المستخدم", logout: "تسجيل الخروج", balance: "الرصيد", wallet: "المحفظة", userData: "بيانات المستخدم",
+    addFunds: "إيداع", withdrawShort: "سحب", mainBalance: "الرصيد الرئيسي", operationHistory: "سجل العمليات والمكافآت",
+    pool: "المجمع الكلي", dailyChange: "التغير اليومي", perDay: "في اليوم", readLesson: "اقرأ الدرس القصير واختر الإجابة الصحيحة. يمكن إكمال كل اختبار مرة واحدة.",
+    reward10: "المكافأة هي $10", check: "تحقق", mainTrade: "التداول الرئيسي",
+    tradeButton: "تداول", locked: "مغلق", availableAll: "متاح لجميع المستخدمين",
+    project: "United Europe Crypto", market: "السوق", copy: "تم النسخ", back: "رجوع"
+  },
+  hi: {
+    navHome: "होम", navTrade: "ट्रेड", navAssets: "एसेट्स", navRewards: "रिवॉर्ड्स", navLearning: "सीखना", navInfo: "जानकारी",
+    install: "ऐप को होम स्क्रीन पर इंस्टॉल करें", installTitle: "ऐप इंस्टॉल करें", installClose: "ठीक है", installIos: "iPhone पर Share दबाएं, फिर Add to Home Screen चुनें.", installAndroid: "Android पर ब्राउज़र मेनू में Install या Add to Home screen दबाएं.", home: "होम", trade: "ट्रेडिंग", assets: "एसेट्स",
+    learning: "क्रिप्टोकरेंसी सीखना", info: "प्रोजेक्ट के बारे में", deposit: "जमा", withdraw: "निकासी",
+    profile: "उपयोगकर्ता डेटा", logout: "लॉग आउट", balance: "बैलेंस", wallet: "वॉलेट", userData: "उपयोगकर्ता डेटा",
+    addFunds: "जमा करें", withdrawShort: "निकालें", mainBalance: "मुख्य बैलेंस", operationHistory: "ऑपरेशन और रिवॉर्ड इतिहास",
+    pool: "कुल पूल", dailyChange: "दैनिक बदलाव", perDay: "प्रति दिन", readLesson: "छोटा पाठ पढ़ें और सही उत्तर चुनें. हर टेस्ट केवल एक बार पूरा किया जा सकता है.",
+    reward10: "रिवॉर्ड $10 है", check: "जांचें", mainTrade: "मुख्य ट्रेडिंग",
+    tradeButton: "ट्रेड करें", locked: "लॉक", availableAll: "सभी उपयोगकर्ताओं के लिए उपलब्ध",
+    project: "United Europe Crypto", market: "मार्केट", copy: "कॉपी हो गया", back: "वापस"
   },
   de: {
     navHome: "Start", navTrade: "Handel", navAssets: "Aktiva", navRewards: "Prämien", navLearning: "Lernen", navInfo: "Info",
@@ -176,6 +200,8 @@ const GOOGLE_LANG_CODES = {
   pl: "pl",
   ro: "ro",
   en: "en",
+  ar: "ar",
+  hi: "hi",
   de: "de",
   fr: "fr",
   pt: "pt",
@@ -199,6 +225,7 @@ function googleTargetLang() {
 function applyTranslations(root = document.body) {
   const lang = currentLang();
   document.documentElement.lang = lang;
+  document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
   protectCurrencyText(root);
 
   root.querySelectorAll("[data-i18n]").forEach(element => {

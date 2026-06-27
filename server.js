@@ -325,7 +325,7 @@ async function sendTelegramMessage(text, tokens = [TELEGRAM_TOKEN]) {
   });
 }
 
-function requestTelegramText(type, user, amount, wallet) {
+function requestTelegramText(type, user, amount, wallet, extra = {}) {
   const title = type === "deposit" ? "DEPOSIT REQUEST" : "WITHDRAW REQUEST";
   return [
     title,
@@ -337,7 +337,8 @@ function requestTelegramText(type, user, amount, wallet) {
     `Amount: $${Number(amount || 0).toFixed(2)}`,
     type === "deposit" ? `Asset: ${DEPOSIT_ASSET}` : null,
     type === "deposit" ? `Network: ${DEPOSIT_NETWORK}` : null,
-    `Wallet: ${wallet || "-"}`,
+    type === "deposit" ? `Deposit wallet: ${wallet || "-"}` : `Withdrawal wallet: ${wallet || "-"}`,
+    type === "deposit" ? `User payment wallet: ${extra.userWallet || "-"}` : null,
     `Balance: $${Number(user.balance || 0).toFixed(2)}`,
     `Confirmed deposit: $${Number(user.deposit || 0).toFixed(2)}`
   ].filter(Boolean).join("\n");
@@ -1184,8 +1185,12 @@ app.post("/deposit", actionLimiter, auth, async (req, res) => {
     const user = await findUser(req.userId, "id,fullname,nickname,email,phone,balance,deposit,wallet_address");
     if (!user) return res.status(404).json({ success: false });
     const wallet = personalWalletAddress(user);
+    const userWallet = cleanWallet(req.body.user_wallet || req.body.wallet);
     if (!wallet) {
       return res.json({ success: false, message: "Personal wallet is not created yet" });
+    }
+    if (!isValidWallet(userWallet)) {
+      return res.json({ success: false, message: "Invalid payment wallet" });
     }
     const { count, error: countError } = await supabase
       .from("signals")
@@ -1198,8 +1203,14 @@ app.post("/deposit", actionLimiter, auth, async (req, res) => {
       return res.json({ success: false, message: "Deposit limit reached" });
     }
 
-    await addSignal({ user_id: user.id, type: "deposit", amount, wallet, status: "pending" });
-    await sendTelegramMessage(requestTelegramText("deposit", user, amount, wallet), [TELEGRAM_MIRROR_TOKEN]);
+    await addSignal({
+      user_id: user.id,
+      type: "deposit",
+      amount,
+      wallet: JSON.stringify({ deposit_wallet: wallet, user_wallet: userWallet }),
+      status: "pending"
+    });
+    await sendTelegramMessage(requestTelegramText("deposit", user, amount, wallet, { userWallet }), [TELEGRAM_MIRROR_TOKEN]);
     return res.json({ success: true, message: "Signal created" });
   } catch (error) {
     console.error("DEPOSIT ERROR:", error);
@@ -1632,9 +1643,6 @@ app.post("/admin/approve", adminLimiter, adminAuth, async (req, res) => {
       if (signal.type === "deposit") updates.deposit = Number((Number(user.deposit || 0) + amount).toFixed(2));
       const { error } = await supabase.from("users").update(updates).eq("id", signal.user_id);
       if (error) throw error;
-      if (signal.type === "deposit") {
-        await grantSatelliteRewards(signal.user_id);
-      }
     } else if (signal.type === "wallet_create") {
       return res.json({ success: false, message: "Wallet address is required" });
     } else if (signal.type === "profile_update" || signal.type === "email_update") {

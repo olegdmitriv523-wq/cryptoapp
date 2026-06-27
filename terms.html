@@ -12,7 +12,7 @@
 <style>
 body { margin:0; font-family:Arial,sans-serif; }
 .terms { width:min(820px,calc(100% - 28px)); margin:0 auto 40px; }
-.warning { padding:16px; border:1px solid #ef4444; border-radius:12px; background:rgba(239,68,68,.12); color:#fecaca; font-size:8px; }
+.warning { padding:16px; border:1px solid #334155; border-radius:12px; background:rgba(15,23,42,.78); color:#dbeafe; font-size:8px; }
 .terms-list { padding:18px 18px 18px 38px; border:1px solid #293246; border-radius:14px; background:var(--panel); line-height:1.55; font-size:8px; }
 .terms-list li { margin:12px 0; }
 .agreement { display:block; margin:18px 0; padding:16px; border-radius:12px; background:var(--panel-soft); cursor:pointer; font-size:8px; line-height:1.5; }
@@ -27,10 +27,10 @@ body { margin:0; font-family:Arial,sans-serif; }
 <body data-no-nav="true">
 <main class="terms">
   <h1>Умови користування та попередження про ризики</h1>
-  <p class="warning"><b>Важливо:</b> операції з криптовалютами є високоризиковими. Ви можете втратити частину або всі внесені кошти. Жоден прибуток не гарантований.</p>
+  <p class="warning"><b>Важливо:</b> операції з криптовалютами потребують уважності. Результат залежить від ринкових умов, тому прибуток не гарантується.</p>
   <ol class="terms-list">
     <li><b>Волатильність.</b> Ціни криптоактивів можуть різко змінюватися за короткий час через новини, ліквідність, ринкові настрої чи маніпуляції.</li>
-    <li><b>Ризик повної втрати.</b> Вартість активу може впасти до нуля. Використовуйте лише кошти, втрата яких не вплине на необхідні витрати.</li>
+    <li><b>Ринковий ризик.</b> Вартість активів може суттєво змінюватися. Оцінюйте суму операцій відповідально та з урахуванням власних фінансових можливостей.</li>
     <li><b>Відсутність гарантій.</b> Історична дохідність, навчальні приклади та показники платформи не гарантують майбутніх результатів.</li>
     <li><b>Кредитне плече й ліквідація.</b> Торгівля з плечем збільшує як потенційний прибуток, так і збиток та може призвести до швидкої ліквідації позиції.</li>
     <li><b>Ліквідність.</b> У певний момент актив може бути неможливо швидко купити або продати за очікуваною ціною.</li>
@@ -42,7 +42,7 @@ body { margin:0; font-family:Arial,sans-serif; }
     <li><b>Правові й податкові ризики.</b> Правила щодо криптовалют можуть змінюватися. Користувач сам відповідає за дотримання законів і сплату податків у своїй країні.</li>
     <li><b>Не фінансова порада.</b> Матеріали платформи мають інформаційний і навчальний характер. Рішення про операції ви приймаєте самостійно.</li>
   </ol>
-  <label class="agreement"><input id="acceptTerms" type="checkbox">Я прочитав(ла), розумію перелічені ризики, можливість часткової або повної втрати коштів і погоджуюся з умовами користування.</label>
+  <label class="agreement"><input id="acceptTerms" type="checkbox">Я прочитав(ла), розумію перелічені умови та погоджуюся з правилами користування.</label>
   <div class="actions"><button class="back" onclick="location.href='login.html'">Назад</button><button class="accept" onclick="continueRegistration()">Погоджуюся і продовжити</button></div>
   <div id="termsMessage" role="alert"></div>
 </main>
