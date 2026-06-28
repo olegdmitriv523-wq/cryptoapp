@@ -260,16 +260,24 @@ function depositAddressesFilePath() {
   return path.isAbsolute(DEPOSIT_ADDRESSES_FILE) ? DEPOSIT_ADDRESSES_FILE : path.join(__dirname, DEPOSIT_ADDRESSES_FILE);
 }
 
+function ensureDepositAddressBookFile(filePath) {
+  if (fs.existsSync(filePath)) return false;
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, "[]\n", "utf8");
+  return true;
+}
+
 function readDepositAddressBook() {
   const filePath = depositAddressesFilePath();
-  if (!fs.existsSync(filePath)) return { filePath, exists: false, entries: [], wrapper: null };
+  const created = ensureDepositAddressBookFile(filePath);
   const raw = fs.readFileSync(filePath, "utf8").trim();
-  if (!raw) return { filePath, exists: true, entries: [], wrapper: null };
+  if (!raw) return { filePath, exists: true, created, entries: [], wrapper: null };
   const parsed = JSON.parse(raw);
   if (Array.isArray(parsed)) {
     return {
       filePath,
       exists: true,
+      created,
       entries: parsed.map(entry => (typeof entry === "string" ? { wallet: entry } : { ...entry })),
       wrapper: null
     };
@@ -278,6 +286,7 @@ function readDepositAddressBook() {
     return {
       filePath,
       exists: true,
+      created,
       entries: parsed.addresses.map(entry => (typeof entry === "string" ? { wallet: entry } : { ...entry })),
       wrapper: parsed
     };
@@ -292,6 +301,21 @@ function writeDepositAddressBook(book) {
 
 function depositAddressFromEntry(entry) {
   return cleanWallet(entry?.wallet || entry?.address || entry?.deposit_wallet);
+}
+
+function depositAddressBookStatus() {
+  const book = readDepositAddressBook();
+  const validEntries = book.entries.filter(entry => isValidWallet(depositAddressFromEntry(entry)));
+  const assigned = validEntries.filter(entry => Number(entry.user_id) > 0);
+  return {
+    file_path: book.filePath,
+    total: book.entries.length,
+    valid: validEntries.length,
+    free: validEntries.length - assigned.length,
+    assigned: assigned.length,
+    invalid: book.entries.length - validEntries.length,
+    created: Boolean(book.created)
+  };
 }
 
 function attachUserToDepositAddress(entry, user, wallet) {
@@ -1613,6 +1637,19 @@ app.get("/admin/signals", adminLimiter, adminAuth, async (req, res) => {
   ]);
   const usersById = Object.fromEntries((users || []).map(user => [user.id, withDisplayId(user)]));
   return res.json((signals || []).map(signal => ({ ...signal, user: usersById[signal.user_id] || null })));
+});
+
+app.get("/admin/deposit-addresses/status", adminLimiter, adminAuth, (req, res) => {
+  try {
+    return res.json({ success: true, ...depositAddressBookStatus() });
+  } catch (error) {
+    console.error("DEPOSIT ADDRESS STATUS ERROR:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Deposit address file cannot be read",
+      file_path: depositAddressesFilePath()
+    });
+  }
 });
 
 app.get("/admin/support", adminLimiter, adminAuth, async (req, res) => {

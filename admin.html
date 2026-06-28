@@ -92,6 +92,7 @@ let allUsers = [];
 let allSignals = [];
 let allReferrals = [];
 let allSupport = [];
+let depositAddressStatus = null;
 const adminFetch = (path, options = {}) => fetch(API_URL + path, {
   ...options,
   headers: { ...(options.headers || {}), "X-Admin-Key": adminKey }
@@ -285,9 +286,33 @@ async function loadSignals() {
   renderSignals(allSignals);
 }
 
+function renderDepositAddressStatus(status) {
+  if (!status) return "";
+  if (!status.success) {
+    return `<article class="card"><b>Файл депозитних адрес</b><div class="empty">${escapeHtml(status.message || "Файл не читається")}</div></article>`;
+  }
+  return `
+    <article class="card">
+      <b>Файл депозитних адрес</b>
+      <div class="grid">
+        <div><span class="label">Шлях</span><br>${escapeHtml(status.file_path)}</div>
+        <div><span class="label">Усього адрес</span><br>${Number(status.total || 0)}</div>
+        <div><span class="label">Вільні</span><br>${Number(status.free || 0)}</div>
+        <div><span class="label">Прив'язані</span><br>${Number(status.assigned || 0)}</div>
+        <div><span class="label">Некоректні</span><br>${Number(status.invalid || 0)}</div>
+        <div><span class="label">Статус</span><br>${status.created ? "Файл створено автоматично" : "Файл підключено"}</div>
+      </div>
+    </article>
+  `;
+}
+
+async function loadDepositAddressStatus() {
+  depositAddressStatus = await adminFetch("/admin/deposit-addresses/status").then(response => response.json());
+}
+
 function renderSignals(signals) {
   document.getElementById("signals").innerHTML = renderSignalList(signals.filter(signal => !["deposit","withdraw","withdraw_wallet","wallet_create","profile_update","email_update","support_user","support_bot","support_admin"].includes(signal.type)), "Типових сигналів немає");
-  document.getElementById("walletRequests").innerHTML = renderSignalList(signals.filter(signal => signal.type === "wallet_create"), "Запитів на створення гаманця немає");
+  document.getElementById("walletRequests").innerHTML = renderDepositAddressStatus(depositAddressStatus) + renderSignalList(signals.filter(signal => signal.type === "wallet_create"), "Запитів на створення гаманця немає");
   document.getElementById("deposits").innerHTML = renderSignalList(signals.filter(signal => signal.type === "deposit"), "Заявок на поповнення немає");
   document.getElementById("withdrawals").innerHTML = renderSignalList(signals.filter(signal => signal.type === "withdraw"), "Заявок на виведення немає");
   document.getElementById("profileRequests").innerHTML = renderSignalList(signals.filter(signal => ["profile_update","email_update"].includes(signal.type)), "Заявок на зміну даних немає");
@@ -417,7 +442,10 @@ function renderSatellites(users) {
 }
 
 async function refresh() {
-  try { await Promise.all([loadUsers(), loadSignals(), loadSatellites(), loadSupport()]); }
+  try {
+    await Promise.all([loadUsers(), loadDepositAddressStatus(), loadSatellites(), loadSupport()]);
+    await loadSignals();
+  }
   catch (error) {
     const message = error.message === "admin-auth" ? "Невірний код адміністратора або ADMIN_KEY не налаштований на Render." : "Не вдалося завантажити дані";
     document.querySelectorAll(".section").forEach(section => section.innerHTML = `<div class="empty">${message}</div>`);
