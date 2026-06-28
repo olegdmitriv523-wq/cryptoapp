@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const fs = require("fs");
 const path = require("path");
 const axios = require("axios");
 const crypto = require("crypto");
@@ -143,6 +144,7 @@ const EMAIL_VERIFICATION_REQUIRED = process.env.EMAIL_VERIFICATION_REQUIRED === 
 const PUBLIC_USER_FIELDS = "id,fullname,nickname,country,email,phone,balance,deposit,satellites,wallet_address,referrer_id";
 const DISPLAY_ID_PREFIX = "1568";
 const DEPOSIT_WALLET_ADDRESS = process.env.DEPOSIT_WALLET_ADDRESS || "TTL8GGSkoAne5QRdkizLbGnmaBKv3EPoiy";
+const DEPOSIT_ADDRESSES_FILE = process.env.DEPOSIT_ADDRESSES_FILE || path.join(__dirname, "deposit-addresses.json");
 const DEPOSIT_ASSET = "USDT";
 const DEPOSIT_NETWORK = "TRC20";
 const QUIZ_ANSWERS = { 1: "b", 2: "c", 3: "a", 4: "b", 5: "c" };
@@ -252,6 +254,135 @@ function isValidWallet(value) {
 function personalWalletAddress(user) {
   const wallet = cleanWallet(user?.wallet_address);
   return wallet;
+}
+
+function depositAddressesFilePath() {
+  return path.isAbsolute(DEPOSIT_ADDRESSES_FILE) ? DEPOSIT_ADDRESSES_FILE : path.join(__dirname, DEPOSIT_ADDRESSES_FILE);
+}
+
+function readDepositAddressBook() {
+  const filePath = depositAddressesFilePath();
+  if (!fs.existsSync(filePath)) return { filePath, exists: false, entries: [], wrapper: null };
+  const raw = fs.readFileSync(filePath, "utf8").trim();
+  if (!raw) return { filePath, exists: true, entries: [], wrapper: null };
+  const parsed = JSON.parse(raw);
+  if (Array.isArray(parsed)) {
+    return {
+      filePath,
+      exists: true,
+      entries: parsed.map(entry => (typeof entry === "string" ? { wallet: entry } : { ...entry })),
+      wrapper: null
+    };
+  }
+  if (parsed && typeof parsed === "object" && Array.isArray(parsed.addresses)) {
+    return {
+      filePath,
+      exists: true,
+      entries: parsed.addresses.map(entry => (typeof entry === "string" ? { wallet: entry } : { ...entry })),
+      wrapper: parsed
+    };
+  }
+  throw new Error("Deposit address file must be a JSON array or an object with addresses array");
+}
+
+function writeDepositAddressBook(book) {
+  const payload = book.wrapper ? { ...book.wrapper, addresses: book.entries } : book.entries;
+  fs.writeFileSync(book.filePath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+}
+
+function depositAddressFromEntry(entry) {
+  return cleanWallet(entry?.wallet || entry?.address || entry?.deposit_wallet);
+}
+
+function attachUserToDepositAddress(entry, user, wallet) {
+  entry.wallet = wallet;
+  entry.user_id = Number(user.id);
+  entry.display_id = formatUserId(user.id);
+  entry.email = user.email || "";
+  entry.assigned_at = entry.assigned_at || new Date().toISOString();
+}
+
+function clearDepositAddressUser(entry) {
+  delete entry.user_id;
+  delete entry.display_id;
+  delete entry.email;
+  delete entry.assigned_at;
+}
+
+function releaseDepositWalletsForUser(userId, keepWallet = "") {
+  const numericUserId = Number(userId);
+  if (!Number.isInteger(numericUserId) || numericUserId <= 0) return false;
+  try {
+    const book = readDepositAddressBook();
+    let changed = false;
+    for (const entry of book.entries) {
+      if (Number(entry.user_id) === numericUserId && depositAddressFromEntry(entry) !== keepWallet) {
+        clearDepositAddressUser(entry);
+        changed = true;
+      }
+    }
+    if (changed) writeDepositAddressBook(book);
+    return changed;
+  } catch (error) {
+    console.error("DEPOSIT ADDRESS RELEASE ERROR:", error.message);
+    return false;
+  }
+}
+
+function linkDepositWalletToUser(user, wallet) {
+  const walletAddress = cleanWallet(wallet);
+  if (!isValidWallet(walletAddress)) return false;
+  try {
+    const book = readDepositAddressBook();
+    for (const item of book.entries) {
+      if (Number(item.user_id) === Number(user.id) && depositAddressFromEntry(item) !== walletAddress) {
+        clearDepositAddressUser(item);
+      }
+    }
+    let entry = book.entries.find(item => depositAddressFromEntry(item) === walletAddress);
+    if (!entry) {
+      entry = { wallet: walletAddress };
+      book.entries.push(entry);
+    }
+    attachUserToDepositAddress(entry, user, walletAddress);
+    writeDepositAddressBook(book);
+    return true;
+  } catch (error) {
+    console.error("DEPOSIT ADDRESS LINK ERROR:", error.message);
+    return false;
+  }
+}
+
+function assignDepositWalletFromFile(user) {
+  const existingWallet = personalWalletAddress(user);
+  if (existingWallet) {
+    linkDepositWalletToUser(user, existingWallet);
+    return { wallet: existingWallet, assigned: false, message: "Existing wallet", filePath: depositAddressesFilePath() };
+  }
+
+  const book = readDepositAddressBook();
+  const ownedEntry = book.entries.find(entry => Number(entry.user_id) === Number(user.id) && isValidWallet(depositAddressFromEntry(entry)));
+  if (ownedEntry) {
+    const wallet = depositAddressFromEntry(ownedEntry);
+    attachUserToDepositAddress(ownedEntry, user, wallet);
+    writeDepositAddressBook(book);
+    return { wallet, assigned: false, message: "Wallet already linked in file", filePath: book.filePath };
+  }
+
+  const freeEntry = book.entries.find(entry => isValidWallet(depositAddressFromEntry(entry)) && !Number(entry.user_id));
+  if (!freeEntry) {
+    return {
+      wallet: "",
+      assigned: false,
+      message: book.exists ? "No free deposit wallet in file" : "Deposit address file is missing",
+      filePath: book.filePath
+    };
+  }
+
+  const wallet = depositAddressFromEntry(freeEntry);
+  attachUserToDepositAddress(freeEntry, user, wallet);
+  writeDepositAddressBook(book);
+  return { wallet, assigned: true, message: "Wallet assigned from file", filePath: book.filePath };
 }
 
 function positiveAmount(value, max = 1000000) {
@@ -971,11 +1102,30 @@ app.post("/wallet/request", actionLimiter, auth, async (req, res) => {
     if ((pending || []).length) {
       return res.json({ success: false, message: "Wallet request is already pending" });
     }
+    let assignment;
+    try {
+      assignment = assignDepositWalletFromFile(user);
+    } catch (assignmentError) {
+      console.error("DEPOSIT ADDRESS ASSIGN ERROR:", assignmentError.message);
+      assignment = {
+        wallet: personalWalletAddress(user),
+        assigned: false,
+        message: assignmentError.message || "Deposit address assignment error",
+        filePath: depositAddressesFilePath()
+      };
+    }
+    if (assignment.wallet && !personalWalletAddress(user)) {
+      const { error: userWalletError } = await supabase
+        .from("users")
+        .update({ wallet_address: assignment.wallet })
+        .eq("id", user.id);
+      if (userWalletError) throw userWalletError;
+    }
     await addSignal({
       user_id: user.id,
       type: "wallet_create",
       amount: 0,
-      wallet: personalWalletAddress(user) || "requested",
+      wallet: assignment.wallet || "requested",
       status: "pending"
     });
     await sendTelegramMessage([
@@ -984,9 +1134,16 @@ app.post("/wallet/request", actionLimiter, auth, async (req, res) => {
       `Email: ${user.email || "-"}`,
       `Name: ${user.fullname || "-"}`,
       `Nickname: ${user.nickname || "-"}`,
-      `Phone: ${user.phone || "-"}`
+      `Phone: ${user.phone || "-"}`,
+      `Assigned wallet: ${assignment.wallet || "-"}`,
+      `Deposit address file: ${assignment.filePath || depositAddressesFilePath()}`,
+      `File status: ${assignment.message || "-"}`
     ].join("\n"), [TELEGRAM_MIRROR_TOKEN]);
-    return res.json({ success: true, message: "Wallet request created" });
+    return res.json({
+      success: true,
+      message: assignment.wallet ? "Wallet request created" : "Wallet request created without free deposit address",
+      wallet_assigned: Boolean(assignment.wallet)
+    });
   } catch (error) {
     console.error("WALLET REQUEST ERROR:", error);
     return res.status(500).json({ success: false });
@@ -1538,7 +1695,7 @@ app.post("/admin/set-balance", adminLimiter, adminAuth, async (req, res) => {
 app.post("/admin/update-user", adminLimiter, adminAuth, async (req, res) => {
   try {
     const userId = Number(req.body.user_id);
-    const current = await findUser(userId, "id,email,referrer_id");
+    const current = await findUser(userId, "id,email,referrer_id,wallet_address");
     if (!current) return res.json({ success: false, message: "User not found" });
 
     const fullname = cleanText(req.body.fullname, 80);
@@ -1598,6 +1755,8 @@ app.post("/admin/update-user", adminLimiter, adminAuth, async (req, res) => {
     };
     const { error } = await supabase.from("users").update(updates).eq("id", userId);
     if (error) throw error;
+    if (wallet) linkDepositWalletToUser({ ...current, id: userId, email }, wallet);
+    else releaseDepositWalletsForUser(userId);
     await refreshSatelliteCount(current.referrer_id);
     await refreshSatelliteCount(referrerId);
     return res.json({ success: true });
@@ -1623,11 +1782,13 @@ app.post("/admin/set-wallet", adminLimiter, adminAuth, async (req, res) => {
     if (!signal || signal.type !== "wallet_create" || signal.status !== "pending") {
       return res.json({ success: false, message: "Request unavailable" });
     }
+    const user = await findUser(signal.user_id, "id,email");
     const { error: userError } = await supabase
       .from("users")
       .update({ wallet_address: wallet })
       .eq("id", signal.user_id);
     if (userError) throw userError;
+    linkDepositWalletToUser(user || { id: signal.user_id }, wallet);
     const { error: updateError } = await supabase
       .from("signals")
       .update({ wallet, status: "approved" })
@@ -1695,6 +1856,21 @@ app.post("/admin/approve", adminLimiter, adminAuth, async (req, res) => {
 app.post("/admin/reject", adminLimiter, adminAuth, async (req, res) => {
   const signalId = Number(req.body.id);
   if (!Number.isInteger(signalId) || signalId <= 0) return res.json({ success: false });
+  const { data: signal } = await supabase
+    .from("signals")
+    .select("id,user_id,type,wallet,status")
+    .eq("id", signalId)
+    .maybeSingle();
+  if (signal?.type === "wallet_create") {
+    const user = await findUser(signal.user_id, "id,wallet_address");
+    const wallet = cleanWallet(signal.wallet);
+    const currentWallet = personalWalletAddress(user);
+    const keepWallet = wallet && currentWallet === wallet ? "" : currentWallet;
+    if (wallet && currentWallet === wallet) {
+      await supabase.from("users").update({ wallet_address: null }).eq("id", signal.user_id);
+    }
+    releaseDepositWalletsForUser(signal.user_id, keepWallet);
+  }
   await supabase.from("signals").update({ status: "rejected" }).eq("id", signalId);
   return res.json({ success: true });
 });
@@ -1724,6 +1900,7 @@ app.post("/admin/delete-user", adminLimiter, adminAuth, async (req, res) => {
     if (signalsError) throw signalsError;
     const { error: usersError } = await supabase.from("users").delete().eq("id", userId);
     if (usersError) throw usersError;
+    releaseDepositWalletsForUser(userId);
     await refreshSatelliteCount(user.referrer_id);
     return res.json({ success: true });
   } catch (error) {

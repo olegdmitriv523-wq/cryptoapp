@@ -243,6 +243,10 @@ function signalDetails(signal) {
     return `<b>Гаманець для поповнення:</b> ${escapeHtml(signal.wallet)}`;
   }
   if (signal.type === "withdraw") return `<b>Гаманець для виводу:</b> ${escapeHtml(signal.wallet)}`;
+  if (signal.type === "wallet_create") {
+    const wallet = signal.wallet && signal.wallet !== "requested" ? signal.wallet : "-";
+    return `<b>Персональний гаманець:</b> ${escapeHtml(wallet)}`;
+  }
   if (signal.type !== "profile_update" && signal.type !== "email_update") return escapeHtml(signal.wallet);
   try {
     const changes = JSON.parse(signal.wallet || "{}");
@@ -268,7 +272,7 @@ function renderSignalList(signals, emptyText) {
         <div><span class="label">Час</span><br>${new Date(signal.created_at).toLocaleString("uk-UA")}</div>
       </div>
       <div class="signal-actions">
-        ${signal.type === "wallet_create" && signal.status === "pending" ? `<input class="wallet-input" id="wallet-${signal.id}" placeholder="Впишіть персональний гаманець"><button class="approve" onclick="approveWalletRequest(${signal.id})">Зберегти гаманець</button><button class="reject" onclick="setSignal(${signal.id}, 'reject')">Відхилити</button>` : ""}
+        ${signal.type === "wallet_create" && signal.status === "pending" ? `<input class="wallet-input" id="wallet-${signal.id}" value="${escapeHtml(signal.wallet && signal.wallet !== "requested" ? signal.wallet : "")}" placeholder="Впишіть персональний гаманець"><button class="approve" onclick="approveWalletRequest(${signal.id})">Зберегти гаманець</button><button class="reject" onclick="setSignal(${signal.id}, 'reject')">Відхилити</button>` : ""}
         ${signal.type !== "wallet_create" && signal.status === "pending" ? `<button class="approve" onclick="setSignal(${signal.id}, 'approve')">Підтвердити</button><button class="reject" onclick="setSignal(${signal.id}, 'reject')">Відхилити</button>` : ""}
         <button class="delete-btn" onclick="deleteSignal(${signal.id})">Видалити заявку</button>
       </div>
