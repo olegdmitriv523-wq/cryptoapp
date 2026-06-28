@@ -99,7 +99,7 @@ app.use(cors({
   credentials: false,
   maxAge: 86400
 }));
-app.use(express.json({ limit: "32kb", strict: true }));
+app.use(express.json({ limit: "512kb", strict: true }));
 app.use((err, req, res, next) => {
   if (err) return res.status(400).json({ success: false, message: "Invalid request" });
   return next();
@@ -301,6 +301,51 @@ function writeDepositAddressBook(book) {
 
 function depositAddressFromEntry(entry) {
   return cleanWallet(entry?.wallet || entry?.address || entry?.deposit_wallet);
+}
+
+function normalizeDepositAddressEntry(entry) {
+  const source = typeof entry === "string" ? { wallet: entry } : { ...(entry || {}) };
+  const wallet = depositAddressFromEntry(source);
+  if (!isValidWallet(wallet)) return null;
+  const normalized = { wallet };
+  const userId = Number(source.user_id || source.userId);
+  if (Number.isInteger(userId) && userId > 0) {
+    normalized.user_id = userId;
+    normalized.display_id = cleanText(source.display_id || formatUserId(userId), 32);
+    normalized.email = cleanEmail(source.email || "");
+    normalized.assigned_at = cleanText(source.assigned_at || new Date().toISOString(), 40);
+  }
+  return normalized;
+}
+
+function parseDepositAddressImport(content) {
+  const text = String(content || "").trim();
+  if (!text || text.length > 500000) return [];
+  let sourceEntries = null;
+  try {
+    const parsed = JSON.parse(text);
+    if (Array.isArray(parsed)) sourceEntries = parsed;
+    else if (parsed && typeof parsed === "object" && Array.isArray(parsed.addresses)) sourceEntries = parsed.addresses;
+  } catch {}
+  if (!sourceEntries) {
+    sourceEntries = text
+      .split(/\r?\n/)
+      .map(line => line.trim())
+      .filter(line => line && !line.startsWith("#"))
+      .map(line => {
+        const [wallet, userId] = line.split(/[,\s;]+/).filter(Boolean);
+        return { wallet, user_id: userId };
+      });
+  }
+  const seen = new Set();
+  const entries = [];
+  for (const sourceEntry of sourceEntries) {
+    const entry = normalizeDepositAddressEntry(sourceEntry);
+    if (!entry || seen.has(entry.wallet)) continue;
+    seen.add(entry.wallet);
+    entries.push(entry);
+  }
+  return entries;
 }
 
 function depositAddressBookStatus() {
@@ -1647,6 +1692,28 @@ app.get("/admin/deposit-addresses/status", adminLimiter, adminAuth, (req, res) =
     return res.status(500).json({
       success: false,
       message: "Deposit address file cannot be read",
+      file_path: depositAddressesFilePath()
+    });
+  }
+});
+
+app.post("/admin/deposit-addresses/import", adminLimiter, adminAuth, (req, res) => {
+  try {
+    const entries = parseDepositAddressImport(req.body.content);
+    if (!entries.length) {
+      return res.json({ success: false, message: "No valid deposit addresses found" });
+    }
+    writeDepositAddressBook({
+      filePath: depositAddressesFilePath(),
+      entries,
+      wrapper: null
+    });
+    return res.json({ success: true, imported: entries.length, ...depositAddressBookStatus() });
+  } catch (error) {
+    console.error("DEPOSIT ADDRESS IMPORT ERROR:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Deposit address file cannot be saved",
       file_path: depositAddressesFilePath()
     });
   }

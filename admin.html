@@ -49,6 +49,9 @@ h1 { text-align:center; }
 .support-reply { display:grid; gap:8px; margin-top:12px; }
 .support-reply textarea { width:100%; min-height:76px; resize:vertical; padding:10px; border:1px solid #334155; border-radius:8px; background:#0b1220; color:white; }
 .support-reply button { width:auto; padding:10px 14px; border:0; border-radius:8px; background:var(--accent); color:#111; font-weight:800; cursor:pointer; }
+.file-upload { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; align-items:center; }
+.file-upload input { max-width:100%; color:#e5e7eb; }
+.file-upload button { width:auto; padding:9px 12px; border:0; border-radius:7px; background:var(--accent); color:#111; cursor:pointer; }
 </style>
 </head>
 <body data-no-nav="true">
@@ -302,12 +305,34 @@ function renderDepositAddressStatus(status) {
         <div><span class="label">Некоректні</span><br>${Number(status.invalid || 0)}</div>
         <div><span class="label">Статус</span><br>${status.created ? "Файл створено автоматично" : "Файл підключено"}</div>
       </div>
+      <div class="file-upload">
+        <input id="depositAddressFile" type="file" accept=".json,.txt,.csv">
+        <button type="button" onclick="importDepositAddressFile()">Завантажити з ноутбука на сервер</button>
+      </div>
+      <div class="muted-note">Підходить JSON як у прикладі або простий список: одна адреса в рядку.</div>
     </article>
   `;
 }
 
 async function loadDepositAddressStatus() {
   depositAddressStatus = await adminFetch("/admin/deposit-addresses/status").then(response => response.json());
+}
+
+async function importDepositAddressFile() {
+  const input = document.getElementById("depositAddressFile");
+  const file = input?.files?.[0];
+  if (!file) return alert("Виберіть файл з адресами на ноутбуці");
+  const content = await file.text();
+  const response = await adminFetch("/admin/deposit-addresses/import", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({filename:file.name, content})
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!result.success) return alert(result.message || "Не вдалося завантажити файл на сервер");
+  depositAddressStatus = result;
+  renderSignals(allSignals);
+  alert(`Файл завантажено на сервер. Адрес: ${result.imported || result.total || 0}`);
 }
 
 function renderSignals(signals) {
