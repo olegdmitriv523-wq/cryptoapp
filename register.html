@@ -83,8 +83,21 @@ const API_URL = ["localhost", "127.0.0.1"].includes(location.hostname)
   ? location.origin
   : "https://cryptoapp-eqc5.onrender.com";
 
+function cleanReferrerId(value) {
+  return String(value || "").replace(/\D/g, "").slice(0, 8);
+}
+
+const registrationParams = new URLSearchParams(location.search);
+const referrerFromLink = cleanReferrerId(
+  registrationParams.get("ref") ||
+  registrationParams.get("referrer_id") ||
+  registrationParams.get("invite")
+);
+if (referrerFromLink) localStorage.setItem("registration_referrer_id", referrerFromLink);
+
 if (localStorage.getItem("registration_terms_accepted") !== "yes") {
-  location.replace("terms.html");
+  const storedReferrer = cleanReferrerId(referrerFromLink || localStorage.getItem("registration_referrer_id"));
+  location.replace(storedReferrer ? `terms.html?ref=${encodeURIComponent(storedReferrer)}` : "terms.html");
 }
 
 const messages = {
@@ -103,6 +116,12 @@ const messages = {
 };
 let pendingToken = "";
 let emailVerificationRequired = true;
+const savedReferrerId = cleanReferrerId(referrerFromLink || localStorage.getItem("registration_referrer_id"));
+if (savedReferrerId) {
+  const referrerInput = document.getElementById("referrer_id");
+  referrerInput.value = savedReferrerId;
+  referrerInput.readOnly = true;
+}
 
 async function loadRegistrationMode() {
   try {
@@ -161,6 +180,7 @@ document.getElementById("registerForm").addEventListener("submit", async (event)
 
     if (data.registered) {
       localStorage.removeItem("registration_terms_accepted");
+      localStorage.removeItem("registration_referrer_id");
       alert("Акаунт створено. Тепер увійдіть.");
       location.href = "login.html";
       return;
@@ -197,6 +217,7 @@ document.getElementById("verifyForm").addEventListener("submit", async event => 
     const data = await response.json();
     if (!response.ok || !data.success) { message.textContent = messages[data.message] || "Не вдалося підтвердити код."; window.appTranslate?.translatePage(); return; }
     localStorage.removeItem("registration_terms_accepted");
+    localStorage.removeItem("registration_referrer_id");
     alert("Пошту підтверджено, акаунт створено. Тепер увійдіть.");
     location.href = "login.html";
   } catch {

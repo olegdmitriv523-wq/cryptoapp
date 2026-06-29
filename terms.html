@@ -47,13 +47,26 @@ body { margin:0; font-family:Arial,sans-serif; }
   <div id="termsMessage" role="alert"></div>
 </main>
 <script>
+function cleanReferrerId(value) {
+  return String(value || "").replace(/\D/g, "").slice(0, 8);
+}
+
+const termsParams = new URLSearchParams(location.search);
+const termsReferrerId = cleanReferrerId(
+  termsParams.get("ref") ||
+  termsParams.get("referrer_id") ||
+  termsParams.get("invite")
+);
+if (termsReferrerId) localStorage.setItem("registration_referrer_id", termsReferrerId);
+
 function continueRegistration() {
   if (!document.getElementById("acceptTerms").checked) {
     document.getElementById("termsMessage").textContent = "Потрібно прочитати умови та підтвердити згоду.";
     return;
   }
   localStorage.setItem("registration_terms_accepted", "yes");
-  location.href = "register.html";
+  const storedReferrer = cleanReferrerId(termsReferrerId || localStorage.getItem("registration_referrer_id"));
+  location.href = storedReferrer ? `register.html?ref=${encodeURIComponent(storedReferrer)}` : "register.html";
 }
 </script>
 <script src="app-nav.js"></script>

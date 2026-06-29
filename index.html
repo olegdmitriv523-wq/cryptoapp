@@ -54,6 +54,40 @@ body {
 .user-meta div {
   word-break: break-all;
 }
+.invite-link {
+  margin-top: 7px;
+  display: grid;
+  gap: 6px;
+}
+.invite-label {
+  color: #9ca3af;
+  font-size: 12px;
+}
+.invite-row {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+.invite-row input {
+  width: min(360px, 56vw);
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #e5e7eb;
+  font-size: 12px;
+}
+.invite-row button {
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: #f59e0b;
+  color: #111827;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
 .logout {
   background: #ef4444;
   padding: 10px 16px;
@@ -165,6 +199,13 @@ if (!token) location.href = "login.html";
       <div class="avatar" onclick="uploadPhoto()"><img id="avatarImg" alt=""></div>
       <div class="user-meta">
         <div id="userIdText"></div>
+        <div class="invite-link">
+          <div class="invite-label">Посилання для запрошення</div>
+          <div class="invite-row">
+            <input id="inviteLink" readonly value="">
+            <button type="button" onclick="copyInviteLink()">Копіювати</button>
+          </div>
+        </div>
       </div>
     </div>
     <div class="logout" onclick="logout()" data-i18n="logout">Вийти</div>
@@ -193,7 +234,9 @@ async function loadUser() {
     if (res.status === 401) throw new Error("auth");
     const user = await res.json();
 
-    document.getElementById("userIdText").textContent = `ID: ${user.display_id || "1568" + String(user.id).padStart(4, "0").slice(-4)}`;
+    const displayId = user.display_id || "1568" + String(user.id).padStart(4, "0").slice(-4);
+    document.getElementById("userIdText").textContent = `ID: ${displayId}`;
+    document.getElementById("inviteLink").value = `${location.origin}/register.html?ref=${encodeURIComponent(displayId)}`;
 
     const balance = Number(user.balance || 0);
     const deposit = Number(user.deposit || 0);
@@ -234,6 +277,18 @@ async function loadCoins() {
 function goDeposit(){ location.href = "deposit.html"; }
 function goWithdraw(){ location.href = "withdraw.html"; }
 function logout(){ localStorage.removeItem("token"); location.href = "login.html"; }
+
+async function copyInviteLink() {
+  const input = document.getElementById("inviteLink");
+  if (!input.value) return;
+  try {
+    await navigator.clipboard.writeText(input.value);
+  } catch {
+    input.select();
+    document.execCommand("copy");
+  }
+  alert("Посилання скопійовано");
+}
 
 function uploadPhoto() {
   const input = document.createElement("input");
