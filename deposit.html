@@ -194,20 +194,21 @@ async function loadWallet() {
       document.getElementById("walletBox").textContent = data.wallet_request_pending
         ? "Запит на створення персонального гаманця вже відправлено. Дочекайтеся, поки адміністратор впише адресу."
         : "Персональний гаманець ще не створено. Відправте запит адміністратору.";
-      document.getElementById("qr").removeAttribute("src");
-      document.querySelector(".submit-btn").disabled = true;
-      requestButton.hidden = false;
-      requestButton.disabled = Boolean(data.wallet_request_pending);
-      requestButton.textContent = data.wallet_request_pending ? "Очікує адміністратора" : "Запросити гаманець";
-      window.appTranslate?.translatePage();
-      return;
-    }
-    requestButton.hidden = true;
-    requestButton.disabled = false;
-    document.getElementById("walletBox").textContent = wallet;
-    document.getElementById("qr").src = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" + encodeURIComponent(wallet);
-    document.querySelector(".submit-btn").disabled = false;
+    document.getElementById("qr").removeAttribute("src");
+    document.querySelector(".submit-btn").disabled = true;
+    requestButton.hidden = false;
+    requestButton.disabled = Boolean(data.wallet_request_pending);
+    requestButton.textContent = data.wallet_request_pending ? "Очікує адміністратора" : "Запросити гаманець";
     window.appTranslate?.translatePage();
+    return data;
+  }
+  requestButton.hidden = true;
+  requestButton.disabled = false;
+  document.getElementById("walletBox").textContent = wallet;
+  document.getElementById("qr").src = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" + encodeURIComponent(wallet);
+  document.querySelector(".submit-btn").disabled = false;
+  window.appTranslate?.translatePage();
+  return data;
   } catch {
     localStorage.removeItem("token");
     location.href = "login.html";
@@ -227,6 +228,11 @@ async function requestWallet() {
     if (response.status === 401) throw new Error("auth");
     const result = await response.json().catch(() => ({}));
     if (!response.ok || !result.success) {
+      const walletState = await loadWallet();
+      if (walletState?.wallet_request_pending) {
+        alert("Запит уже відправлено адміністратору");
+        return;
+      }
       alert(result.message || "Не вдалося відправити запит");
       return;
     }
@@ -235,6 +241,11 @@ async function requestWallet() {
     if (error.message === "auth") {
       localStorage.removeItem("token");
       location.href = "login.html";
+      return;
+    }
+    const walletState = await loadWallet().catch(() => null);
+    if (walletState?.wallet_request_pending) {
+      alert("Запит уже відправлено адміністратору");
       return;
     }
     alert("Не вдалося відправити запит. Оновіть сторінку і спробуйте ще раз.");
