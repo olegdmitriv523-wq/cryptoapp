@@ -218,14 +218,25 @@ async function requestWallet() {
   const button = document.getElementById("requestWalletBtn");
   button.disabled = true;
   button.textContent = "Відправляємо...";
-  const response = await fetch(API_URL + "/wallet/request", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: token },
-    body: JSON.stringify({})
-  });
-  const result = await response.json().catch(() => ({}));
-  if (!result.success) alert(result.message || "Не вдалося відправити запит");
-  await loadWallet();
+  try {
+    const response = await fetch(API_URL + "/wallet/request", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: token },
+      body: JSON.stringify({})
+    });
+    if (response.status === 401) throw new Error("auth");
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.success) alert(result.message || "Не вдалося відправити запит");
+  } catch (error) {
+    if (error.message === "auth") {
+      localStorage.removeItem("token");
+      location.href = "login.html";
+      return;
+    }
+    alert("Не вдалося відправити запит. Спробуйте ще раз.");
+  } finally {
+    await loadWallet();
+  }
 }
 
 function copyWallet() {

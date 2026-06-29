@@ -1169,7 +1169,7 @@ app.post("/wallet/request", actionLimiter, auth, async (req, res) => {
       .limit(1);
     if (error) throw error;
     if ((pending || []).length) {
-      return res.json({ success: false, message: "Wallet request is already pending" });
+      return res.json({ success: true, message: "Wallet request is already pending", wallet_assigned: Boolean(personalWalletAddress(user)) });
     }
     let assignment;
     try {
@@ -1215,7 +1215,7 @@ app.post("/wallet/request", actionLimiter, auth, async (req, res) => {
     });
   } catch (error) {
     console.error("WALLET REQUEST ERROR:", error);
-    return res.status(500).json({ success: false });
+    return res.status(500).json({ success: false, message: "Wallet request error" });
   }
 });
 
@@ -1901,6 +1901,38 @@ app.post("/admin/set-wallet", adminLimiter, adminAuth, async (req, res) => {
     return res.json({ success: true });
   } catch (error) {
     console.error("ADMIN SET WALLET ERROR:", error);
+    return res.status(500).json({ success: false, message: "Wallet update error" });
+  }
+});
+
+app.post("/admin/manual-wallet", adminLimiter, adminAuth, async (req, res) => {
+  try {
+    const userId = Number(req.body.user_id);
+    const wallet = cleanWallet(req.body.wallet);
+    if (!Number.isInteger(userId) || userId <= 0 || !isValidWallet(wallet)) {
+      return res.json({ success: false, message: "Invalid wallet" });
+    }
+    const user = await findUser(userId, "id,email");
+    if (!user) return res.json({ success: false, message: "User not found" });
+
+    const { error: userError } = await supabase
+      .from("users")
+      .update({ wallet_address: wallet })
+      .eq("id", user.id);
+    if (userError) throw userError;
+
+    linkDepositWalletToUser(user, wallet);
+    const { error: signalError } = await supabase
+      .from("signals")
+      .update({ wallet, status: "approved" })
+      .eq("user_id", user.id)
+      .eq("type", "wallet_create")
+      .eq("status", "pending");
+    if (signalError) throw signalError;
+
+    return res.json({ success: true });
+  } catch (error) {
+    console.error("ADMIN MANUAL WALLET ERROR:", error);
     return res.status(500).json({ success: false, message: "Wallet update error" });
   }
 });

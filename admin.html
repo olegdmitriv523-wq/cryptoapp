@@ -173,6 +173,7 @@ function renderUsers(users) {
       </div>
       <div class="user-edit-actions">
         <button class="approve" onclick="updateUser(${user.id})">Зберегти дані</button>
+        <button class="approve" onclick="saveUserWalletOnly(${user.id})">Зберегти тільки гаманець</button>
         <button class="delete-btn" onclick="deleteUser(${user.id}, '${escapeHtml(user.display_id || displayId(user.id))}')">Видалити користувача</button>
       </div>
       <div class="controls">
@@ -205,6 +206,19 @@ async function updateUser(userId) {
   });
   const result = await response.json().catch(() => ({}));
   if (!result.success) return alert(result.message || "Не вдалося зберегти дані користувача");
+  await refresh();
+}
+
+async function saveUserWalletOnly(userId) {
+  const wallet = document.getElementById(`edit-wallet-${userId}`).value.trim();
+  if (!wallet) return alert("Впишіть гаманець");
+  const response = await adminFetch("/admin/manual-wallet", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({user_id:userId, wallet})
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!result.success) return alert(result.message || "Не вдалося зберегти гаманець");
   await refresh();
 }
 
