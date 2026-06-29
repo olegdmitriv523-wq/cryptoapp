@@ -27,7 +27,7 @@ label { display:block; margin:8px 0; padding:9px; border-radius:7px; background:
 <body>
 <main class="learning">
   <h1>Навчання криптовалютам</h1>
-  <p class="intro">Прочитайте короткий урок і дайте правильну відповідь. Кожен тест можна пройти один раз.<br><span class="reward-highlight">Винагорода становить 10 доларів</span></p>
+  <p class="intro">Прочитайте короткий урок і дайте правильну відповідь. Кожен тест можна пройти один раз.<br><span class="reward-highlight">Винагорода становить 2.5 долара</span></p>
   <div class="access-note" id="accessNote">Навчання доступне після підтвердженого поповнення від $500. Матеріали оновлюються кожного 1 числа місяця.</div>
 
   <article class="quiz" data-id="1">
@@ -89,7 +89,7 @@ function markCompleted(id) {
   const card = document.querySelector(`[data-id="${id}"]`);
   card.classList.add("done");
   card.querySelector("button").disabled = true;
-  card.querySelector(".result").innerHTML = '<span class="reward">Пройдено · винагорода $10</span>';
+  card.querySelector(".result").innerHTML = '<span class="reward">Пройдено · винагорода $2.50</span>';
   window.appTranslate?.translatePage();
 }
 

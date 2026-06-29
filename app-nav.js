@@ -22,7 +22,7 @@ const I18N = {
     profile: "Дані користувача", logout: "Вийти", balance: "Баланс", wallet: "Гаманець", userData: "Дані користувача",
     addFunds: "Поповнити", withdrawShort: "Вивести", mainBalance: "Основний баланс", operationHistory: "Історія операцій і винагород",
     pool: "Загальний пул", dailyChange: "Добова зміна", perDay: "за добу", readLesson: "Прочитайте короткий урок і дайте правильну відповідь. Кожен тест можна пройти один раз.",
-    reward10: "Винагорода становить $10", check: "Перевірити", mainTrade: "Основна торгівля",
+    reward10: "Винагорода становить $2.50", check: "Перевірити", mainTrade: "Основна торгівля",
     tradeButton: "Торгувати", locked: "Заблоковано", availableAll: "Доступна всім користувачам",
     project: "United Europe Crypto", market: "Ринок", copy: "Скопійовано", back: "Назад"
   },
@@ -33,7 +33,7 @@ const I18N = {
     profile: "Данные пользователя", logout: "Выйти", balance: "Баланс", wallet: "Кошелек", userData: "Данные пользователя",
     addFunds: "Пополнить", withdrawShort: "Вывести", mainBalance: "Основной баланс", operationHistory: "История операций и наград",
     pool: "Общий пул", dailyChange: "Суточное изменение", perDay: "за сутки", readLesson: "Прочитайте короткий урок и дайте правильный ответ. Каждый тест можно пройти один раз.",
-    reward10: "Вознаграждение составляет $10", check: "Проверить", mainTrade: "Основная торговля",
+    reward10: "Вознаграждение составляет $2.50", check: "Проверить", mainTrade: "Основная торговля",
     tradeButton: "Торговать", locked: "Заблокировано", availableAll: "Доступно всем пользователям",
     project: "United Europe Crypto", market: "Рынок", copy: "Скопировано", back: "Назад"
   },
@@ -44,7 +44,7 @@ const I18N = {
     profile: "Пайдаланушы деректері", logout: "Шығу", balance: "Баланс", wallet: "Әмиян", userData: "Пайдаланушы деректері",
     addFunds: "Толықтыру", withdrawShort: "Шығару", mainBalance: "Негізгі баланс", operationHistory: "Операциялар мен сыйақылар тарихы",
     pool: "Жалпы пул", dailyChange: "Күндік өзгеріс", perDay: "тәулігіне", readLesson: "Қысқа сабақты оқып, дұрыс жауап беріңіз. Әр тестті бір рет өтуге болады.",
-    reward10: "Сыйақы $10", check: "Тексеру", mainTrade: "Негізгі сауда",
+    reward10: "Сыйақы $2.50", check: "Тексеру", mainTrade: "Негізгі сауда",
     tradeButton: "Саудалау", locked: "Бұғатталған", availableAll: "Барлық пайдаланушыларға қолжетімді",
     project: "United Europe Crypto", market: "Нарық", copy: "Көшірілді", back: "Артқа"
   },
@@ -55,7 +55,7 @@ const I18N = {
     profile: "Dane użytkownika", logout: "Wyloguj", balance: "Saldo", wallet: "Portfel", userData: "Dane użytkownika",
     addFunds: "Wpłać", withdrawShort: "Wypłać", mainBalance: "Saldo główne", operationHistory: "Historia operacji i nagród",
     pool: "Pula ogólna", dailyChange: "Zmiana dzienna", perDay: "dziennie", readLesson: "Przeczytaj krótki materiał i wybierz poprawną odpowiedź. Każdy test można ukończyć raz.",
-    reward10: "Nagroda wynosi $10", check: "Sprawdź", mainTrade: "Handel główny",
+    reward10: "Nagroda wynosi $2.50", check: "Sprawdź", mainTrade: "Handel główny",
     tradeButton: "Handluj", locked: "Zablokowane", availableAll: "Dostępne dla wszystkich użytkowników",
     project: "United Europe Crypto", market: "Rynek", copy: "Skopiowano", back: "Wstecz"
   },
@@ -66,7 +66,7 @@ const I18N = {
     profile: "Date utilizator", logout: "Ieșire", balance: "Sold", wallet: "Portofel", userData: "Date utilizator",
     addFunds: "Depune", withdrawShort: "Retrage", mainBalance: "Sold principal", operationHistory: "Istoricul operațiunilor și recompenselor",
     pool: "Fond total", dailyChange: "Schimbare zilnică", perDay: "pe zi", readLesson: "Citește lecția scurtă și alege răspunsul corect. Fiecare test poate fi făcut o singură dată.",
-    reward10: "Recompensa este de $10", check: "Verifică", mainTrade: "Tranzacție principală",
+    reward10: "Recompensa este de $2.50", check: "Verifică", mainTrade: "Tranzacție principală",
     tradeButton: "Tranzacționează", locked: "Blocat", availableAll: "Disponibil tuturor utilizatorilor",
     project: "United Europe Crypto", market: "Piață", copy: "Copiat", back: "Înapoi"
   },
@@ -77,7 +77,7 @@ const I18N = {
     profile: "User data", logout: "Log out", balance: "Balance", wallet: "Wallet", userData: "User data",
     addFunds: "Deposit", withdrawShort: "Withdraw", mainBalance: "Main balance", operationHistory: "Operations and rewards history",
     pool: "Total pool", dailyChange: "Daily change", perDay: "per day", readLesson: "Read the short lesson and choose the correct answer. Each test can be completed once.",
-    reward10: "The reward is $10", check: "Check", mainTrade: "Main trading",
+    reward10: "The reward is $2.50", check: "Check", mainTrade: "Main trading",
     tradeButton: "Trade", locked: "Locked", availableAll: "Available to all users",
     project: "United Europe Crypto", market: "Market", copy: "Copied", back: "Back"
   },
@@ -88,7 +88,7 @@ const I18N = {
     profile: "بيانات المستخدم", logout: "تسجيل الخروج", balance: "الرصيد", wallet: "المحفظة", userData: "بيانات المستخدم",
     addFunds: "إيداع", withdrawShort: "سحب", mainBalance: "الرصيد الرئيسي", operationHistory: "سجل العمليات والمكافآت",
     pool: "المجمع الكلي", dailyChange: "التغير اليومي", perDay: "في اليوم", readLesson: "اقرأ الدرس القصير واختر الإجابة الصحيحة. يمكن إكمال كل اختبار مرة واحدة.",
-    reward10: "المكافأة هي $10", check: "تحقق", mainTrade: "التداول الرئيسي",
+    reward10: "المكافأة هي $2.50", check: "تحقق", mainTrade: "التداول الرئيسي",
     tradeButton: "تداول", locked: "مغلق", availableAll: "متاح لجميع المستخدمين",
     project: "United Europe Crypto", market: "السوق", copy: "تم النسخ", back: "رجوع"
   },
@@ -99,7 +99,7 @@ const I18N = {
     profile: "उपयोगकर्ता डेटा", logout: "लॉग आउट", balance: "बैलेंस", wallet: "वॉलेट", userData: "उपयोगकर्ता डेटा",
     addFunds: "जमा करें", withdrawShort: "निकालें", mainBalance: "मुख्य बैलेंस", operationHistory: "ऑपरेशन और रिवॉर्ड इतिहास",
     pool: "कुल पूल", dailyChange: "दैनिक बदलाव", perDay: "प्रति दिन", readLesson: "छोटा पाठ पढ़ें और सही उत्तर चुनें. हर टेस्ट केवल एक बार पूरा किया जा सकता है.",
-    reward10: "रिवॉर्ड $10 है", check: "जांचें", mainTrade: "मुख्य ट्रेडिंग",
+    reward10: "रिवॉर्ड $2.50 है", check: "जांचें", mainTrade: "मुख्य ट्रेडिंग",
     tradeButton: "ट्रेड करें", locked: "लॉक", availableAll: "सभी उपयोगकर्ताओं के लिए उपलब्ध",
     project: "United Europe Crypto", market: "मार्केट", copy: "कॉपी हो गया", back: "वापस"
   },
@@ -110,7 +110,7 @@ const I18N = {
     profile: "Benutzerdaten", logout: "Abmelden", balance: "Saldo", wallet: "Wallet", userData: "Benutzerdaten",
     addFunds: "Einzahlen", withdrawShort: "Auszahlen", mainBalance: "Hauptsaldo", operationHistory: "Verlauf von Vorgängen und Belohnungen",
     pool: "Gesamtpool", dailyChange: "Tagesänderung", perDay: "pro Tag", readLesson: "Lesen Sie die kurze Lektion und wählen Sie die richtige Antwort. Jeder Test kann einmal abgeschlossen werden.",
-    reward10: "Die Belohnung beträgt $10", check: "Prüfen", mainTrade: "Haupthandel",
+    reward10: "Die Belohnung beträgt $2.50", check: "Prüfen", mainTrade: "Haupthandel",
     tradeButton: "Handeln", locked: "Gesperrt", availableAll: "Für alle Benutzer verfügbar",
     project: "United Europe Crypto", market: "Markt", copy: "Kopiert", back: "Zurück"
   },
@@ -121,7 +121,7 @@ const I18N = {
     profile: "Données utilisateur", logout: "Déconnexion", balance: "Solde", wallet: "Portefeuille", userData: "Données utilisateur",
     addFunds: "Déposer", withdrawShort: "Retirer", mainBalance: "Solde principal", operationHistory: "Historique des opérations et récompenses",
     pool: "Pool total", dailyChange: "Variation quotidienne", perDay: "par jour", readLesson: "Lisez la courte leçon et choisissez la bonne réponse. Chaque test ne peut être terminé qu'une fois.",
-    reward10: "La récompense est de $10", check: "Vérifier", mainTrade: "Trading principal",
+    reward10: "La récompense est de $2.50", check: "Vérifier", mainTrade: "Trading principal",
     tradeButton: "Trader", locked: "Verrouillé", availableAll: "Disponible pour tous les utilisateurs",
     project: "United Europe Crypto", market: "Marché", copy: "Copié", back: "Retour"
   },
@@ -132,7 +132,7 @@ const I18N = {
     profile: "Dados do usuário", logout: "Sair", balance: "Saldo", wallet: "Carteira", userData: "Dados do usuário",
     addFunds: "Depositar", withdrawShort: "Retirar", mainBalance: "Saldo principal", operationHistory: "Histórico de operações e recompensas",
     pool: "Pool total", dailyChange: "Mudança diária", perDay: "por dia", readLesson: "Leia a lição curta e escolha a resposta correta. Cada teste pode ser concluído uma vez.",
-    reward10: "A recompensa é de $10", check: "Verificar", mainTrade: "Negociação principal",
+    reward10: "A recompensa é de $2.50", check: "Verificar", mainTrade: "Negociação principal",
     tradeButton: "Negociar", locked: "Bloqueado", availableAll: "Disponível para todos os usuários",
     project: "United Europe Crypto", market: "Mercado", copy: "Copiado", back: "Voltar"
   },
@@ -143,7 +143,7 @@ const I18N = {
     profile: "Datos del usuario", logout: "Salir", balance: "Saldo", wallet: "Billetera", userData: "Datos del usuario",
     addFunds: "Depositar", withdrawShort: "Retirar", mainBalance: "Saldo principal", operationHistory: "Historial de operaciones y recompensas",
     pool: "Pool total", dailyChange: "Cambio diario", perDay: "por día", readLesson: "Lee la lección corta y elige la respuesta correcta. Cada prueba se puede completar una vez.",
-    reward10: "La recompensa es de $10", check: "Comprobar", mainTrade: "Trading principal",
+    reward10: "La recompensa es de $2.50", check: "Comprobar", mainTrade: "Trading principal",
     tradeButton: "Operar", locked: "Bloqueado", availableAll: "Disponible para todos los usuarios",
     project: "United Europe Crypto", market: "Mercado", copy: "Copiado", back: "Atrás"
   },
@@ -154,7 +154,7 @@ const I18N = {
     profile: "Dati utente", logout: "Esci", balance: "Saldo", wallet: "Wallet", userData: "Dati utente",
     addFunds: "Deposita", withdrawShort: "Preleva", mainBalance: "Saldo principale", operationHistory: "Storico operazioni e ricompense",
     pool: "Pool totale", dailyChange: "Variazione giornaliera", perDay: "al giorno", readLesson: "Leggi la breve lezione e scegli la risposta corretta. Ogni test può essere completato una sola volta.",
-    reward10: "La ricompensa è di $10", check: "Controlla", mainTrade: "Trading principale",
+    reward10: "La ricompensa è di $2.50", check: "Controlla", mainTrade: "Trading principale",
     tradeButton: "Fai trading", locked: "Bloccato", availableAll: "Disponibile per tutti gli utenti",
     project: "United Europe Crypto", market: "Mercato", copy: "Copiato", back: "Indietro"
   }
@@ -180,8 +180,8 @@ const TEXT_KEYS = {
   "Історія операцій і винагород": "operationHistory",
   "Загальний пул": "pool",
   "Добова зміна": "dailyChange",
-  "Винагорода становить 10 доларів": "reward10",
-  "Винагорода становить $10": "reward10",
+  "Винагорода становить 2.5 долара": "reward10",
+  "Винагорода становить $2.50": "reward10",
   "Перевірити": "check",
   "Основна торгівля": "mainTrade",
   "Ринок": "market",

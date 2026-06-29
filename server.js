@@ -155,18 +155,19 @@ const MIN_DEPOSIT_AMOUNT = 500;
 const MAX_DEPOSIT_REQUESTS = 2;
 const MIN_WITHDRAW_AMOUNT = 100;
 const WITHDRAW_COOLDOWN_MS = 60 * 60 * 1000;
-const TRADE_RATES = [0.01, 0.01, 0.005, 0.0075, 0.0125, 0.02];
+const TRADE_RATES = [0.01, 0.01, 0.0025, 0.005, 0.0075, 0.015];
 const TRADE_SETTLE_MS = 10 * 60 * 1000;
-const REFERRER_REWARDS = [75, 100, 125, 125, 250];
+const REFERRER_REWARDS = [50, 75, 100, 100, 150];
 const BALANCE_REWARDS = [
-  [1000, 75],
-  [2000, 100],
-  [5000, 250],
-  [10000, 750],
-  [20000, 2000],
-  [50000, 5000],
-  [100000, 20000]
+  [1000, 50],
+  [2500, 100],
+  [5000, 200],
+  [10000, 500],
+  [20000, 1000],
+  [50000, 2500],
+  [100000, 5000]
 ];
+const QUIZ_REWARD_AMOUNT = 2.5;
 const TRADE_STREAK_REWARDS = [
   [10, 10],
   [30, 50],
@@ -512,8 +513,8 @@ function supportAnswer(message) {
   }
   if (/(навчан|learning|урок|тест|quiz)/i.test(text)) {
     return answer(
-      "Навчання відкривається після підтвердженого поповнення від $500. Уроки містять коротку інформацію і тест. За правильне проходження тесту може нараховуватися внутрішня винагорода $10.",
-      "Learning opens after an approved deposit from $500. Lessons include short information and a quiz. Correct completion can create a $10 internal reward."
+      "Навчання відкривається після підтвердженого поповнення від $500. Уроки містять коротку інформацію і тест. За правильне проходження тесту може нараховуватися внутрішня винагорода $2.50.",
+      "Learning opens after an approved deposit from $500. Lessons include short information and a quiz. Correct completion can create a $2.50 internal reward."
     );
   }
   if (/(сател|satellite|запрош|referr|структур)/i.test(text)) {
@@ -628,12 +629,23 @@ async function getTradeStreak(userId) {
   return streak;
 }
 
+function invitedSatelliteRewardAmount(deposit) {
+  const amount = Number(deposit || 0);
+  if (amount >= 2000) return 100;
+  if (amount >= 1000) return 45;
+  if (amount >= ACTIVE_SATELLITE_MIN_DEPOSIT) return 5;
+  return 0;
+}
+
 async function grantSatelliteRewards(satelliteId) {
   const satellite = await findUser(satelliteId, "id,referrer_id,deposit");
   if (!satellite || Number(satellite.deposit || 0) < ACTIVE_SATELLITE_MIN_DEPOSIT) return;
 
   if (satellite.referrer_id) {
-    await grantRewardOnce(satellite.id, "reward_invited_satellite", 50, `satellite:${satellite.id}`);
+    const invitedReward = invitedSatelliteRewardAmount(satellite.deposit);
+    if (invitedReward > 0) {
+      await grantRewardOnce(satellite.id, "reward_invited_satellite", invitedReward, `satellite:${satellite.id}`);
+    }
 
     const { data: activeSatellites } = await supabase
       .from("users")
@@ -672,7 +684,7 @@ function rewardDefinitions() {
       amount,
       threshold
     })),
-    { type: "reward_invited_satellite", group: "satellites", title: "Винагорода запрошеному після поповнення від $500", amount: 50, satelliteRank: 0 },
+    { type: "reward_invited_satellite", group: "satellites", title: "Винагорода запрошеному після поповнення від $500", amount: 5, satelliteRank: 0, variableAmount: true },
     ...REFERRER_REWARDS.map((amount, index) => ({
       type: `reward_referrer_satellite_${index + 1}`,
       group: "satellites",
@@ -720,6 +732,7 @@ async function rewardProgress(userId) {
     let eligible = false;
     let progress = 0;
     let target = 1;
+    let amount = Number(reward.amount);
     if (reward.group === "balance") {
       progress = balance;
       target = reward.threshold;
@@ -728,6 +741,7 @@ async function rewardProgress(userId) {
       progress = deposit;
       target = ACTIVE_SATELLITE_MIN_DEPOSIT;
       eligible = Boolean(user.referrer_id) && deposit >= ACTIVE_SATELLITE_MIN_DEPOSIT;
+      amount = invitedSatelliteRewardAmount(deposit) || amount;
     } else if (reward.group === "satellites") {
       progress = satellites;
       target = reward.satelliteRank;
@@ -739,7 +753,7 @@ async function rewardProgress(userId) {
     }
     return {
       ...reward,
-      amount: Number(reward.amount),
+      amount,
       progress,
       target,
       eligible,
@@ -1393,11 +1407,11 @@ app.post("/quiz/complete", actionLimiter, auth, async (req, res) => {
       .maybeSingle();
     if (existing) return res.json({ success: false, message: "Already completed" });
 
-    const newBalance = Number(user.balance || 0) + 10;
+    const newBalance = Number((Number(user.balance || 0) + QUIZ_REWARD_AMOUNT).toFixed(2));
     const { error } = await supabase.from("users").update({ balance: newBalance }).eq("id", req.userId);
     if (error) throw error;
-    await addSignal({ user_id: req.userId, type, amount: 10, wallet: `quiz:${quizId}`, status: "rewarded" });
-    return res.json({ success: true, reward: 10, balance: newBalance });
+    await addSignal({ user_id: req.userId, type, amount: QUIZ_REWARD_AMOUNT, wallet: `quiz:${quizId}`, status: "rewarded" });
+    return res.json({ success: true, reward: QUIZ_REWARD_AMOUNT, balance: newBalance });
   } catch (error) {
     console.error("QUIZ ERROR:", error);
     return res.status(500).json({ success: false, message: "Server error" });
