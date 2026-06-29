@@ -587,6 +587,14 @@ function renderInstallButton() {
 }
 
 async function installApp() {
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  if (isStandalone) {
+    document.querySelector(".install-app-btn")?.classList.remove("visible");
+    return;
+  }
+  if ("serviceWorker" in navigator) {
+    await navigator.serviceWorker.register("service-worker.js").catch(() => {});
+  }
   const waitForInstallPrompt = (timeout = 2500) => new Promise(resolve => {
     if (window.deferredInstallPrompt) return resolve(true);
     const timer = setTimeout(() => {
@@ -620,19 +628,50 @@ async function installApp() {
 function showInstallInstructions() {
   document.querySelector(".install-modal")?.remove();
   const ua = navigator.userAgent || "";
-  const isIos = /iphone|ipad|ipod/i.test(ua);
-  const message = isIos ? tr("installIos") : tr("installAndroid");
+  const isIos = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const isSafari = isIos && /safari/i.test(ua) && !/(crios|fxios|edgios|opr|instagram|fbav|fban|telegram|line|micromessenger)/i.test(ua);
+  const isInAppBrowser = /(telegram|instagram|fbav|fban|line|micromessenger|twitter|tiktok)/i.test(ua) || Boolean(window.TelegramWebviewProxy || window.Telegram);
+  const currentUrl = location.origin + "/loading.html";
+  const iosTitle = "Встановити ярлик на iPhone";
+  const title = isIos ? iosTitle : tr("installTitle");
+  const message = isIos
+    ? (isSafari
+      ? "На iPhone Apple не дозволяє сайту встановити ярлик автоматично. Це займає кілька секунд у Safari:"
+      : "Ви відкрили сайт не в Safari. На iPhone ярлик можна додати тільки через Safari:")
+    : tr("installAndroid");
+  const steps = isIos
+    ? (isSafari
+      ? ["Натисніть кнопку «Поділитися» внизу Safari.", "Оберіть «На початковий екран».", "Натисніть «Додати»."]
+      : ["Скопіюйте адресу або відкрийте меню браузера.", "Відкрийте цю сторінку в Safari.", "У Safari натисніть «Поділитися» → «На початковий екран» → «Додати»."]
+    )
+    : [];
   const modal = document.createElement("div");
   modal.className = "install-modal visible";
   modal.innerHTML = `
     <div class="install-card">
-      <h2>${tr("installTitle")}</h2>
-      <p>${message}</p>
+      <h2>${supportEscape(title)}</h2>
+      <p>${supportEscape(message)}</p>
+      ${isIos ? `
+        <ol class="install-steps">
+          ${steps.map(step => `<li>${supportEscape(step)}</li>`).join("")}
+        </ol>
+        ${isInAppBrowser ? `<p class="install-note">Якщо бачите меню «Відкрити в Safari», оберіть його. Це найкоротший шлях до встановлення ярлика.</p>` : ""}
+        <div class="install-url">${supportEscape(currentUrl)}</div>
+        <button class="copy-install-url" type="button">Скопіювати адресу</button>
+      ` : ""}
       <button type="button">${tr("installClose")}</button>
     </div>
   `;
   modal.addEventListener("click", event => {
-    if (event.target === modal || event.target.tagName === "BUTTON") modal.remove();
+    if (event.target?.classList?.contains("copy-install-url")) {
+      navigator.clipboard?.writeText(currentUrl).then(() => {
+        event.target.textContent = "Адресу скопійовано";
+      }).catch(() => {
+        event.target.textContent = currentUrl;
+      });
+      return;
+    }
+    if (event.target === modal || (event.target.tagName === "BUTTON" && !event.target.classList.contains("copy-install-url"))) modal.remove();
   });
   document.body.append(modal);
 }
