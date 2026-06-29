@@ -667,8 +667,20 @@ function showInstallInstructions(options = {}) {
     : tr("installAndroid");
   const steps = isIos
     ? (isSafari
-      ? ["Натисніть кнопку «Поділитися» внизу Safari.", "Оберіть «На початковий екран».", "Натисніть «Додати»."]
-      : ["Натисніть «Відкрити в Safari».", "Якщо iPhone лишив сторінку тут, скопіюйте адресу і вставте її в Safari.", "У Safari натисніть «Поділитися» → «На початковий екран» → «Додати»."]
+      ? [
+        "Переконайтеся, що сторінка відкрита саме в Safari.",
+        "У нижній панелі Safari натисніть кнопку «Поділитися» - це квадрат зі стрілкою вгору.",
+        "У меню, яке відкриється, прокрутіть список нижче і натисніть «На початковий екран» або «Add to Home Screen».",
+        "На екрані з назвою United Europe Crypto натисніть «Додати» у правому верхньому куті.",
+        "Поверніться на головний екран iPhone: там з'явиться ярлик додатку."
+      ]
+      : [
+        "Натисніть велику кнопку «Відкрити в Safari» нижче.",
+        "Якщо iPhone залишив сторінку в Telegram або іншому вікні, натисніть «Скопіювати адресу», відкрийте Safari вручну і вставте адресу в рядок пошуку зверху.",
+        "Коли сторінка відкриється в Safari, натисніть внизу кнопку «Поділитися» - квадрат зі стрілкою вгору.",
+        "Прокрутіть меню нижче і натисніть «На початковий екран» або «Add to Home Screen».",
+        "Натисніть «Додати» у правому верхньому куті. Ярлик з'явиться на головному екрані iPhone."
+      ]
     )
     : [];
   const modal = document.createElement("div");
@@ -681,7 +693,7 @@ function showInstallInstructions(options = {}) {
         <ol class="install-steps">
           ${steps.map(step => `<li>${supportEscape(step)}</li>`).join("")}
         </ol>
-        ${isInAppBrowser ? `<p class="install-note">Якщо бачите меню «Відкрити в Safari», оберіть його. Це найкоротший шлях до встановлення ярлика.</p>` : ""}
+        ${isInAppBrowser ? `<p class="install-note">У Telegram також можна натиснути три крапки у верхньому правому куті та вибрати «Відкрити в Safari». Після цього виконайте кроки з кнопкою «Поділитися».</p>` : ""}
         ${!isSafari ? `<a class="open-safari-btn" href="${supportEscape(currentUrl)}" target="_blank" rel="noopener">Відкрити в Safari</a>` : ""}
         <div class="install-url">${supportEscape(currentUrl)}</div>
         <button class="copy-install-url" type="button">Скопіювати адресу</button>
