@@ -20,7 +20,7 @@ body {
 .header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 14px;
   padding: 18px 0 6px;
 }
@@ -95,6 +95,8 @@ body {
   cursor: pointer;
   font-weight: 700;
   white-space: nowrap;
+  margin-top: 4px;
+  align-self: flex-start;
 }
 .balance {
   margin: 10px 0 0;
@@ -174,6 +176,8 @@ body {
 .red { color: #ef4444; }
 @media (max-width: 620px) {
   .header { padding-top: 12px; }
+  .invite-row { flex-wrap: wrap; }
+  .invite-row input { width: min(100%, 310px); }
   .actions { grid-template-columns: 1fr; margin-top: 24px; }
   .balance { font-size: 31px; }
   .user-meta { font-size: 16px; }
