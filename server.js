@@ -996,7 +996,7 @@ app.get("/deposit/config", auth, async (req, res) => {
   });
 });
 
-app.post("/wallet/request", actionLimiter, auth, async (req, res) => {
+app.post("/wallet/request", auth, async (req, res) => {
   try {
     const user = await findUser(req.userId, "id,fullname,nickname,email,phone,wallet_address");
     if (!user) return res.status(404).json({ success: false });

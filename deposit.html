@@ -226,14 +226,18 @@ async function requestWallet() {
     });
     if (response.status === 401) throw new Error("auth");
     const result = await response.json().catch(() => ({}));
-    if (!response.ok || !result.success) alert(result.message || "Не вдалося відправити запит");
+    if (!response.ok || !result.success) {
+      alert(result.message || "Не вдалося відправити запит");
+      return;
+    }
+    alert(result.message === "Wallet request is already pending" ? "Запит уже відправлено адміністратору" : "Запит відправлено адміністратору");
   } catch (error) {
     if (error.message === "auth") {
       localStorage.removeItem("token");
       location.href = "login.html";
       return;
     }
-    alert("Не вдалося відправити запит. Спробуйте ще раз.");
+    alert("Не вдалося відправити запит. Оновіть сторінку і спробуйте ще раз.");
   } finally {
     await loadWallet();
   }
