@@ -246,7 +246,39 @@ const signalNames = {
   profile_update:"Зміна даних користувача", email_update:"Зміна електронної пошти"
 };
 
+function walletCreatePayload(signal) {
+  try {
+    const payload = JSON.parse(signal.wallet || "{}");
+    return payload && payload.kind === "wallet_create_request" ? (payload.wallet || "") : "";
+  } catch {
+    return "";
+  }
+}
+
+function isWalletCreateSignal(signal) {
+  if (signal.type === "wallet_create") return true;
+  try {
+    const payload = JSON.parse(signal.wallet || "{}");
+    return signal.type === "withdraw_wallet" && payload && payload.kind === "wallet_create_request";
+  } catch {
+    return false;
+  }
+}
+
+function signalTitle(signal) {
+  return isWalletCreateSignal(signal) ? signalNames.wallet_create : (signalNames[signal.type] || signal.type);
+}
+
+function walletInputValue(signal) {
+  if (signal.type === "withdraw_wallet" && isWalletCreateSignal(signal)) return walletCreatePayload(signal);
+  return signal.wallet && signal.wallet !== "requested" ? signal.wallet : "";
+}
+
 function signalDetails(signal) {
+  if (signal.type === "withdraw_wallet" && isWalletCreateSignal(signal)) {
+    const wallet = walletCreatePayload(signal) || "Очікує введення адміністратором";
+    return `<b>Персональний гаманець:</b> ${escapeHtml(wallet)}`;
+  }
   if (signal.type === "deposit") {
     try {
       const details = JSON.parse(signal.wallet || "{}");
@@ -257,7 +289,7 @@ function signalDetails(signal) {
     return `<b>Гаманець для поповнення:</b> ${escapeHtml(signal.wallet)}`;
   }
   if (signal.type === "withdraw") return `<b>Гаманець для виводу:</b> ${escapeHtml(signal.wallet)}`;
-  if (signal.type === "wallet_create") {
+  if (isWalletCreateSignal(signal)) {
     const wallet = signal.wallet && signal.wallet !== "requested" ? signal.wallet : "Очікує введення адміністратором";
     return `<b>Персональний гаманець:</b> ${escapeHtml(wallet)}`;
   }
@@ -272,11 +304,11 @@ function signalDetails(signal) {
 function renderSignalList(signals, emptyText) {
   const filtered = signals.filter(signal => matchesSearch(searchable([
     signal.id, signal.user_id, signal.user?.display_id, signal.user?.fullname, signal.user?.nickname,
-    signal.user?.email, signal.type, signalNames[signal.type], signal.amount, signal.wallet, signal.status, signal.created_at
+    signal.user?.email, signal.type, signalTitle(signal), signal.amount, signal.wallet, signal.status, signal.created_at
   ])));
   return filtered.length ? filtered.map(signal => `
     <article class="card">
-      <b>${escapeHtml(signalNames[signal.type] || signal.type)}</b>
+      <b>${escapeHtml(signalTitle(signal))}</b>
       <div class="grid">
         <div><span class="label">Користувач</span><br>#${signal.user?.display_id || displayId(signal.user_id)} ${escapeHtml(signal.user?.nickname || signal.user?.fullname)}</div>
         <div><span class="label">Email</span><br>${escapeHtml(signal.user?.email)}</div>
@@ -286,8 +318,8 @@ function renderSignalList(signals, emptyText) {
         <div><span class="label">Час</span><br>${new Date(signal.created_at).toLocaleString("uk-UA")}</div>
       </div>
       <div class="signal-actions">
-        ${signal.type === "wallet_create" && signal.status === "pending" ? `<input class="wallet-input" id="wallet-${signal.id}" value="${escapeHtml(signal.wallet && signal.wallet !== "requested" ? signal.wallet : "")}" placeholder="Впишіть персональний гаманець"><button class="approve" onclick="approveWalletRequest(${signal.id})">Зберегти гаманець</button><button class="reject" onclick="setSignal(${signal.id}, 'reject')">Відхилити</button>` : ""}
-        ${signal.type !== "wallet_create" && signal.status === "pending" ? `<button class="approve" onclick="setSignal(${signal.id}, 'approve')">Підтвердити</button><button class="reject" onclick="setSignal(${signal.id}, 'reject')">Відхилити</button>` : ""}
+        ${isWalletCreateSignal(signal) && signal.status === "pending" ? `<input class="wallet-input" id="wallet-${signal.id}" value="${escapeHtml(walletInputValue(signal))}" placeholder="Впишіть персональний гаманець"><button class="approve" onclick="approveWalletRequest(${signal.id})">Зберегти гаманець</button><button class="reject" onclick="setSignal(${signal.id}, 'reject')">Відхилити</button>` : ""}
+        ${!isWalletCreateSignal(signal) && signal.status === "pending" ? `<button class="approve" onclick="setSignal(${signal.id}, 'approve')">Підтвердити</button><button class="reject" onclick="setSignal(${signal.id}, 'reject')">Відхилити</button>` : ""}
         <button class="delete-btn" onclick="deleteSignal(${signal.id})">Видалити заявку</button>
       </div>
     </article>
@@ -300,8 +332,8 @@ async function loadSignals() {
 }
 
 function renderSignals(signals) {
-  document.getElementById("signals").innerHTML = renderSignalList(signals.filter(signal => !["deposit","withdraw","withdraw_wallet","wallet_create","profile_update","email_update","support_user","support_bot","support_admin"].includes(signal.type)), "Типових сигналів немає");
-  document.getElementById("walletRequests").innerHTML = renderSignalList(signals.filter(signal => signal.type === "wallet_create"), "Запитів на створення гаманця немає");
+  document.getElementById("signals").innerHTML = renderSignalList(signals.filter(signal => !isWalletCreateSignal(signal) && !["deposit","withdraw","withdraw_wallet","wallet_create","profile_update","email_update","support_user","support_bot","support_admin"].includes(signal.type)), "Типових сигналів немає");
+  document.getElementById("walletRequests").innerHTML = renderSignalList(signals.filter(isWalletCreateSignal), "Запитів на створення гаманця немає");
   document.getElementById("deposits").innerHTML = renderSignalList(signals.filter(signal => signal.type === "deposit"), "Заявок на поповнення немає");
   document.getElementById("withdrawals").innerHTML = renderSignalList(signals.filter(signal => signal.type === "withdraw"), "Заявок на виведення немає");
   document.getElementById("profileRequests").innerHTML = renderSignalList(signals.filter(signal => ["profile_update","email_update"].includes(signal.type)), "Заявок на зміну даних немає");

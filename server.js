@@ -145,6 +145,9 @@ const DISPLAY_ID_PREFIX = "1568";
 const DEPOSIT_WALLET_ADDRESS = process.env.DEPOSIT_WALLET_ADDRESS || "TTL8GGSkoAne5QRdkizLbGnmaBKv3EPoiy";
 const DEPOSIT_ASSET = "USDT";
 const DEPOSIT_NETWORK = "TRC20";
+const WALLET_CREATE_SIGNAL_TYPE = "wallet_create";
+const WALLET_CREATE_FALLBACK_TYPE = "withdraw_wallet";
+const WALLET_CREATE_FALLBACK_KIND = "wallet_create_request";
 const QUIZ_ANSWERS = { 1: "b", 2: "c", 3: "a", 4: "b", 5: "c" };
 const LEARNING_MIN_DEPOSIT = 500;
 const ACTIVE_SATELLITE_MIN_DEPOSIT = 500;
@@ -265,6 +268,55 @@ function safeJsonObject(value) {
     return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
   } catch {
     return {};
+  }
+}
+
+function walletCreatePayload(wallet = "") {
+  return JSON.stringify({ kind: WALLET_CREATE_FALLBACK_KIND, wallet: cleanWallet(wallet) });
+}
+
+function walletCreatePayloadWallet(value) {
+  const payload = safeJsonObject(value);
+  return payload.kind === WALLET_CREATE_FALLBACK_KIND ? cleanWallet(payload.wallet) : "";
+}
+
+function isWalletCreateSignal(signal) {
+  return signal?.type === WALLET_CREATE_SIGNAL_TYPE ||
+    (signal?.type === WALLET_CREATE_FALLBACK_TYPE && safeJsonObject(signal.wallet).kind === WALLET_CREATE_FALLBACK_KIND);
+}
+
+async function pendingWalletCreateRequests(userId) {
+  const { data, error } = await supabase
+    .from("signals")
+    .select("id,type,wallet")
+    .eq("user_id", userId)
+    .in("type", [WALLET_CREATE_SIGNAL_TYPE, WALLET_CREATE_FALLBACK_TYPE])
+    .eq("status", "pending")
+    .limit(10);
+  if (error) throw error;
+  return (data || []).filter(isWalletCreateSignal);
+}
+
+async function addWalletCreateSignal(user) {
+  try {
+    await addSignal({
+      user_id: user.id,
+      type: WALLET_CREATE_SIGNAL_TYPE,
+      amount: 0,
+      wallet: "requested",
+      status: "pending"
+    });
+    return WALLET_CREATE_SIGNAL_TYPE;
+  } catch (error) {
+    console.error("WALLET CREATE SIGNAL FALLBACK:", error.message || error);
+    await addSignal({
+      user_id: user.id,
+      type: WALLET_CREATE_FALLBACK_TYPE,
+      amount: 0,
+      wallet: walletCreatePayload(),
+      status: "pending"
+    });
+    return WALLET_CREATE_FALLBACK_TYPE;
   }
 }
 
@@ -918,13 +970,7 @@ app.post("/login", authLimiter, async (req, res) => {
 app.get("/me", auth, async (req, res) => {
   const user = await findUser(req.userId);
   if (!user) return res.status(404).json({ success: false });
-  const { data: pendingWalletRequests } = await supabase
-    .from("signals")
-    .select("id")
-    .eq("user_id", req.userId)
-    .eq("type", "wallet_create")
-    .eq("status", "pending")
-    .limit(1);
+  const pendingWalletRequests = await pendingWalletCreateRequests(req.userId);
   return res.json({
     ...withDisplayId(user),
     wallet_address: personalWalletAddress(user),
@@ -938,13 +984,7 @@ app.get("/me", auth, async (req, res) => {
 app.get("/deposit/config", auth, async (req, res) => {
   const user = await findUser(req.userId, "id,wallet_address");
   const wallet = personalWalletAddress(user);
-  const { data: pendingWalletRequests } = await supabase
-    .from("signals")
-    .select("id")
-    .eq("user_id", req.userId)
-    .eq("type", "wallet_create")
-    .eq("status", "pending")
-    .limit(1);
+  const pendingWalletRequests = await pendingWalletCreateRequests(req.userId);
   return res.json({
     success: true,
     asset: DEPOSIT_ASSET,
@@ -960,15 +1000,8 @@ app.post("/wallet/request", actionLimiter, auth, async (req, res) => {
   try {
     const user = await findUser(req.userId, "id,fullname,nickname,email,phone,wallet_address");
     if (!user) return res.status(404).json({ success: false });
-    const { data: pending, error } = await supabase
-      .from("signals")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("type", "wallet_create")
-      .eq("status", "pending")
-      .limit(1);
-    if (error) throw error;
-    if ((pending || []).length) {
+    const pending = await pendingWalletCreateRequests(user.id);
+    if (pending.length) {
       await sendTelegramMessage([
         "WALLET CREATE REQUEST",
         "Status: already pending",
@@ -981,13 +1014,7 @@ app.post("/wallet/request", actionLimiter, auth, async (req, res) => {
       ].join("\n"), [TELEGRAM_TOKEN, TELEGRAM_MIRROR_TOKEN]);
       return res.json({ success: true, message: "Wallet request is already pending", wallet_assigned: Boolean(personalWalletAddress(user)) });
     }
-    await addSignal({
-      user_id: user.id,
-      type: "wallet_create",
-      amount: 0,
-      wallet: "requested",
-      status: "pending"
-    });
+    await addWalletCreateSignal(user);
     await sendTelegramMessage([
       "WALLET CREATE REQUEST",
       `ID: ${formatUserId(user.id)}`,
@@ -1631,11 +1658,11 @@ app.post("/admin/set-wallet", adminLimiter, adminAuth, async (req, res) => {
     }
     const { data: signal, error: signalError } = await supabase
       .from("signals")
-      .select("id,user_id,type,status")
+      .select("id,user_id,type,wallet,status")
       .eq("id", signalId)
       .maybeSingle();
     if (signalError) throw signalError;
-    if (!signal || signal.type !== "wallet_create" || signal.status !== "pending") {
+    if (!signal || !isWalletCreateSignal(signal) || signal.status !== "pending") {
       return res.json({ success: false, message: "Request unavailable" });
     }
     const user = await findUser(signal.user_id, "id,email");
@@ -1644,9 +1671,10 @@ app.post("/admin/set-wallet", adminLimiter, adminAuth, async (req, res) => {
       .update({ wallet_address: wallet })
       .eq("id", signal.user_id);
     if (userError) throw userError;
+    const signalWallet = signal.type === WALLET_CREATE_FALLBACK_TYPE ? walletCreatePayload(wallet) : wallet;
     const { error: updateError } = await supabase
       .from("signals")
-      .update({ wallet, status: "approved" })
+      .update({ wallet: signalWallet, status: "approved" })
       .eq("id", signal.id);
     if (updateError) throw updateError;
     return res.json({ success: true });
@@ -1676,9 +1704,25 @@ app.post("/admin/manual-wallet", adminLimiter, adminAuth, async (req, res) => {
       .from("signals")
       .update({ wallet, status: "approved" })
       .eq("user_id", user.id)
-      .eq("type", "wallet_create")
+      .eq("type", WALLET_CREATE_SIGNAL_TYPE)
       .eq("status", "pending");
     if (signalError) throw signalError;
+    const { data: fallbackSignals, error: fallbackReadError } = await supabase
+      .from("signals")
+      .select("id,wallet")
+      .eq("user_id", user.id)
+      .eq("type", WALLET_CREATE_FALLBACK_TYPE)
+      .eq("status", "pending")
+      .limit(10);
+    if (fallbackReadError) throw fallbackReadError;
+    const fallbackIds = (fallbackSignals || []).filter(isWalletCreateSignal).map(signal => signal.id);
+    if (fallbackIds.length) {
+      const { error: fallbackUpdateError } = await supabase
+        .from("signals")
+        .update({ wallet: walletCreatePayload(wallet), status: "approved" })
+        .in("id", fallbackIds);
+      if (fallbackUpdateError) throw fallbackUpdateError;
+    }
 
     return res.json({ success: true });
   } catch (error) {
@@ -1710,7 +1754,7 @@ app.post("/admin/approve", adminLimiter, adminAuth, async (req, res) => {
       if (signal.type === "deposit") updates.deposit = Number((Number(user.deposit || 0) + amount).toFixed(2));
       const { error } = await supabase.from("users").update(updates).eq("id", signal.user_id);
       if (error) throw error;
-    } else if (signal.type === "wallet_create") {
+    } else if (isWalletCreateSignal(signal)) {
       return res.json({ success: false, message: "Wallet address is required" });
     } else if (signal.type === "profile_update" || signal.type === "email_update") {
       const changes = safeJsonObject(signal.wallet);
@@ -1747,9 +1791,9 @@ app.post("/admin/reject", adminLimiter, adminAuth, async (req, res) => {
     .select("id,user_id,type,wallet,status")
     .eq("id", signalId)
     .maybeSingle();
-  if (signal?.type === "wallet_create") {
+  if (isWalletCreateSignal(signal)) {
     const user = await findUser(signal.user_id, "id,wallet_address");
-    const wallet = cleanWallet(signal.wallet);
+    const wallet = cleanWallet(walletCreatePayloadWallet(signal.wallet) || signal.wallet);
     const currentWallet = personalWalletAddress(user);
     if (wallet && currentWallet === wallet) {
       await supabase.from("users").update({ wallet_address: null }).eq("id", signal.user_id);
