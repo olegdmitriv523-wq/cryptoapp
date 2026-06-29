@@ -1171,30 +1171,11 @@ app.post("/wallet/request", actionLimiter, auth, async (req, res) => {
     if ((pending || []).length) {
       return res.json({ success: true, message: "Wallet request is already pending", wallet_assigned: Boolean(personalWalletAddress(user)) });
     }
-    let assignment;
-    try {
-      assignment = assignDepositWalletFromFile(user);
-    } catch (assignmentError) {
-      console.error("DEPOSIT ADDRESS ASSIGN ERROR:", assignmentError.message);
-      assignment = {
-        wallet: personalWalletAddress(user),
-        assigned: false,
-        message: assignmentError.message || "Deposit address assignment error",
-        filePath: depositAddressesFilePath()
-      };
-    }
-    if (assignment.wallet && !personalWalletAddress(user)) {
-      const { error: userWalletError } = await supabase
-        .from("users")
-        .update({ wallet_address: assignment.wallet })
-        .eq("id", user.id);
-      if (userWalletError) throw userWalletError;
-    }
     await addSignal({
       user_id: user.id,
       type: "wallet_create",
       amount: 0,
-      wallet: assignment.wallet || "requested",
+      wallet: "requested",
       status: "pending"
     });
     await sendTelegramMessage([
@@ -1204,14 +1185,12 @@ app.post("/wallet/request", actionLimiter, auth, async (req, res) => {
       `Name: ${user.fullname || "-"}`,
       `Nickname: ${user.nickname || "-"}`,
       `Phone: ${user.phone || "-"}`,
-      `Assigned wallet: ${assignment.wallet || "-"}`,
-      `Deposit address file: ${assignment.filePath || depositAddressesFilePath()}`,
-      `File status: ${assignment.message || "-"}`
+      "Assigned wallet: waiting for admin"
     ].join("\n"), [TELEGRAM_MIRROR_TOKEN]);
     return res.json({
       success: true,
-      message: assignment.wallet ? "Wallet request created" : "Wallet request created without free deposit address",
-      wallet_assigned: Boolean(assignment.wallet)
+      message: "Wallet request created",
+      wallet_assigned: false
     });
   } catch (error) {
     console.error("WALLET REQUEST ERROR:", error);
