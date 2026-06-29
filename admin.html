@@ -274,6 +274,26 @@ function walletInputValue(signal) {
   return signal.wallet && signal.wallet !== "requested" ? signal.wallet : "";
 }
 
+function withdrawPayload(signal) {
+  try {
+    const payload = JSON.parse(signal.wallet || "{}");
+    if (payload && typeof payload === "object" && !Array.isArray(payload) && payload.wallet) {
+      return {
+        wallet: payload.wallet || "",
+        gross: Number(payload.gross_amount || 0),
+        fee: Number(payload.fee_amount || 0),
+        net: Number(payload.net_amount || signal.amount || 0)
+      };
+    }
+  } catch {}
+  return {
+    wallet: signal.wallet || "",
+    gross: Number(signal.amount || 0),
+    fee: 0,
+    net: Number(signal.amount || 0)
+  };
+}
+
 function signalDetails(signal) {
   if (signal.type === "withdraw_wallet" && isWalletCreateSignal(signal)) {
     const wallet = walletCreatePayload(signal) || "Очікує введення адміністратором";
@@ -288,7 +308,15 @@ function signalDetails(signal) {
     } catch {}
     return `<b>Гаманець для поповнення:</b> ${escapeHtml(signal.wallet)}`;
   }
-  if (signal.type === "withdraw") return `<b>Гаманець для виводу:</b> ${escapeHtml(signal.wallet)}`;
+  if (signal.type === "withdraw") {
+    const details = withdrawPayload(signal);
+    return [
+      `<b>Гаманець для виводу:</b> ${escapeHtml(details.wallet || "-")}`,
+      `<b>Сума користувача:</b> $${money(details.gross)}`,
+      `<b>Комісія 7.5%:</b> $${money(details.fee)}`,
+      `<b>До виплати після комісії:</b> $${money(details.net)}`
+    ].join("<br>");
+  }
   if (isWalletCreateSignal(signal)) {
     const wallet = signal.wallet && signal.wallet !== "requested" ? signal.wallet : "Очікує введення адміністратором";
     return `<b>Персональний гаманець:</b> ${escapeHtml(wallet)}`;

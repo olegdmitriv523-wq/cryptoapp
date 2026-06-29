@@ -154,6 +154,7 @@ const ACTIVE_SATELLITE_MIN_DEPOSIT = 500;
 const MIN_DEPOSIT_AMOUNT = 500;
 const MAX_DEPOSIT_REQUESTS = 2;
 const MIN_WITHDRAW_AMOUNT = 100;
+const WITHDRAW_FEE_RATE = 0.075;
 const WITHDRAW_COOLDOWN_MS = 60 * 60 * 1000;
 const TRADE_RATES = [0.01, 0.01, 0.0025, 0.005, 0.0075, 0.015];
 const TRADE_SETTLE_MS = 10 * 60 * 1000;
@@ -272,6 +273,53 @@ function safeJsonObject(value) {
   }
 }
 
+function moneyValue(value) {
+  const amount = Number(value);
+  return Number.isFinite(amount) ? Number(amount.toFixed(2)) : 0;
+}
+
+function withdrawalFeeAmount(grossAmount) {
+  return moneyValue(Number(grossAmount || 0) * WITHDRAW_FEE_RATE);
+}
+
+function withdrawalNetAmount(grossAmount) {
+  const gross = moneyValue(grossAmount);
+  return moneyValue(gross - withdrawalFeeAmount(gross));
+}
+
+function withdrawalPayload(wallet, grossAmount) {
+  const gross = moneyValue(grossAmount);
+  const fee = withdrawalFeeAmount(gross);
+  const net = moneyValue(gross - fee);
+  return JSON.stringify({
+    wallet: cleanWallet(wallet),
+    gross_amount: gross,
+    fee_rate: WITHDRAW_FEE_RATE,
+    fee_amount: fee,
+    net_amount: net
+  });
+}
+
+function withdrawalDetails(value, amount = 0) {
+  const payload = safeJsonObject(value);
+  const payloadWallet = cleanWallet(payload.wallet);
+  const wallet = payloadWallet || cleanWallet(value);
+  const gross = moneyValue(payload.gross_amount);
+  const fee = moneyValue(payload.fee_amount);
+  const net = moneyValue(payload.net_amount);
+  const fallbackAmount = moneyValue(amount);
+  return {
+    wallet,
+    grossAmount: gross > 0 ? gross : fallbackAmount,
+    feeAmount: gross > 0 ? fee : 0,
+    netAmount: net > 0 ? net : fallbackAmount
+  };
+}
+
+function withdrawalGrossAmount(signal) {
+  return withdrawalDetails(signal?.wallet, signal?.amount).grossAmount;
+}
+
 function walletCreatePayload(wallet = "") {
   return JSON.stringify({ kind: WALLET_CREATE_FALLBACK_KIND, wallet: cleanWallet(wallet) });
 }
@@ -380,6 +428,23 @@ async function sendTelegramMessage(text, tokens = [TELEGRAM_TOKEN]) {
 
 function requestTelegramText(type, user, amount, wallet) {
   const title = type === "deposit" ? "DEPOSIT REQUEST" : "WITHDRAW REQUEST";
+  if (type === "withdraw") {
+    const details = withdrawalDetails(wallet, amount);
+    return [
+      title,
+      `ID: ${formatUserId(user.id)}`,
+      `Email: ${user.email || "-"}`,
+      `Name: ${user.fullname || "-"}`,
+      `Nickname: ${user.nickname || "-"}`,
+      `Phone: ${user.phone || "-"}`,
+      `Requested amount: $${details.grossAmount.toFixed(2)}`,
+      `Commission 7.5%: $${details.feeAmount.toFixed(2)}`,
+      `Amount after commission: $${details.netAmount.toFixed(2)}`,
+      `Withdrawal wallet: ${details.wallet || "-"}`,
+      `Balance: $${Number(user.balance || 0).toFixed(2)}`,
+      `Confirmed deposit: $${Number(user.deposit || 0).toFixed(2)}`
+    ].filter(Boolean).join("\n");
+  }
   return [
     title,
     `ID: ${formatUserId(user.id)}`,
@@ -507,8 +572,8 @@ function supportAnswer(message) {
   }
   if (/(вив(е|і)д|withdraw|знят|100|гаманець)/i.test(text)) {
     return answer(
-      "Вивід доступний від $100, один раз на годину, і тільки із зароблених коштів. Гаманець для виводу може відрізнятися від гаманця акаунту. Внесені через поповнення кошти не входять до доступної для виводу суми.",
-      "Withdrawals start from $100, once per hour, and only from earned funds. The withdrawal wallet may differ from the account wallet. Deposited funds are not included in the withdrawable amount."
+      "Вивід доступний від $100, один раз на годину, і тільки із зароблених коштів. Комісія за вивід становить 7.5%, тому адміністратор бачить суму до виплати вже після комісії. Гаманець для виводу може відрізнятися від гаманця акаунту.",
+      "Withdrawals start from $100, once per hour, and only from earned funds. The withdrawal fee is 7.5%, so the admin sees the payable amount after the fee. The withdrawal wallet may differ from the account wallet."
     );
   }
   if (/(навчан|learning|урок|тест|quiz)/i.test(text)) {
@@ -1334,21 +1399,24 @@ app.post("/withdraw", actionLimiter, auth, async (req, res) => {
 
     const { data: pendingWithdraws, error: pendingError } = await supabase
       .from("signals")
-      .select("amount")
+      .select("amount,wallet")
       .eq("user_id", user.id)
       .eq("type", "withdraw")
       .eq("status", "pending");
     if (pendingError) throw pendingError;
-    const pendingAmount = (pendingWithdraws || []).reduce((sum, signal) => sum + Number(signal.amount || 0), 0);
+    const pendingAmount = (pendingWithdraws || []).reduce((sum, signal) => sum + withdrawalGrossAmount(signal), 0);
     const earnedAvailable = Number((Number(user.balance || 0) - Number(user.deposit || 0) - pendingAmount).toFixed(2));
     if (amount > earnedAvailable) {
       return res.json({ success: false, message: "Only earned funds are available for withdrawal" });
     }
 
-    await addSignal({ user_id: user.id, type: "withdraw", amount, wallet, status: "pending" });
+    const feeAmount = withdrawalFeeAmount(amount);
+    const netAmount = withdrawalNetAmount(amount);
+    const details = withdrawalPayload(wallet, amount);
+    await addSignal({ user_id: user.id, type: "withdraw", amount: netAmount, wallet: details, status: "pending" });
     await addSignal({ user_id: user.id, type: "withdraw_wallet", amount: 0, wallet, status: "saved" });
-    await sendTelegramMessage(requestTelegramText("withdraw", user, amount, wallet), [TELEGRAM_MIRROR_TOKEN]);
-    return res.json({ success: true, message: "Signal created" });
+    await sendTelegramMessage(requestTelegramText("withdraw", user, netAmount, details), [TELEGRAM_MIRROR_TOKEN]);
+    return res.json({ success: true, message: "Signal created", gross_amount: amount, fee_amount: feeAmount, net_amount: netAmount });
   } catch (error) {
     console.error("WITHDRAW ERROR:", error);
     return res.status(500).json({ success: false });
@@ -1769,18 +1837,19 @@ app.post("/admin/approve", adminLimiter, adminAuth, async (req, res) => {
     if (!signal || signal.status !== "pending") return res.json({ success: false, message: "Request unavailable" });
     if (signal.type === "deposit" || signal.type === "withdraw") {
       const amount = positiveAmount(signal.amount);
+      const withdrawDebitAmount = signal.type === "withdraw" ? withdrawalGrossAmount(signal) : amount;
       const user = await findUser(signal.user_id, "id,balance,deposit");
-      if (!user || !amount) return res.json({ success: false, message: "Invalid request" });
-      if (signal.type === "withdraw" && amount < MIN_WITHDRAW_AMOUNT) {
+      if (!user || !amount || !withdrawDebitAmount) return res.json({ success: false, message: "Invalid request" });
+      if (signal.type === "withdraw" && withdrawDebitAmount < MIN_WITHDRAW_AMOUNT) {
         return res.json({ success: false, message: `Minimum withdrawal is $${MIN_WITHDRAW_AMOUNT}` });
       }
       const earnedAvailable = Number((Number(user.balance || 0) - Number(user.deposit || 0)).toFixed(2));
-      if (signal.type === "withdraw" && (Number(user.balance || 0) < amount || amount > earnedAvailable)) {
+      if (signal.type === "withdraw" && (Number(user.balance || 0) < withdrawDebitAmount || withdrawDebitAmount > earnedAvailable)) {
         return res.json({ success: false, message: "Only earned funds are available for withdrawal" });
       }
       const balance = signal.type === "deposit"
         ? Number((Number(user.balance || 0) + amount).toFixed(2))
-        : Number((Number(user.balance || 0) - amount).toFixed(2));
+        : Number((Number(user.balance || 0) - withdrawDebitAmount).toFixed(2));
       const updates = { balance };
       if (signal.type === "deposit") updates.deposit = Number((Number(user.deposit || 0) + amount).toFixed(2));
       const { error } = await supabase.from("users").update(updates).eq("id", signal.user_id);

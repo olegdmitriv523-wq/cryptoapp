@@ -134,6 +134,20 @@ input {
   font-weight: 900;
   cursor: pointer;
 }
+.fee-box {
+  margin: -2px 0 12px;
+  padding: 12px 14px;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #f8fafc;
+  font-size: 16px;
+  line-height: 1.45;
+}
+.fee-box span {
+  color: #fbbf24;
+  font-weight: 800;
+}
 </style>
 </head>
 <body>
@@ -150,9 +164,10 @@ if (!token) location.href = "login.html";
 
   <section class="card">
     <h1>Виведення коштів</h1>
-    <p class="hint">Вкажіть суму та адресу будь-якого гаманця для виводу. Мінімальна сума виводу становить $100. Вивести можна один раз на годину і тільки зароблені кошти, тобто суму понад підтверджені поповнення та заявки, які очікують рішення адміністратора.</p>
+    <p class="hint">Вкажіть суму та адресу будь-якого гаманця для виводу. Мінімальна сума виводу становить $100. Комісія за вивід - 7.5%, адміністратор отримує заявку вже на суму після комісії. Вивести можна один раз на годину і тільки зароблені кошти.</p>
     <div class="balance-box">Доступно для виведення: $<span id="balance">0.00</span></div>
     <input id="amount" type="number" min="100" step="0.01" placeholder="Сума від $100">
+    <div id="feePreview" class="fee-box">Комісія 7.5%: <span>$0.00</span><br>До виплати після комісії: <span>$0.00</span></div>
     <div id="savedWalletBox" class="saved-wallet-box"><b>Збережений гаманець</b><br><span id="savedWalletText"></span></div>
     <button id="savedWithdrawBtn" class="saved-withdraw-btn" type="button" onclick="withdrawToSavedWallet()" hidden>Вивести на збережений гаманець</button>
     <input id="wallet" placeholder="Адреса будь-якого гаманця для виводу">
@@ -164,8 +179,30 @@ if (!token) location.href = "login.html";
 </main>
 
 <script>
+const WITHDRAW_FEE_RATE = 0.075;
 let currentEarned = 0;
 let savedWithdrawWallet = "";
+
+function money(value) {
+  const amount = Number(value);
+  return Number.isFinite(amount) ? amount.toFixed(2) : "0.00";
+}
+
+function updateFeePreview() {
+  const amount = Number(document.getElementById("amount").value);
+  const gross = Number.isFinite(amount) && amount > 0 ? amount : 0;
+  const fee = Math.round(gross * WITHDRAW_FEE_RATE * 100) / 100;
+  const net = Math.max(0, Math.round((gross - fee) * 100) / 100);
+  document.getElementById("feePreview").innerHTML = `Комісія 7.5%: <span>$${money(fee)}</span><br>До виплати після комісії: <span>$${money(net)}</span>`;
+}
+
+function pendingWithdrawAmount(signal) {
+  try {
+    const details = JSON.parse(signal.wallet || "{}");
+    if (details && Number(details.gross_amount) > 0) return Number(details.gross_amount);
+  } catch {}
+  return Number(signal.amount || 0);
+}
 
 function renderSavedWallet(wallet) {
   savedWithdrawWallet = wallet || "";
@@ -201,9 +238,10 @@ async function loadUser() {
     }
     const pendingWithdraw = (summary.history || [])
       .filter(item => item.type === "withdraw" && item.status === "pending")
-      .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+      .reduce((sum, item) => sum + pendingWithdrawAmount(item), 0);
     currentEarned = Math.max(0, Number(summary.balance || 0) - Number(summary.deposit || 0) - pendingWithdraw);
     document.getElementById("balance").textContent = currentEarned.toFixed(2);
+    updateFeePreview();
     window.appTranslate?.translatePage();
   } catch {
     localStorage.removeItem("token");
@@ -255,7 +293,8 @@ async function withdraw() {
     });
     const data = await response.json();
     if (data.success) {
-      alert("Заявку на виведення передано адміністратору. Баланс зміниться після підтвердження.");
+      const net = Number(data.net_amount || 0);
+      alert(`Заявку на виведення передано адміністратору. До виплати після комісії 7.5%: $${money(net)}. Баланс зміниться після підтвердження.`);
       location.href = "index.html";
     } else {
       alert(data.message || "Помилка");
@@ -269,6 +308,7 @@ function goBack() {
   location.href = "index.html";
 }
 
+document.getElementById("amount").addEventListener("input", updateFeePreview);
 loadUser();
 </script>
 <script src="app-nav.js"></script>
