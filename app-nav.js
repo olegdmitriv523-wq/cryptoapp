@@ -574,19 +574,48 @@ function renderInstallButton() {
   if (current !== "index.html") return;
   const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
   if (isStandalone) return;
+  const env = installEnvironment();
   const button = document.createElement("button");
   button.type = "button";
   button.className = "install-app-btn";
-  button.textContent = tr("install");
+  button.textContent = env.isIos && !env.isSafari ? "Відкрити через Safari" : tr("install");
   button.addEventListener("click", installApp);
   const show = () => button.classList.add("visible");
   show();
   if (window.deferredInstallPrompt) show();
   window.addEventListener("pwa-install-ready", show);
   document.body.insertBefore(button, document.body.firstElementChild?.nextSibling || null);
+  if (env.isIos && !env.isSafari) {
+    setTimeout(() => showInstallInstructions(), 350);
+  }
+}
+
+function installEnvironment() {
+  const ua = navigator.userAgent || "";
+  const isIos = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const isSafari = isIos && /safari/i.test(ua) && !/(crios|fxios|edgios|opr|instagram|fbav|fban|telegram|line|micromessenger)/i.test(ua);
+  const isInAppBrowser = /(telegram|instagram|fbav|fban|line|micromessenger|twitter|tiktok)/i.test(ua) || Boolean(window.TelegramWebviewProxy || window.Telegram);
+  return { isIos, isSafari, isInAppBrowser };
+}
+
+function appStartUrl() {
+  return location.origin + "/loading.html";
+}
+
+function tryOpenSafari(url) {
+  try {
+    const opened = window.open(url, "_blank", "noopener");
+    if (opened) return true;
+  } catch {}
+  return false;
 }
 
 async function installApp() {
+  const env = installEnvironment();
+  if (env.isIos && !env.isSafari) {
+    showInstallInstructions({ autoOpen: true });
+    return;
+  }
   const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
   if (isStandalone) {
     document.querySelector(".install-app-btn")?.classList.remove("visible");
@@ -625,13 +654,10 @@ async function installApp() {
   showInstallInstructions();
 }
 
-function showInstallInstructions() {
+function showInstallInstructions(options = {}) {
   document.querySelector(".install-modal")?.remove();
-  const ua = navigator.userAgent || "";
-  const isIos = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  const isSafari = isIos && /safari/i.test(ua) && !/(crios|fxios|edgios|opr|instagram|fbav|fban|telegram|line|micromessenger)/i.test(ua);
-  const isInAppBrowser = /(telegram|instagram|fbav|fban|line|micromessenger|twitter|tiktok)/i.test(ua) || Boolean(window.TelegramWebviewProxy || window.Telegram);
-  const currentUrl = location.origin + "/loading.html";
+  const { isIos, isSafari, isInAppBrowser } = installEnvironment();
+  const currentUrl = appStartUrl();
   const iosTitle = "Встановити ярлик на iPhone";
   const title = isIos ? iosTitle : tr("installTitle");
   const message = isIos
@@ -642,7 +668,7 @@ function showInstallInstructions() {
   const steps = isIos
     ? (isSafari
       ? ["Натисніть кнопку «Поділитися» внизу Safari.", "Оберіть «На початковий екран».", "Натисніть «Додати»."]
-      : ["Скопіюйте адресу або відкрийте меню браузера.", "Відкрийте цю сторінку в Safari.", "У Safari натисніть «Поділитися» → «На початковий екран» → «Додати»."]
+      : ["Натисніть «Відкрити в Safari».", "Якщо iPhone лишив сторінку тут, скопіюйте адресу і вставте її в Safari.", "У Safari натисніть «Поділитися» → «На початковий екран» → «Додати»."]
     )
     : [];
   const modal = document.createElement("div");
@@ -656,6 +682,7 @@ function showInstallInstructions() {
           ${steps.map(step => `<li>${supportEscape(step)}</li>`).join("")}
         </ol>
         ${isInAppBrowser ? `<p class="install-note">Якщо бачите меню «Відкрити в Safari», оберіть його. Це найкоротший шлях до встановлення ярлика.</p>` : ""}
+        ${!isSafari ? `<a class="open-safari-btn" href="${supportEscape(currentUrl)}" target="_blank" rel="noopener">Відкрити в Safari</a>` : ""}
         <div class="install-url">${supportEscape(currentUrl)}</div>
         <button class="copy-install-url" type="button">Скопіювати адресу</button>
       ` : ""}
@@ -671,9 +698,14 @@ function showInstallInstructions() {
       });
       return;
     }
+    if (event.target?.classList?.contains("open-safari-btn")) {
+      tryOpenSafari(currentUrl);
+      return;
+    }
     if (event.target === modal || (event.target.tagName === "BUTTON" && !event.target.classList.contains("copy-install-url"))) modal.remove();
   });
   document.body.append(modal);
+  if (options.autoOpen && isIos && !isSafari) tryOpenSafari(currentUrl);
 }
 
 const supportApiUrl = ["localhost", "127.0.0.1"].includes(location.hostname) ? location.origin : "https://cryptoapp-eqc5.onrender.com";

@@ -203,6 +203,20 @@ body {
   font-weight: 800;
 }
 
+.open-safari-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 12px;
+  padding: 13px 12px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  color: #111827;
+  font-weight: 900;
+  text-decoration: none;
+}
+
 .install-card .copy-install-url {
   background: #334155;
   color: #f8fafc;
