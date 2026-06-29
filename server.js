@@ -395,6 +395,34 @@ function requestTelegramText(type, user, amount, wallet) {
   ].filter(Boolean).join("\n");
 }
 
+function walletCreateTelegramText(user, status = "") {
+  return [
+    "WALLET CREATE REQUEST",
+    status ? `Status: ${status}` : null,
+    `ID: ${formatUserId(user.id)}`,
+    `Email: ${user.email || "-"}`,
+    `Name: ${user.fullname || "-"}`,
+    `Nickname: ${user.nickname || "-"}`,
+    `Phone: ${user.phone || "-"}`,
+    "Assigned wallet: waiting for admin"
+  ].filter(Boolean).join("\n");
+}
+
+async function notifyWalletCreateRequest(user, status = "") {
+  await sendTelegramMessage(walletCreateTelegramText(user, status), [TELEGRAM_TOKEN, TELEGRAM_MIRROR_TOKEN]);
+}
+
+async function ensureWalletCreateRequest(user, notifyExisting = false) {
+  const pending = await pendingWalletCreateRequests(user.id);
+  if (pending.length) {
+    if (notifyExisting) await notifyWalletCreateRequest(user, "already pending");
+    return { created: false, pending: true };
+  }
+  await addWalletCreateSignal(user);
+  await notifyWalletCreateRequest(user);
+  return { created: true, pending: true };
+}
+
 function supportPayload(role, text, extra = {}) {
   return JSON.stringify({
     role,
@@ -982,9 +1010,15 @@ app.get("/me", auth, async (req, res) => {
 });
 
 app.get("/deposit/config", auth, async (req, res) => {
-  const user = await findUser(req.userId, "id,wallet_address");
+  const user = await findUser(req.userId, "id,fullname,nickname,email,phone,wallet_address");
   const wallet = personalWalletAddress(user);
-  const pendingWalletRequests = await pendingWalletCreateRequests(req.userId);
+  let pendingWalletRequests = await pendingWalletCreateRequests(req.userId);
+  let walletRequestCreated = false;
+  if (!wallet && String(req.query.request_wallet || "") === "1") {
+    const requestResult = await ensureWalletCreateRequest(user, true);
+    walletRequestCreated = requestResult.created;
+    pendingWalletRequests = requestResult.pending ? [{ id: "wallet_request" }] : [];
+  }
   return res.json({
     success: true,
     asset: DEPOSIT_ASSET,
@@ -992,6 +1026,7 @@ app.get("/deposit/config", auth, async (req, res) => {
     wallet_address: wallet,
     wallet_missing: !wallet,
     wallet_request_pending: Boolean((pendingWalletRequests || []).length),
+    wallet_request_created: walletRequestCreated,
     memo_required: false
   });
 });
@@ -1002,28 +1037,10 @@ app.post("/wallet/request", auth, async (req, res) => {
     if (!user) return res.status(404).json({ success: false });
     const pending = await pendingWalletCreateRequests(user.id);
     if (pending.length) {
-      await sendTelegramMessage([
-        "WALLET CREATE REQUEST",
-        "Status: already pending",
-        `ID: ${formatUserId(user.id)}`,
-        `Email: ${user.email || "-"}`,
-        `Name: ${user.fullname || "-"}`,
-        `Nickname: ${user.nickname || "-"}`,
-        `Phone: ${user.phone || "-"}`,
-        "Assigned wallet: waiting for admin"
-      ].join("\n"), [TELEGRAM_TOKEN, TELEGRAM_MIRROR_TOKEN]);
+      await notifyWalletCreateRequest(user, "already pending");
       return res.json({ success: true, message: "Wallet request is already pending", wallet_assigned: Boolean(personalWalletAddress(user)) });
     }
-    await addWalletCreateSignal(user);
-    await sendTelegramMessage([
-      "WALLET CREATE REQUEST",
-      `ID: ${formatUserId(user.id)}`,
-      `Email: ${user.email || "-"}`,
-      `Name: ${user.fullname || "-"}`,
-      `Nickname: ${user.nickname || "-"}`,
-      `Phone: ${user.phone || "-"}`,
-      "Assigned wallet: waiting for admin"
-    ].join("\n"), [TELEGRAM_TOKEN, TELEGRAM_MIRROR_TOKEN]);
+    await ensureWalletCreateRequest(user);
     return res.json({
       success: true,
       message: "Wallet request created",

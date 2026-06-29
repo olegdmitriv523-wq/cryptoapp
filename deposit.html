@@ -215,11 +215,28 @@ async function loadWallet() {
   }
 }
 
+async function requestWalletThroughConfig() {
+  const response = await fetch(API_URL + "/deposit/config?request_wallet=1&ts=" + Date.now(), {
+    headers: { Authorization: token },
+    cache: "no-store"
+  });
+  if (response.status === 401) throw new Error("auth");
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.success) throw new Error(data.message || "request_failed");
+  await loadWallet();
+  return data;
+}
+
 async function requestWallet() {
   const button = document.getElementById("requestWalletBtn");
   button.disabled = true;
   button.textContent = "Відправляємо...";
   try {
+    const configResult = await requestWalletThroughConfig();
+    if (configResult.wallet_request_pending) {
+      alert(configResult.wallet_request_created ? "Запит відправлено адміністратору" : "Запит уже відправлено адміністратору");
+      return;
+    }
     const response = await fetch(API_URL + "/wallet/request", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: token },
@@ -228,7 +245,7 @@ async function requestWallet() {
     if (response.status === 401) throw new Error("auth");
     const result = await response.json().catch(() => ({}));
     if (!response.ok || !result.success) {
-      const walletState = await loadWallet();
+      const walletState = await requestWalletThroughConfig().catch(() => loadWallet());
       if (walletState?.wallet_request_pending) {
         alert("Запит уже відправлено адміністратору");
         return;
@@ -243,7 +260,7 @@ async function requestWallet() {
       location.href = "login.html";
       return;
     }
-    const walletState = await loadWallet().catch(() => null);
+    const walletState = await requestWalletThroughConfig().catch(() => loadWallet().catch(() => null));
     if (walletState?.wallet_request_pending) {
       alert("Запит уже відправлено адміністратору");
       return;
