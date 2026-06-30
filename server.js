@@ -870,7 +870,9 @@ function encryptForStorage(value) {
 }
 
 async function sendVerificationEmail(email, code, purpose = "registration") {
-  const action = purpose === "email_change" ? "зміни електронної пошти" : "реєстрації";
+  const action = purpose === "email_change"
+    ? "зміни електронної пошти"
+    : (purpose === "password_reset" ? "відновлення пароля" : "реєстрації");
   const subject = `Код підтвердження United Europe Crypto: ${code}`;
   const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#111"><h2>United Europe Crypto</h2><p>Ваш код для ${action}:</p><div style="font-size:34px;font-weight:700;letter-spacing:8px;margin:24px 0">${code}</div><p>Код дійсний 10 хвилин. Якщо ви не робили цей запит, просто проігноруйте лист.</p></div>`;
   if (BREVO_API_KEY && BREVO_SENDER_EMAIL) {
@@ -1071,6 +1073,63 @@ app.post("/login", authLimiter, async (req, res) => {
   } catch (error) {
     console.error("LOGIN ERROR:", error);
     return res.status(500).json({ success: false });
+  }
+});
+
+app.post("/password/reset/start", authLimiter, async (req, res) => {
+  try {
+    const email = cleanEmail(req.body.email);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.json({ success: false, message: "Invalid email" });
+    }
+    const { data: user, error } = await supabase
+      .from("users")
+      .select("id,email")
+      .eq("email", email)
+      .maybeSingle();
+    if (error) throw error;
+    if (!user) return res.json({ success: true, email });
+
+    const code = crypto.randomInt(100000, 1000000).toString();
+    const pendingToken = jwt.sign({
+      purpose: "password_reset",
+      userId: user.id,
+      email: user.email,
+      codeDigest: emailCodeDigest(code)
+    }, SECRET, { expiresIn: "10m" });
+    await sendVerificationEmail(user.email, code, "password_reset");
+    return res.json({ success: true, pendingToken, email: user.email });
+  } catch (error) {
+    console.error("PASSWORD RESET START ERROR:", error.response?.data || error.message);
+    return res.status(500).json({ success: false, message: "Email send error" });
+  }
+});
+
+app.post("/password/reset/verify", authLimiter, async (req, res) => {
+  try {
+    const pending = jwt.verify(String(req.body.pendingToken || ""), SECRET);
+    const code = String(req.body.code || "").trim();
+    const password = String(req.body.password || "").slice(0, 200);
+    if (pending.purpose !== "password_reset" || emailCodeDigest(code) !== pending.codeDigest) {
+      return res.json({ success: false, message: "Invalid code" });
+    }
+    if (password.length < 6) return res.json({ success: false, message: "Weak password" });
+    const { data: user, error: userError } = await supabase
+      .from("users")
+      .select("id,email")
+      .eq("id", pending.userId)
+      .eq("email", cleanEmail(pending.email))
+      .maybeSingle();
+    if (userError) throw userError;
+    if (!user) return res.json({ success: false, message: "Invalid code" });
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const { error } = await supabase.from("users").update({ password: passwordHash }).eq("id", user.id);
+    if (error) throw error;
+    return res.json({ success: true });
+  } catch (error) {
+    console.error("PASSWORD RESET VERIFY ERROR:", error);
+    return res.json({ success: false, message: error.name === "TokenExpiredError" ? "Code expired" : "Invalid code" });
   }
 });
 
