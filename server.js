@@ -159,6 +159,11 @@ const WITHDRAW_COOLDOWN_MS = 60 * 60 * 1000;
 const TRADE_RATES = [0.01, 0.01, 0.0025, 0.005, 0.0075, 0.015];
 const TRADE_SETTLE_MS = 10 * 60 * 1000;
 const REFERRER_REWARDS = [50, 75, 100, 100, 150];
+const INVITED_SATELLITE_REWARDS = [
+  [2000, 150],
+  [1000, 50],
+  [ACTIVE_SATELLITE_MIN_DEPOSIT, 35]
+];
 const BALANCE_REWARDS = [
   [1000, 50],
   [2500, 100],
@@ -696,9 +701,9 @@ async function getTradeStreak(userId) {
 
 function invitedSatelliteRewardAmount(deposit) {
   const amount = Number(deposit || 0);
-  if (amount >= 2000) return 100;
-  if (amount >= 1000) return 45;
-  if (amount >= ACTIVE_SATELLITE_MIN_DEPOSIT) return 5;
+  for (const [threshold, reward] of INVITED_SATELLITE_REWARDS) {
+    if (amount >= threshold) return reward;
+  }
   return 0;
 }
 
@@ -749,7 +754,7 @@ function rewardDefinitions() {
       amount,
       threshold
     })),
-    { type: "reward_invited_satellite", group: "satellites", title: "Винагорода запрошеному після поповнення від $500", amount: 5, satelliteRank: 0, variableAmount: true },
+    { type: "reward_invited_satellite", group: "satellites", title: "Винагорода запрошеному після поповнення від $500", amount: 35, satelliteRank: 0, variableAmount: true },
     ...REFERRER_REWARDS.map((amount, index) => ({
       type: `reward_referrer_satellite_${index + 1}`,
       group: "satellites",
@@ -785,12 +790,13 @@ async function rewardProgress(userId) {
     getTradeStreak(userId),
     supabase
       .from("signals")
-      .select("type")
+      .select("type,amount")
       .eq("user_id", userId)
       .like("type", "reward_%")
       .in("status", ["rewarded", "approved"])
   ]);
   const claimed = new Set((claimedRows.data || []).map(row => row.type));
+  const claimedAmounts = Object.fromEntries((claimedRows.data || []).map(row => [row.type, Number(row.amount || 0)]));
   const balance = Number(user.balance || 0);
   const deposit = Number(user.deposit || 0);
   return rewardDefinitions().map(reward => {
@@ -818,7 +824,7 @@ async function rewardProgress(userId) {
     }
     return {
       ...reward,
-      amount,
+      amount: claimed.has(reward.type) && claimedAmounts[reward.type] > 0 ? claimedAmounts[reward.type] : amount,
       progress,
       target,
       eligible,
@@ -1935,6 +1941,9 @@ app.post("/admin/approve", adminLimiter, adminAuth, async (req, res) => {
       if (error) throw error;
     }
     await supabase.from("signals").update({ status: "approved" }).eq("id", signalId);
+    if (signal.type === "deposit") {
+      await grantSatelliteRewards(signal.user_id);
+    }
     return res.json({ success: true });
   } catch (error) {
     console.error("ADMIN APPROVE ERROR:", error);
