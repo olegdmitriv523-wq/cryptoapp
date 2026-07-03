@@ -160,7 +160,7 @@ const TRADE_RATES = [0.01, 0.01, 0.0025, 0.005, 0.0075, 0.015];
 const TRADE_SETTLE_MS = 10 * 60 * 1000;
 const REFERRER_REWARDS = [50, 75, 100, 100, 150];
 const INVITED_SATELLITE_REWARDS = [
-  [2000, 150],
+  [2000, 100],
   [1000, 50],
   [ACTIVE_SATELLITE_MIN_DEPOSIT, 35]
 ];
@@ -707,6 +707,14 @@ function invitedSatelliteRewardAmount(deposit) {
   return 0;
 }
 
+function invitedSatelliteRewardTitle(deposit) {
+  const amount = Number(deposit || 0);
+  if (amount >= 2000) return "Винагорода запрошеному за поповнення $2,000+";
+  if (amount >= 1000) return "Винагорода запрошеному за поповнення $1,000-$1,999";
+  if (amount >= ACTIVE_SATELLITE_MIN_DEPOSIT) return "Винагорода запрошеному за поповнення $500-$999";
+  return "Винагорода запрошеному: $35 / $50 / $100 за рівнем поповнення";
+}
+
 async function grantSatelliteRewards(satelliteId) {
   const satellite = await findUser(satelliteId, "id,referrer_id,deposit");
   if (!satellite || Number(satellite.deposit || 0) < ACTIVE_SATELLITE_MIN_DEPOSIT) return;
@@ -804,6 +812,7 @@ async function rewardProgress(userId) {
     let progress = 0;
     let target = 1;
     let amount = Number(reward.amount);
+    let title = reward.title;
     if (reward.group === "balance") {
       progress = balance;
       target = reward.threshold;
@@ -813,6 +822,7 @@ async function rewardProgress(userId) {
       target = ACTIVE_SATELLITE_MIN_DEPOSIT;
       eligible = Boolean(user.referrer_id) && deposit >= ACTIVE_SATELLITE_MIN_DEPOSIT;
       amount = invitedSatelliteRewardAmount(deposit) || amount;
+      title = invitedSatelliteRewardTitle(deposit);
     } else if (reward.group === "satellites") {
       progress = satellites;
       target = reward.satelliteRank;
@@ -824,6 +834,7 @@ async function rewardProgress(userId) {
     }
     return {
       ...reward,
+      title,
       amount: claimed.has(reward.type) && claimedAmounts[reward.type] > 0 ? claimedAmounts[reward.type] : amount,
       progress,
       target,
