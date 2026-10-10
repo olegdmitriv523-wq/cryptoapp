@@ -127,10 +127,12 @@ app.get("/:file", (req, res, next) => {
 const SECRET = process.env.JWT_SECRET || "SECRET_KEY";
 const DATA_FILE = process.env.DATA_FILE || path.join(__dirname, "app-data.json");
 const supabase = createLocalDb(DATA_FILE);
-const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN || "";
-const TELEGRAM_MIRROR_TOKEN = process.env.TELEGRAM_MIRROR_TOKEN || "";
-const SUPPORT_TELEGRAM_TOKEN = process.env.SUPPORT_TELEGRAM_TOKEN || "";
-const CHAT_ID = process.env.TELEGRAM_CHAT_ID || "337179852";
+const TELEGRAM_ENV = {
+  main: process.env.TELEGRAM_TOKEN || "",
+  mirror: process.env.TELEGRAM_MIRROR_TOKEN || "",
+  support: process.env.SUPPORT_TELEGRAM_TOKEN || "",
+  chatId: process.env.TELEGRAM_CHAT_ID || "337179852"
+};
 const ADMIN_KEY = process.env.ADMIN_KEY || "";
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const EMAIL_FROM = process.env.EMAIL_FROM || "United Europe Crypto <onboarding@resend.dev>";
@@ -414,12 +416,65 @@ async function addSignal(signal) {
   if (error) throw error;
 }
 
-async function sendTelegramMessage(text, tokens = [TELEGRAM_TOKEN]) {
-  const uniqueTokens = [...new Set(tokens.filter(Boolean))];
+function cleanTelegramToken(value) {
+  return String(value || "").trim().replace(/[^\w:-]/g, "").slice(0, 120);
+}
+
+function hasOwn(object, key) {
+  return Object.prototype.hasOwnProperty.call(object || {}, key);
+}
+
+function cleanTelegramChatId(value) {
+  return String(value || "").trim().replace(/[^\w@-]/g, "").slice(0, 80);
+}
+
+async function getSetting(key) {
+  const { data, error } = await supabase.from("settings").select("value").eq("key", key).maybeSingle();
+  if (error) throw error;
+  return data?.value || "";
+}
+
+async function setSetting(key, value) {
+  const current = await supabase.from("settings").select("id").eq("key", key).maybeSingle();
+  if (current.error) throw current.error;
+  if (current.data) {
+    const { error } = await supabase.from("settings").update({ value }).eq("key", key);
+    if (error) throw error;
+    return;
+  }
+  const { error } = await supabase.from("settings").insert([{ key, value }]);
+  if (error) throw error;
+}
+
+async function telegramConfig() {
+  const [main, mirror, support, chatId] = await Promise.all([
+    getSetting("telegram.main"),
+    getSetting("telegram.mirror"),
+    getSetting("telegram.support"),
+    getSetting("telegram.chat_id")
+  ]);
+  return {
+    tokens: {
+      main: cleanTelegramToken(main) || TELEGRAM_ENV.main,
+      mirror: cleanTelegramToken(mirror) || TELEGRAM_ENV.mirror,
+      support: cleanTelegramToken(support) || TELEGRAM_ENV.support
+    },
+    chatId: cleanTelegramChatId(chatId) || TELEGRAM_ENV.chatId
+  };
+}
+
+async function sendTelegramMessage(text, roles = ["main"]) {
+  const config = await telegramConfig();
+  const uniqueTokens = [...new Set(roles.map(role => config.tokens[role]).filter(Boolean))];
+  if (!uniqueTokens.length) {
+    console.error("TELEGRAM NOT CONFIGURED:", roles.join(","));
+    return { success: false, configured: false };
+  }
   const results = await Promise.allSettled(uniqueTokens.map(token => axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
-    chat_id: CHAT_ID,
+    chat_id: config.chatId,
     text
   })));
+  const sent = results.some(result => result.status === "fulfilled" && result.value?.data?.ok !== false);
   results.forEach((result, index) => {
     if (result.status === "rejected") {
       const tokenLabel = `${uniqueTokens[index].slice(0, 8)}...`;
@@ -427,6 +482,7 @@ async function sendTelegramMessage(text, tokens = [TELEGRAM_TOKEN]) {
       console.error("TELEGRAM SEND ERROR:", tokenLabel, details);
     }
   });
+  return { success: sent, configured: true };
 }
 
 function requestTelegramText(type, user, amount, wallet) {
@@ -478,7 +534,7 @@ function walletCreateTelegramText(user, status = "") {
 }
 
 async function notifyWalletCreateRequest(user, status = "") {
-  await sendTelegramMessage(walletCreateTelegramText(user, status), [TELEGRAM_TOKEN, TELEGRAM_MIRROR_TOKEN]);
+  return sendTelegramMessage(walletCreateTelegramText(user, status), ["main", "mirror"]);
 }
 
 async function ensureWalletCreateRequest(user, notifyExisting = false) {
@@ -992,25 +1048,22 @@ async function createRegisteredUser(data, passwordHash, ip, emailVerified = fals
   await refreshSatelliteCount(data.referrerId);
 
   try {
-    if (TELEGRAM_TOKEN) await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
-      chat_id: CHAT_ID,
-      text: [
-        "NEW USER",
-        `ID: ${formatUserId(user.id)}`,
-        `Email: ${user.email}`,
-        `Name: ${user.fullname}`,
-        `Nickname: ${user.nickname}`,
-        `Country: ${user.country}`,
-        `Phone: ${user.phone}`,
-        `Referrer: ${user.referrer_id ? formatUserId(user.referrer_id) : "-"}`,
-        `Deposit asset: ${DEPOSIT_ASSET}`,
-        `Deposit network: ${DEPOSIT_NETWORK}`,
-        `Deposit wallet: ${DEPOSIT_WALLET_ADDRESS}`,
-        "Secret phrase: not sent for security",
-        `Email verified: ${emailVerified ? "yes" : "temporarily skipped"}`,
-        `Starting balance: $0`
-      ].join("\n")
-    });
+    await sendTelegramMessage([
+      "NEW USER",
+      `ID: ${formatUserId(user.id)}`,
+      `Email: ${user.email}`,
+      `Name: ${user.fullname}`,
+      `Nickname: ${user.nickname}`,
+      `Country: ${user.country}`,
+      `Phone: ${user.phone}`,
+      `Referrer: ${user.referrer_id ? formatUserId(user.referrer_id) : "-"}`,
+      `Deposit asset: ${DEPOSIT_ASSET}`,
+      `Deposit network: ${DEPOSIT_NETWORK}`,
+      `Deposit wallet: ${DEPOSIT_WALLET_ADDRESS}`,
+      "Secret phrase: not sent for security",
+      `Email verified: ${emailVerified ? "yes" : "temporarily skipped"}`,
+      `Starting balance: $0`
+    ].join("\n"), ["main"]);
   } catch (telegramError) {
     console.error("TELEGRAM ERROR:", telegramError.message);
   }
@@ -1307,7 +1360,7 @@ app.post("/support/chat", actionLimiter, auth, async (req, res) => {
       status: result.handled ? "answered" : "pending"
     });
     if (!result.handled) {
-      await sendTelegramMessage(formatSupportTelegram(user, message), [SUPPORT_TELEGRAM_TOKEN]);
+      await sendTelegramMessage(formatSupportTelegram(user, message), ["support"]);
     }
     return res.json({ success: true, reply: result.text, escalated: !result.handled });
   } catch (error) {
@@ -1411,7 +1464,7 @@ app.post("/deposit", actionLimiter, auth, async (req, res) => {
     }
 
     await addSignal({ user_id: user.id, type: "deposit", amount, wallet, status: "pending" });
-    await sendTelegramMessage(requestTelegramText("deposit", user, amount, wallet), [TELEGRAM_MIRROR_TOKEN]);
+    await sendTelegramMessage(requestTelegramText("deposit", user, amount, wallet), ["mirror", "main"]);
     return res.json({ success: true, message: "Signal created" });
   } catch (error) {
     console.error("DEPOSIT ERROR:", error);
@@ -1489,7 +1542,7 @@ app.post("/withdraw", actionLimiter, auth, async (req, res) => {
     const details = withdrawalPayload(wallet, amount);
     await addSignal({ user_id: user.id, type: "withdraw", amount: netAmount, wallet: details, status: "pending" });
     await addSignal({ user_id: user.id, type: "withdraw_wallet", amount: 0, wallet, status: "saved" });
-    await sendTelegramMessage(requestTelegramText("withdraw", user, netAmount, details), [TELEGRAM_MIRROR_TOKEN]);
+    await sendTelegramMessage(requestTelegramText("withdraw", user, netAmount, details), ["mirror", "main"]);
     return res.json({ success: true, message: "Signal created", gross_amount: amount, fee_amount: feeAmount, net_amount: netAmount });
   } catch (error) {
     console.error("WITHDRAW ERROR:", error);
@@ -1662,6 +1715,60 @@ app.get("/admin/users", adminLimiter, adminAuth, async (req, res) => {
     if (user.referrer_id) counts[user.referrer_id] = (counts[user.referrer_id] || 0) + 1;
   }
   return res.json((data || []).map(user => ({ ...withDisplayId(user), satellites: counts[user.id] || 0 })));
+});
+
+app.get("/admin/telegram/status", adminLimiter, adminAuth, async (req, res) => {
+  try {
+    const config = await telegramConfig();
+    return res.json({
+      success: true,
+      chat_id_configured: Boolean(config.chatId),
+      main_configured: Boolean(config.tokens.main),
+      mirror_configured: Boolean(config.tokens.mirror),
+      support_configured: Boolean(config.tokens.support)
+    });
+  } catch (error) {
+    console.error("ADMIN TELEGRAM STATUS ERROR:", error);
+    return res.status(500).json({ success: false, message: "Telegram status error" });
+  }
+});
+
+app.post("/admin/telegram/config", adminLimiter, adminAuth, async (req, res) => {
+  try {
+    const body = req.body || {};
+    if (hasOwn(body, "token")) await setSetting("telegram.main", cleanTelegramToken(body.token));
+    if (hasOwn(body, "mirror_token")) await setSetting("telegram.mirror", cleanTelegramToken(body.mirror_token));
+    if (hasOwn(body, "support_token")) await setSetting("telegram.support", cleanTelegramToken(body.support_token));
+    if (hasOwn(body, "chat_id")) await setSetting("telegram.chat_id", cleanTelegramChatId(body.chat_id));
+
+    let test = null;
+    if (body.send_test) {
+      test = await sendTelegramMessage("TELEGRAM TEST: United Europe Crypto notifications are configured.", ["main", "mirror", "support"]);
+    }
+    const config = await telegramConfig();
+    return res.json({
+      success: true,
+      test,
+      chat_id_configured: Boolean(config.chatId),
+      main_configured: Boolean(config.tokens.main),
+      mirror_configured: Boolean(config.tokens.mirror),
+      support_configured: Boolean(config.tokens.support)
+    });
+  } catch (error) {
+    console.error("ADMIN TELEGRAM CONFIG ERROR:", error);
+    return res.status(500).json({ success: false, message: "Telegram config error" });
+  }
+});
+
+app.post("/admin/telegram/test", adminLimiter, adminAuth, async (req, res) => {
+  try {
+    const text = cleanText(req.body?.text, 600) || "TELEGRAM TEST: United Europe Crypto notifications are working.";
+    const result = await sendTelegramMessage(text, ["main", "mirror", "support"]);
+    return res.json({ success: Boolean(result.success), telegram: result });
+  } catch (error) {
+    console.error("ADMIN TELEGRAM TEST ERROR:", error);
+    return res.status(500).json({ success: false, message: "Telegram test error" });
+  }
 });
 
 app.get("/admin/signals", adminLimiter, adminAuth, async (req, res) => {
