@@ -1,17 +1,19 @@
 const fs = require("fs");
 const path = require("path");
 
-const TABLES = ["users", "signals", "settings"];
+const TABLES = ["users", "signals", "settings", "verifications"];
 
 function createEmptyState() {
   return {
     users: [],
     signals: [],
     settings: [],
+    verifications: [],
     counters: {
       users: 0,
       signals: 0,
-      settings: 0
+      settings: 0,
+      verifications: 0
     }
   };
 }

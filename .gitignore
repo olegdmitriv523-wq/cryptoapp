@@ -5,3 +5,4 @@ app-data.json
 app-data.json.tmp
 app-data*.json
 app-data*.json.tmp
+app-secret.txt

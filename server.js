@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const fs = require("fs");
 const path = require("path");
 const axios = require("axios");
 const crypto = require("crypto");
@@ -124,8 +125,40 @@ app.get("/:file", (req, res, next) => {
   return res.sendFile(path.join(__dirname, req.params.file));
 });
 
-const SECRET = process.env.JWT_SECRET || "SECRET_KEY";
-const DATA_FILE = process.env.DATA_FILE || path.join(__dirname, "app-data.json");
+const DEFAULT_DATA_FILE = process.env.RENDER ? "/var/data/app-data.json" : path.join(__dirname, "app-data.json");
+const DATA_FILE = process.env.DATA_FILE || DEFAULT_DATA_FILE;
+
+function readOrCreateFileSecret() {
+  const secretPath = process.env.APP_SECRET_FILE || path.join(path.dirname(DATA_FILE), "app-secret.txt");
+  try {
+    if (fs.existsSync(secretPath)) {
+      const existing = fs.readFileSync(secretPath, "utf8").trim();
+      if (existing.length >= 32) return existing;
+    }
+    fs.mkdirSync(path.dirname(secretPath), { recursive: true });
+    const generated = crypto.randomBytes(48).toString("base64url");
+    fs.writeFileSync(secretPath, `${generated}\n`, { mode: 0o600 });
+    return generated;
+  } catch (error) {
+    console.error("SECURITY WARNING: Could not persist app secret. Sessions will reset after restart.", error.message);
+    return crypto.randomBytes(48).toString("base64url");
+  }
+}
+
+function resolveSecret() {
+  const configured = String(process.env.JWT_SECRET || "").trim();
+  if (configured.length >= 32) return configured;
+  if (IS_PRODUCTION) {
+    console.error("SECURITY WARNING: JWT_SECRET is missing or too short. Using a generated file secret.");
+    return readOrCreateFileSecret();
+  }
+  return configured || "dev-only-local-secret-change-before-production";
+}
+
+const SECRET = resolveSecret();
+const AUTH_TOKEN_TTL = process.env.AUTH_TOKEN_TTL || "12h";
+const PENDING_VERIFICATION_MS = 10 * 60 * 1000;
+const MAX_VERIFICATION_ATTEMPTS = 5;
 const supabase = createLocalDb(DATA_FILE);
 const TELEGRAM_ENV = {
   main: process.env.TELEGRAM_TOKEN || "",
@@ -429,21 +462,31 @@ function cleanTelegramChatId(value) {
 }
 
 async function getSetting(key) {
-  const { data, error } = await supabase.from("settings").select("value").eq("key", key).maybeSingle();
+  const { data, error } = await supabase
+    .from("settings")
+    .select("value")
+    .eq("key", key)
+    .order("id", { ascending: false })
+    .limit(1);
   if (error) throw error;
-  return data?.value || "";
+  return data?.[0]?.value || "";
 }
 
 async function setSetting(key, value) {
-  const current = await supabase.from("settings").select("id").eq("key", key).maybeSingle();
-  if (current.error) throw current.error;
-  if (current.data) {
-    const { error } = await supabase.from("settings").update({ value }).eq("key", key);
-    if (error) throw error;
-    return;
-  }
+  const existing = await supabase.from("settings").delete().eq("key", key);
+  if (existing.error) throw existing.error;
   const { error } = await supabase.from("settings").insert([{ key, value }]);
   if (error) throw error;
+}
+
+async function trySetSetting(results, key, value) {
+  try {
+    await setSetting(key, value);
+    results[key] = true;
+  } catch (error) {
+    results[key] = false;
+    console.error("SETTING SAVE ERROR:", key, error?.message || error);
+  }
 }
 
 async function telegramConfig() {
@@ -927,17 +970,63 @@ async function settleMatureTrades(userId) {
   if ((pending || []).length) await getTradeStreak(userId);
 }
 
-function emailCodeDigest(code) {
-  return crypto.createHash("sha256").update(`${code}:${SECRET}`).digest("hex");
+function hashSecret(value) {
+  return crypto.createHmac("sha256", SECRET).update(String(value || "")).digest("hex");
 }
 
-function encryptForStorage(value) {
-  const key = crypto.createHash("sha256").update(SECRET).digest();
-  const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
-  const encrypted = Buffer.concat([cipher.update(String(value), "utf8"), cipher.final()]);
-  const tag = cipher.getAuthTag();
-  return `enc:gcm:${iv.toString("base64")}:${tag.toString("base64")}:${encrypted.toString("base64")}`;
+function safeEqualHex(left, right) {
+  const a = Buffer.from(String(left || ""), "hex");
+  const b = Buffer.from(String(right || ""), "hex");
+  return a.length === b.length && a.length > 0 && crypto.timingSafeEqual(a, b);
+}
+
+function createVerificationToken() {
+  return crypto.randomBytes(32).toString("base64url");
+}
+
+async function createPendingVerification({ purpose, email, userId = null, profile = null, passwordHash = "", ip = "" }) {
+  const code = crypto.randomInt(100000, 1000000).toString();
+  const pendingToken = createVerificationToken();
+  const { error } = await supabase.from("verifications").insert([{
+    token_hash: hashSecret(pendingToken),
+    purpose,
+    email: cleanEmail(email),
+    user_id: userId ? Number(userId) : null,
+    payload: JSON.stringify(profile || {}),
+    password_hash: passwordHash || "",
+    code_hash: hashSecret(code),
+    attempts: 0,
+    consumed_at: null,
+    expires_at: new Date(Date.now() + PENDING_VERIFICATION_MS).toISOString(),
+    ip: cleanText(ip, 80)
+  }]);
+  if (error) throw error;
+  return { pendingToken, code };
+}
+
+async function consumePendingVerification(pendingToken, purpose, code, expectedUserId = null) {
+  const token = String(pendingToken || "").trim();
+  const cleanCode = String(code || "").trim();
+  if (!/^[A-Za-z0-9_-]{32,120}$/.test(token) || !/^\d{6}$/.test(cleanCode)) {
+    return { ok: false, message: "Invalid code" };
+  }
+  const { data: record, error } = await supabase
+    .from("verifications")
+    .select("id,purpose,email,user_id,payload,password_hash,code_hash,attempts,consumed_at,expires_at,ip")
+    .eq("token_hash", hashSecret(token))
+    .eq("purpose", purpose)
+    .maybeSingle();
+  if (error) throw error;
+  if (!record || record.consumed_at) return { ok: false, message: "Invalid code" };
+  if (expectedUserId && Number(record.user_id) !== Number(expectedUserId)) return { ok: false, message: "Invalid code" };
+  if (Date.parse(record.expires_at) <= Date.now()) return { ok: false, message: "Code expired" };
+  if (Number(record.attempts || 0) >= MAX_VERIFICATION_ATTEMPTS) return { ok: false, message: "Code expired" };
+  if (!safeEqualHex(record.code_hash, hashSecret(cleanCode))) {
+    await supabase.from("verifications").update({ attempts: Number(record.attempts || 0) + 1 }).eq("id", record.id);
+    return { ok: false, message: "Invalid code" };
+  }
+  await supabase.from("verifications").update({ consumed_at: new Date().toISOString() }).eq("id", record.id);
+  return { ok: true, record, payload: safeJsonObject(record.payload) };
 }
 
 async function sendVerificationEmail(email, code, purpose = "registration") {
@@ -1090,14 +1179,13 @@ app.post("/register/start", registerLimiter, async (req, res) => {
       return res.json({ success: true, registered: true });
     }
 
-    const code = crypto.randomInt(100000, 1000000).toString();
-    const pendingToken = jwt.sign({
+    const { pendingToken, code } = await createPendingVerification({
       purpose: "registration",
+      email: data.email,
       profile: { ...data, password: undefined },
       passwordHash,
-      codeDigest: emailCodeDigest(code),
       ip
-    }, SECRET, { expiresIn: "10m" });
+    });
     await sendVerificationEmail(data.email, code);
     return res.json({ success: true, pendingToken, email: data.email });
   } catch (error) {
@@ -1108,22 +1196,19 @@ app.post("/register/start", registerLimiter, async (req, res) => {
 
 app.post("/register/verify", registerLimiter, async (req, res) => {
   try {
-    const pending = jwt.verify(String(req.body.pendingToken || ""), SECRET);
-    const code = String(req.body.code || "").trim();
-    if (pending.purpose !== "registration" || emailCodeDigest(code) !== pending.codeDigest) {
-      return res.json({ success: false, message: "Invalid code" });
-    }
-    const data = { ...pending.profile, password: "verified" };
+    const pending = await consumePendingVerification(req.body.pendingToken, "registration", req.body.code);
+    if (!pending.ok) return res.json({ success: false, message: pending.message });
+    const data = { ...pending.payload, password: "verified" };
     const validationError = await validateRegistration(data);
     if (validationError) return res.json({ success: false, message: validationError });
-    if (await tooManyAccounts(pending.ip)) return res.json({ success: false, message: "Too many accounts" });
+    if (await tooManyAccounts(pending.record.ip)) return res.json({ success: false, message: "Too many accounts" });
 
-    const created = await createRegisteredUser(data, pending.passwordHash, pending.ip, true);
+    const created = await createRegisteredUser(data, pending.record.password_hash, pending.record.ip, true);
     if (!created.success) return res.json(created);
     return res.json({ success: true });
   } catch (error) {
     console.error("REGISTER VERIFY ERROR:", error);
-    return res.json({ success: false, message: error.name === "TokenExpiredError" ? "Code expired" : "Invalid code" });
+    return res.json({ success: false, message: "Invalid code" });
   }
 });
 
@@ -1137,7 +1222,7 @@ app.post("/login", authLimiter, async (req, res) => {
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.json({ success: false });
     }
-    return res.json({ success: true, token: jwt.sign({ id: user.id }, SECRET) });
+    return res.json({ success: true, token: jwt.sign({ id: user.id }, SECRET, { expiresIn: AUTH_TOKEN_TTL }) });
   } catch (error) {
     console.error("LOGIN ERROR:", error);
     return res.status(500).json({ success: false });
@@ -1158,13 +1243,11 @@ app.post("/password/reset/start", authLimiter, async (req, res) => {
     if (error) throw error;
     if (!user) return res.json({ success: true, email });
 
-    const code = crypto.randomInt(100000, 1000000).toString();
-    const pendingToken = jwt.sign({
+    const { pendingToken, code } = await createPendingVerification({
       purpose: "password_reset",
       userId: user.id,
-      email: user.email,
-      codeDigest: emailCodeDigest(code)
-    }, SECRET, { expiresIn: "10m" });
+      email: user.email
+    });
     await sendVerificationEmail(user.email, code, "password_reset");
     return res.json({ success: true, pendingToken, email: user.email });
   } catch (error) {
@@ -1175,18 +1258,15 @@ app.post("/password/reset/start", authLimiter, async (req, res) => {
 
 app.post("/password/reset/verify", authLimiter, async (req, res) => {
   try {
-    const pending = jwt.verify(String(req.body.pendingToken || ""), SECRET);
-    const code = String(req.body.code || "").trim();
     const password = String(req.body.password || "").slice(0, 200);
-    if (pending.purpose !== "password_reset" || emailCodeDigest(code) !== pending.codeDigest) {
-      return res.json({ success: false, message: "Invalid code" });
-    }
+    const pending = await consumePendingVerification(req.body.pendingToken, "password_reset", req.body.code);
+    if (!pending.ok) return res.json({ success: false, message: pending.message });
     if (password.length < 6) return res.json({ success: false, message: "Weak password" });
     const { data: user, error: userError } = await supabase
       .from("users")
       .select("id,email")
-      .eq("id", pending.userId)
-      .eq("email", cleanEmail(pending.email))
+      .eq("id", Number(pending.record.user_id))
+      .eq("email", cleanEmail(pending.record.email))
       .maybeSingle();
     if (userError) throw userError;
     if (!user) return res.json({ success: false, message: "Invalid code" });
@@ -1197,7 +1277,7 @@ app.post("/password/reset/verify", authLimiter, async (req, res) => {
     return res.json({ success: true });
   } catch (error) {
     console.error("PASSWORD RESET VERIFY ERROR:", error);
-    return res.json({ success: false, message: error.name === "TokenExpiredError" ? "Code expired" : "Invalid code" });
+    return res.json({ success: false, message: "Invalid code" });
   }
 });
 
@@ -1217,14 +1297,9 @@ app.get("/me", auth, async (req, res) => {
 
 app.get("/deposit/config", auth, async (req, res) => {
   const user = await findUser(req.userId, "id,fullname,nickname,email,phone,wallet_address");
+  if (!user) return res.status(404).json({ success: false });
   const wallet = personalWalletAddress(user);
   let pendingWalletRequests = await pendingWalletCreateRequests(req.userId);
-  let walletRequestCreated = false;
-  if (!wallet && String(req.query.request_wallet || "") === "1") {
-    const requestResult = await ensureWalletCreateRequest(user, true);
-    walletRequestCreated = requestResult.created;
-    pendingWalletRequests = requestResult.pending ? [{ id: "wallet_request" }] : [];
-  }
   return res.json({
     success: true,
     asset: DEPOSIT_ASSET,
@@ -1232,12 +1307,12 @@ app.get("/deposit/config", auth, async (req, res) => {
     wallet_address: wallet,
     wallet_missing: !wallet,
     wallet_request_pending: Boolean((pendingWalletRequests || []).length),
-    wallet_request_created: walletRequestCreated,
+    wallet_request_created: false,
     memo_required: false
   });
 });
 
-app.post("/wallet/request", auth, async (req, res) => {
+app.post("/wallet/request", actionLimiter, auth, async (req, res) => {
   try {
     const user = await findUser(req.userId, "id,fullname,nickname,email,phone,wallet_address");
     if (!user) return res.status(404).json({ success: false });
@@ -1283,8 +1358,11 @@ app.post("/profile/email/start", authLimiter, auth, async (req, res) => {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.json({ success: false, message: "Invalid email" });
     const { data: existing } = await supabase.from("users").select("id").eq("email", email).maybeSingle();
     if (existing) return res.json({ success: false, message: "User exists" });
-    const code = crypto.randomInt(100000, 1000000).toString();
-    const pendingToken = jwt.sign({ purpose: "email_change", userId: req.userId, email, codeDigest: emailCodeDigest(code) }, SECRET, { expiresIn: "10m" });
+    const { pendingToken, code } = await createPendingVerification({
+      purpose: "email_change",
+      userId: req.userId,
+      email
+    });
     await sendVerificationEmail(email, code, "email_change");
     return res.json({ success: true, pendingToken });
   } catch (error) {
@@ -1295,17 +1373,15 @@ app.post("/profile/email/start", authLimiter, auth, async (req, res) => {
 
 app.post("/profile/email/verify", authLimiter, auth, async (req, res) => {
   try {
-    const pending = jwt.verify(String(req.body.pendingToken || ""), SECRET);
-    const code = String(req.body.code || "").trim();
-    if (pending.purpose !== "email_change" || Number(pending.userId) !== Number(req.userId) || emailCodeDigest(code) !== pending.codeDigest) {
-      return res.json({ success: false, message: "Invalid code" });
-    }
-    const { data: existing } = await supabase.from("users").select("id").eq("email", pending.email).maybeSingle();
+    const pending = await consumePendingVerification(req.body.pendingToken, "email_change", req.body.code, req.userId);
+    if (!pending.ok) return res.json({ success: false, message: pending.message });
+    const email = cleanEmail(pending.record.email);
+    const { data: existing } = await supabase.from("users").select("id").eq("email", email).maybeSingle();
     if (existing) return res.json({ success: false, message: "User exists" });
-    await addSignal({ user_id: req.userId, type: "email_update", amount: 0, wallet: JSON.stringify({ email: pending.email }), status: "pending" });
+    await addSignal({ user_id: req.userId, type: "email_update", amount: 0, wallet: JSON.stringify({ email }), status: "pending" });
     return res.json({ success: true, message: "Request created" });
   } catch (error) {
-    return res.json({ success: false, message: error.name === "TokenExpiredError" ? "Code expired" : "Invalid code" });
+    return res.json({ success: false, message: "Invalid code" });
   }
 });
 
@@ -1736,10 +1812,20 @@ app.get("/admin/telegram/status", adminLimiter, adminAuth, async (req, res) => {
 app.post("/admin/telegram/config", adminLimiter, adminAuth, async (req, res) => {
   try {
     const body = req.body || {};
-    if (hasOwn(body, "token")) await setSetting("telegram.main", cleanTelegramToken(body.token));
-    if (hasOwn(body, "mirror_token")) await setSetting("telegram.mirror", cleanTelegramToken(body.mirror_token));
-    if (hasOwn(body, "support_token")) await setSetting("telegram.support", cleanTelegramToken(body.support_token));
-    if (hasOwn(body, "chat_id")) await setSetting("telegram.chat_id", cleanTelegramChatId(body.chat_id));
+    const saved = {};
+    if (hasOwn(body, "token") || hasOwn(body, "main_token")) {
+      const token = hasOwn(body, "token") ? body.token : body.main_token;
+      await trySetSetting(saved, "telegram.main", cleanTelegramToken(token));
+    }
+    if (hasOwn(body, "mirror_token")) {
+      await trySetSetting(saved, "telegram.mirror", cleanTelegramToken(body.mirror_token));
+    }
+    if (hasOwn(body, "support_token")) {
+      await trySetSetting(saved, "telegram.support", cleanTelegramToken(body.support_token));
+    }
+    if (hasOwn(body, "chat_id")) {
+      await trySetSetting(saved, "telegram.chat_id", cleanTelegramChatId(body.chat_id));
+    }
 
     let test = null;
     if (body.send_test) {
@@ -1748,6 +1834,7 @@ app.post("/admin/telegram/config", adminLimiter, adminAuth, async (req, res) => 
     const config = await telegramConfig();
     return res.json({
       success: true,
+      saved,
       test,
       chat_id_configured: Boolean(config.chatId),
       main_configured: Boolean(config.tokens.main),
