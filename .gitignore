@@ -1,3 +1,7 @@
 ﻿node_modules
 db.sqlite
 deposit-addresses.json
+app-data.json
+app-data.json.tmp
+app-data*.json
+app-data*.json.tmp

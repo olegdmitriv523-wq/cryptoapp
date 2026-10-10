@@ -5,7 +5,7 @@ const jwt = require("jsonwebtoken");
 const path = require("path");
 const axios = require("axios");
 const crypto = require("crypto");
-const { createClient } = require("@supabase/supabase-js");
+const { createLocalDb } = require("./local-db");
 
 const app = express();
 app.set("trust proxy", 1);
@@ -125,13 +125,11 @@ app.get("/:file", (req, res, next) => {
 });
 
 const SECRET = process.env.JWT_SECRET || "SECRET_KEY";
-const supabase = createClient(
-  process.env.SUPABASE_URL || "https://pwqmiiruxceepjammiza.supabase.co",
-  process.env.SUPABASE_KEY || "sb_publishable_7lxiFe5VT8iQx37Ip7R2YA_99WVsa1N"
-);
-const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN || "8714057941:AAGZL1OXRoy8-7_IoVAHBePTLwuTKmqicOg";
-const TELEGRAM_MIRROR_TOKEN = process.env.TELEGRAM_MIRROR_TOKEN || "8838586164:AAHRVFEv_Elr-iNEsqyDbnqSB3_aJ8KFZvc";
-const SUPPORT_TELEGRAM_TOKEN = process.env.SUPPORT_TELEGRAM_TOKEN || "8684197550:AAEJzPHMAYPIm9Rk5xDw8RxrXKze5tq_Vqo";
+const DATA_FILE = process.env.DATA_FILE || path.join(__dirname, "app-data.json");
+const supabase = createLocalDb(DATA_FILE);
+const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN || "";
+const TELEGRAM_MIRROR_TOKEN = process.env.TELEGRAM_MIRROR_TOKEN || "";
+const SUPPORT_TELEGRAM_TOKEN = process.env.SUPPORT_TELEGRAM_TOKEN || "";
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID || "337179852";
 const ADMIN_KEY = process.env.ADMIN_KEY || "";
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
@@ -994,7 +992,7 @@ async function createRegisteredUser(data, passwordHash, ip, emailVerified = fals
   await refreshSatelliteCount(data.referrerId);
 
   try {
-    await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
+    if (TELEGRAM_TOKEN) await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
       chat_id: CHAT_ID,
       text: [
         "NEW USER",
