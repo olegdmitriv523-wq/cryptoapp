@@ -7,6 +7,7 @@ const path = require("path");
 const os = require("os");
 const axios = require("axios");
 const crypto = require("crypto");
+const { createClient } = require("@supabase/supabase-js");
 const { createLocalDb } = require("./local-db");
 
 const app = express();
@@ -193,7 +194,18 @@ const SECRET = resolveSecret();
 const AUTH_TOKEN_TTL = process.env.AUTH_TOKEN_TTL || "12h";
 const PENDING_VERIFICATION_MS = 10 * 60 * 1000;
 const MAX_VERIFICATION_ATTEMPTS = 5;
-const supabase = createLocalDb(DATA_FILE);
+const SUPABASE_URL = String(process.env.SUPABASE_URL || "").trim().replace(/\/$/, "");
+const SUPABASE_SERVICE_ROLE_KEY = String(process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
+const USE_SUPABASE = Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
+const supabase = USE_SUPABASE
+  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    })
+  : createLocalDb(DATA_FILE);
+const STORAGE_BACKEND = USE_SUPABASE
+  ? "supabase"
+  : (DATA_FILE.startsWith("/var/data/") ? "persistent-disk" : "writable-fallback");
+if (USE_SUPABASE) console.log(`Using Supabase storage: ${SUPABASE_URL}`);
 const TELEGRAM_ENV = {
   main: process.env.TELEGRAM_TOKEN || "",
   mirror: process.env.TELEGRAM_MIRROR_TOKEN || "",
@@ -1487,7 +1499,7 @@ app.post("/profile/email/verify", authLimiter, auth, async (req, res) => {
 
 app.get("/health", (req, res) => res.json({
   success: true,
-  storage: DATA_FILE.startsWith("/var/data/") ? "persistent-disk" : "writable-fallback"
+  storage: STORAGE_BACKEND
 }));
 
 app.get("/support/history", auth, async (req, res) => {
