@@ -1485,7 +1485,10 @@ app.post("/profile/email/verify", authLimiter, auth, async (req, res) => {
   }
 });
 
-app.get("/health", (req, res) => res.json({ success: true }));
+app.get("/health", (req, res) => res.json({
+  success: true,
+  storage: DATA_FILE.startsWith("/var/data/") ? "persistent-disk" : "writable-fallback"
+}));
 
 app.get("/support/history", auth, async (req, res) => {
   try {
