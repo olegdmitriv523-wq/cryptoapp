@@ -1228,13 +1228,20 @@ app.post("/register/start", registerLimiter, async (req, res) => {
       return res.json({ success: true, registered: true });
     }
 
-    const { pendingToken, code } = await createPendingVerification({
-      purpose: "registration",
-      email: data.email,
-      profile: { ...data, password: undefined },
-      passwordHash,
-      ip
-    });
+    let pending;
+    try {
+      pending = await createPendingVerification({
+        purpose: "registration",
+        email: data.email,
+        profile: { ...data, password: undefined },
+        passwordHash,
+        ip
+      });
+    } catch (error) {
+      console.error("REGISTRATION VERIFICATION STORAGE ERROR:", error.message);
+      return res.status(500).json({ success: false, message: "Verification storage error" });
+    }
+    const { pendingToken, code } = pending;
     await sendVerificationEmail(data.email, code);
     return res.json({ success: true, pendingToken, email: data.email });
   } catch (error) {
