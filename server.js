@@ -11,9 +11,13 @@ const { createClient } = require("@supabase/supabase-js");
 const { createLocalDb } = require("./local-db");
 
 const SUPABASE_URL = String(process.env.SUPABASE_URL || "").trim().replace(/\/$/, "");
-const SUPABASE_SERVICE_ROLE_KEY = String(process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
-const USE_SUPABASE = Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
-const SUPABASE_CONFIG_INCOMPLETE = Boolean(SUPABASE_URL) !== Boolean(SUPABASE_SERVICE_ROLE_KEY);
+// Supabase now calls the server-only replacement for service_role the Secret key.
+// Keep the legacy variable as a fallback for existing deployments.
+const SUPABASE_ADMIN_KEY = String(
+  process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+).trim();
+const USE_SUPABASE = Boolean(SUPABASE_URL && SUPABASE_ADMIN_KEY);
+const SUPABASE_CONFIG_INCOMPLETE = Boolean(SUPABASE_URL) !== Boolean(SUPABASE_ADMIN_KEY);
 
 const app = express();
 app.set("trust proxy", 1);
@@ -202,7 +206,7 @@ const AUTH_TOKEN_TTL = process.env.AUTH_TOKEN_TTL || "12h";
 const PENDING_VERIFICATION_MS = 10 * 60 * 1000;
 const MAX_VERIFICATION_ATTEMPTS = 5;
 const supabase = USE_SUPABASE
-  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  ? createClient(SUPABASE_URL, SUPABASE_ADMIN_KEY, {
       auth: { autoRefreshToken: false, persistSession: false }
     })
   : createLocalDb(DATA_FILE);
@@ -212,7 +216,7 @@ const STORAGE_BACKEND = USE_SUPABASE
     ? "supabase-config-incomplete"
     : (DATA_FILE.startsWith("/var/data/") ? "persistent-disk" : "writable-fallback");
 if (USE_SUPABASE) console.log(`Using Supabase storage: ${SUPABASE_URL}`);
-if (SUPABASE_CONFIG_INCOMPLETE) console.error("SUPABASE CONFIGURATION INCOMPLETE: set both SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY");
+if (SUPABASE_CONFIG_INCOMPLETE) console.error("SUPABASE CONFIGURATION INCOMPLETE: set SUPABASE_URL and a server-only SUPABASE_SECRET_KEY");
 const TELEGRAM_ENV = {
   main: process.env.TELEGRAM_TOKEN || "",
   mirror: process.env.TELEGRAM_MIRROR_TOKEN || "",
