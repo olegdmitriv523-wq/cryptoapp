@@ -1097,7 +1097,11 @@ async function validateRegistration(data) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) return "Invalid email";
   if (data.phone.length < 10 || data.phone.length > 15) return "Invalid phone";
   if (data.password.length < 6) return "Weak password";
-  if (data.referrerProvided && (!Number.isInteger(data.referrerId) || data.referrerId <= 0 || !(await findUser(data.referrerId, "id")))) return "Invalid referrer";
+  if (data.referrerProvided && (!Number.isInteger(data.referrerId) || data.referrerId <= 0 || !(await findUser(data.referrerId, "id")))) {
+    // Old invitation links can point to deleted users. They must not block a new registration.
+    data.referrerId = null;
+    data.referrerProvided = false;
+  }
   const { data: existing } = await supabase.from("users").select("id").eq("email", data.email).maybeSingle();
   return existing ? "User exists" : null;
 }

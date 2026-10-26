@@ -122,7 +122,6 @@ const savedReferrerId = cleanReferrerId(referrerFromLink || localStorage.getItem
 if (savedReferrerId) {
   const referrerInput = document.getElementById("referrer_id");
   referrerInput.value = savedReferrerId;
-  referrerInput.readOnly = true;
 }
 
 async function loadRegistrationMode() {
