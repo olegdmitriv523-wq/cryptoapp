@@ -1048,7 +1048,7 @@ async function sendVerificationEmail(email, code, purpose = "registration") {
   const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#111"><h2>United Europe Crypto</h2><p>Ваш код для ${action}:</p><div style="font-size:34px;font-weight:700;letter-spacing:8px;margin:24px 0">${code}</div><p>Код дійсний 10 хвилин. Якщо ви не робили цей запит, просто проігноруйте лист.</p></div>`;
   const provider = EMAIL_PROVIDER;
   if (provider === "brevo") {
-    await axios.post("https://api.brevo.com/v3/smtp/email", {
+    const request = () => axios.post("https://api.brevo.com/v3/smtp/email", {
       sender: { name: "United Europe Crypto", email: BREVO_FROM_ADDRESS },
       to: [{ email }],
       subject,
@@ -1057,10 +1057,19 @@ async function sendVerificationEmail(email, code, purpose = "registration") {
       timeout: 15000,
       headers: { "api-key": BREVO_API_KEY, "Content-Type": "application/json", accept: "application/json" }
     });
+    try {
+      await request();
+    } catch (error) {
+      if (!error.response && ["ECONNABORTED", "ETIMEDOUT", "ENETUNREACH", "ECONNRESET"].includes(error.code)) {
+        await request();
+      } else {
+        throw error;
+      }
+    }
     return;
   }
   if (provider === "resend") {
-    await axios.post("https://api.resend.com/emails", {
+    const request = () => axios.post("https://api.resend.com/emails", {
       from: EMAIL_FROM,
       to: [email],
       subject,
@@ -1069,6 +1078,15 @@ async function sendVerificationEmail(email, code, purpose = "registration") {
       timeout: 15000,
       headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" }
     });
+    try {
+      await request();
+    } catch (error) {
+      if (!error.response && ["ECONNABORTED", "ETIMEDOUT", "ENETUNREACH", "ECONNRESET"].includes(error.code)) {
+        await request();
+      } else {
+        throw error;
+      }
+    }
     return;
   }
   {
@@ -1221,12 +1239,16 @@ app.post("/register/start", registerLimiter, async (req, res) => {
     return res.json({ success: true, pendingToken, email: data.email });
   } catch (error) {
     console.error("REGISTER START ERROR:", error.response?.data || error.message);
-    const providerRejected = Boolean(error.response?.status && error.response.status >= 400);
+    const providerStatus = Number(error.response?.status || 0);
+    const providerRejected = providerStatus >= 400 && providerStatus < 500;
+    const providerUnavailable = providerStatus >= 500 || (!error.response && error.code !== "EMAIL_PROVIDER_NOT_CONFIGURED");
     return res.status(500).json({
       success: false,
       message: error.code === "EMAIL_PROVIDER_NOT_CONFIGURED"
         ? "Email provider is not configured"
-        : (providerRejected ? "Email provider rejected the message" : "Email send error")
+        : (providerRejected
+          ? "Email provider rejected the message"
+          : (providerUnavailable ? "Email provider unavailable" : "Email send error"))
     });
   }
 });
