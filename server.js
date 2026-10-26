@@ -10,6 +10,11 @@ const crypto = require("crypto");
 const { createClient } = require("@supabase/supabase-js");
 const { createLocalDb } = require("./local-db");
 
+const SUPABASE_URL = String(process.env.SUPABASE_URL || "").trim().replace(/\/$/, "");
+const SUPABASE_SERVICE_ROLE_KEY = String(process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
+const USE_SUPABASE = Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
+const SUPABASE_CONFIG_INCOMPLETE = Boolean(SUPABASE_URL) !== Boolean(SUPABASE_SERVICE_ROLE_KEY);
+
 const app = express();
 app.set("trust proxy", 1);
 
@@ -127,7 +132,9 @@ app.get("/:file", (req, res, next) => {
   return res.sendFile(path.join(__dirname, req.params.file));
 });
 
-const DEFAULT_DATA_FILE = process.env.RENDER ? "/var/data/app-data.json" : path.join(__dirname, "app-data.json");
+const DEFAULT_DATA_FILE = USE_SUPABASE
+  ? path.join(os.tmpdir(), "cryptoapp-runtime.json")
+  : (process.env.RENDER ? "/var/data/app-data.json" : path.join(__dirname, "app-data.json"));
 
 function writableDataPath(candidate) {
   const target = path.resolve(candidate);
@@ -194,10 +201,6 @@ const SECRET = resolveSecret();
 const AUTH_TOKEN_TTL = process.env.AUTH_TOKEN_TTL || "12h";
 const PENDING_VERIFICATION_MS = 10 * 60 * 1000;
 const MAX_VERIFICATION_ATTEMPTS = 5;
-const SUPABASE_URL = String(process.env.SUPABASE_URL || "").trim().replace(/\/$/, "");
-const SUPABASE_SERVICE_ROLE_KEY = String(process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
-const USE_SUPABASE = Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
-const SUPABASE_CONFIG_INCOMPLETE = Boolean(SUPABASE_URL) !== Boolean(SUPABASE_SERVICE_ROLE_KEY);
 const supabase = USE_SUPABASE
   ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false }
