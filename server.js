@@ -168,10 +168,23 @@ const TELEGRAM_ENV = {
 };
 const ADMIN_KEY = process.env.ADMIN_KEY || "";
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
-const EMAIL_FROM = process.env.EMAIL_FROM || "United Europe Crypto <onboarding@resend.dev>";
+const EMAIL_FROM = String(process.env.EMAIL_FROM || "").trim();
 const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
-const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "";
+const BREVO_SENDER_EMAIL = String(process.env.BREVO_SENDER_EMAIL || "").trim();
 const EMAIL_VERIFICATION_REQUIRED = process.env.EMAIL_VERIFICATION_REQUIRED === "true";
+
+function parseEmailAddress(value) {
+  const raw = String(value || "").trim();
+  const namedAddress = raw.match(/<([^<>\s]+@[^<>\s]+)>/);
+  const address = namedAddress ? namedAddress[1] : raw;
+  return /^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/.test(address) ? address.toLowerCase() : "";
+}
+
+const EMAIL_FROM_ADDRESS = parseEmailAddress(EMAIL_FROM);
+const BREVO_FROM_ADDRESS = parseEmailAddress(BREVO_SENDER_EMAIL) || EMAIL_FROM_ADDRESS;
+const EMAIL_PROVIDER = BREVO_API_KEY && BREVO_FROM_ADDRESS
+  ? "brevo"
+  : (RESEND_API_KEY && EMAIL_FROM ? "resend" : "");
 
 const PUBLIC_USER_FIELDS = "id,fullname,nickname,country,email,phone,balance,deposit,satellites,wallet_address,referrer_id";
 const DISPLAY_ID_PREFIX = "1568";
@@ -1033,31 +1046,36 @@ async function sendVerificationEmail(email, code, purpose = "registration") {
     : (purpose === "password_reset" ? "відновлення пароля" : "реєстрації");
   const subject = `Код підтвердження United Europe Crypto: ${code}`;
   const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#111"><h2>United Europe Crypto</h2><p>Ваш код для ${action}:</p><div style="font-size:34px;font-weight:700;letter-spacing:8px;margin:24px 0">${code}</div><p>Код дійсний 10 хвилин. Якщо ви не робили цей запит, просто проігноруйте лист.</p></div>`;
-  const provider = BREVO_API_KEY && BREVO_SENDER_EMAIL ? "brevo" : (RESEND_API_KEY ? "resend" : "");
+  const provider = EMAIL_PROVIDER;
   if (provider === "brevo") {
     await axios.post("https://api.brevo.com/v3/smtp/email", {
-      sender: { name: "United Europe Crypto", email: BREVO_SENDER_EMAIL },
+      sender: { name: "United Europe Crypto", email: BREVO_FROM_ADDRESS },
       to: [{ email }],
       subject,
       htmlContent: html
     }, {
+      timeout: 15000,
       headers: { "api-key": BREVO_API_KEY, "Content-Type": "application/json", accept: "application/json" }
     });
     return;
   }
-  if (!RESEND_API_KEY) {
+  if (provider === "resend") {
+    await axios.post("https://api.resend.com/emails", {
+      from: EMAIL_FROM,
+      to: [email],
+      subject,
+      html
+    }, {
+      timeout: 15000,
+      headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" }
+    });
+    return;
+  }
+  {
     const error = new Error("Email provider is not configured");
     error.code = "EMAIL_PROVIDER_NOT_CONFIGURED";
     throw error;
   }
-  await axios.post("https://api.resend.com/emails", {
-    from: EMAIL_FROM,
-    to: [email],
-    subject,
-    html
-  }, {
-    headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" }
-  });
 }
 
 function registrationData(body) {
@@ -1164,12 +1182,12 @@ async function createRegisteredUser(data, passwordHash, ip, emailVerified = fals
 }
 
 app.get("/registration/settings", (req, res) => {
-  const emailProvider = BREVO_API_KEY && BREVO_SENDER_EMAIL ? "brevo" : (RESEND_API_KEY ? "resend" : "");
   res.json({
     success: true,
     emailVerificationRequired: EMAIL_VERIFICATION_REQUIRED,
-    emailProviderConfigured: Boolean(emailProvider),
-    emailProvider: emailProvider || null
+    emailProviderConfigured: Boolean(EMAIL_PROVIDER),
+    emailProvider: EMAIL_PROVIDER || null,
+    emailSenderConfigured: Boolean(BREVO_FROM_ADDRESS || EMAIL_FROM_ADDRESS)
   });
 });
 
@@ -1199,9 +1217,12 @@ app.post("/register/start", registerLimiter, async (req, res) => {
     return res.json({ success: true, pendingToken, email: data.email });
   } catch (error) {
     console.error("REGISTER START ERROR:", error.response?.data || error.message);
+    const providerRejected = Boolean(error.response?.status && error.response.status >= 400);
     return res.status(500).json({
       success: false,
-      message: error.code === "EMAIL_PROVIDER_NOT_CONFIGURED" ? "Email provider is not configured" : "Email send error"
+      message: error.code === "EMAIL_PROVIDER_NOT_CONFIGURED"
+        ? "Email provider is not configured"
+        : (providerRejected ? "Email provider rejected the message" : "Email send error")
     });
   }
 });
