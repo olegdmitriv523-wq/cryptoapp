@@ -28,7 +28,7 @@ label { display:block; margin:8px 0; padding:9px; border-radius:7px; background:
 <main class="learning">
   <h1>Навчання криптовалютам</h1>
   <p class="intro">Прочитайте короткий урок і дайте правильну відповідь. Кожен тест можна пройти один раз.<br><span class="reward-highlight">Винагорода становить 2.5 долара</span></p>
-  <div class="access-note" id="accessNote">Навчання доступне після підтвердженого поповнення від $500. Матеріали оновлюються кожного 1 числа місяця.</div>
+  <div class="access-note" id="accessNote">Навчання доступне після підтвердженого поповнення від $1,000. Матеріали оновлюються кожного 1 числа місяця.</div>
 
   <article class="quiz" data-id="1">
     <h2>1. Блокчейн</h2>
@@ -96,7 +96,7 @@ function markCompleted(id) {
 function setLearningLocked(data) {
   const note = document.getElementById("accessNote");
   note.classList.add("locked");
-  note.textContent = `Навчання відкривається після підтвердженого поповнення від $${data.minDeposit || 500}. Зараз підтверджено: $${Number(data.deposit || 0).toFixed(2)}. Матеріали оновлюються кожного 1 числа місяця.`;
+  note.textContent = `Навчання відкривається після підтвердженого поповнення від $${data.minDeposit || 1000}. Зараз підтверджено: $${Number(data.deposit || 0).toFixed(2)}. Матеріали оновлюються кожного 1 числа місяця.`;
   document.querySelectorAll(".quiz button").forEach(button => button.disabled = true);
   document.querySelectorAll(".quiz .result").forEach(result => result.textContent = "Розділ поки заблокований.");
   window.appTranslate?.translatePage();
@@ -126,7 +126,7 @@ async function submitQuiz(id) {
     if (data.success) alert(`Правильно! На баланс нараховано $${data.reward}.`);
   } else {
     result.textContent = data.message === "Learning locked"
-      ? `Навчання доступне після поповнення від $${data.minDeposit || 500}.`
+      ? `Навчання доступне після поповнення від $${data.minDeposit || 1000}.`
       : data.message === "Incorrect answer"
         ? "Неправильно. Перечитайте урок і спробуйте ще раз."
         : "Не вдалося перевірити відповідь.";

@@ -182,9 +182,9 @@ const WALLET_CREATE_SIGNAL_TYPE = "wallet_create";
 const WALLET_CREATE_FALLBACK_TYPE = "withdraw_wallet";
 const WALLET_CREATE_FALLBACK_KIND = "wallet_create_request";
 const QUIZ_ANSWERS = { 1: "b", 2: "c", 3: "a", 4: "b", 5: "c" };
-const LEARNING_MIN_DEPOSIT = 500;
-const ACTIVE_SATELLITE_MIN_DEPOSIT = 500;
-const MIN_DEPOSIT_AMOUNT = 500;
+const LEARNING_MIN_DEPOSIT = 1000;
+const ACTIVE_SATELLITE_MIN_DEPOSIT = 1000;
+const MIN_DEPOSIT_AMOUNT = 1000;
 const MAX_DEPOSIT_REQUESTS = 2;
 const MIN_WITHDRAW_AMOUNT = 100;
 const WITHDRAW_FEE_RATE = 0.075;
@@ -194,8 +194,7 @@ const TRADE_SETTLE_MS = 10 * 60 * 1000;
 const REFERRER_REWARDS = [50, 75, 100, 100, 150];
 const INVITED_SATELLITE_REWARDS = [
   [2000, 100],
-  [1000, 50],
-  [ACTIVE_SATELLITE_MIN_DEPOSIT, 35]
+  [1000, 50]
 ];
 const BALANCE_REWARDS = [
   [1000, 50],
@@ -626,14 +625,14 @@ function supportAnswer(message) {
   }
   if (/(що ти вмієш|чим допоможеш|help|допоможи|помічник|оператор ai|ai оператор|support bot|підтримка може)/i.test(text)) {
     return answer(
-      "Я можу швидко відповісти на загальні питання по додатку: як зареєструватися, як поповнити від $500, як вивести від $100 із заробленого, як працює навчання, сателіти, торгівля, винагороди та де знайти сайт проекту. Якщо питання стосується конкретної помилки або вашої заявки, я передам його підтримці.",
-      "I can answer general app questions: registration, deposits from $500, withdrawals from $100 earned funds, learning, satellites, trading, rewards and the project website. If the question is about a specific error or request, I will pass it to support."
+      "Я можу швидко відповісти на загальні питання по додатку: як зареєструватися, як поповнити від $1,000, як вивести від $100 із заробленого, як працює навчання, сателіти, торгівля, винагороди та де знайти сайт проекту. Якщо питання стосується конкретної помилки або вашої заявки, я передам його підтримці.",
+      "I can answer general app questions: registration, deposits from $1,000, withdrawals from $100 earned funds, learning, satellites, trading, rewards and the project website. If the question is about a specific error or request, I will pass it to support."
     );
   }
   if (/(як почати|з чого почати|start|почати|новач|перший раз|що робити)/i.test(text)) {
     return answer(
-      "Почніть із трьох кроків: 1) прочитайте умови користування; 2) зареєструйте акаунт і збережіть email/пароль; 3) після входу перегляньте Інфо, Активи, Поповнення та Навчання. Навчання відкривається після підтвердженого поповнення від $500.",
-      "Start with three steps: 1) read the terms; 2) create an account and keep your email/password safe; 3) after login, check Info, Assets, Deposit and Learning. Learning opens after an approved deposit from $500."
+      "Почніть із трьох кроків: 1) прочитайте умови користування; 2) зареєструйте акаунт і збережіть email/пароль; 3) після входу перегляньте Інфо, Активи, Поповнення та Навчання. Навчання відкривається після підтвердженого поповнення від $1,000.",
+      "Start with three steps: 1) read the terms; 2) create an account and keep your email/password safe; 3) after login, check Info, Assets, Deposit and Learning. Learning opens after an approved deposit from $1,000."
     );
   }
   if (/(що це|проєкт|проект|about|platform|платформа|united europe crypto|uec)/i.test(text)) {
@@ -668,8 +667,8 @@ function supportAnswer(message) {
   }
   if (/(поповн|deposit|депозит|usdt|trc20|500)/i.test(text)) {
     return answer(
-      "Мінімальна сума поповнення становить $500. Користувач переказує USDT у мережі TRC20 на вказаний гаманець, створює заявку в додатку, а баланс змінюється тільки після підтвердження адміністратором. Ліміт два поповнення рахується лише після підтверджених поповнень.",
-      "The minimum deposit is $500. Send USDT via TRC20 to the shown wallet, create a request in the app, and the balance changes only after admin approval. The two-deposit limit counts only approved deposits."
+      "Мінімальна сума поповнення становить $1,000. Користувач переказує USDT у мережі TRC20 на вказаний гаманець, створює заявку в додатку, а баланс змінюється тільки після підтвердження адміністратором. Ліміт два поповнення рахується лише після підтверджених поповнень.",
+      "The minimum deposit is $1,000. Send USDT via TRC20 to the shown wallet, create a request in the app, and the balance changes only after admin approval. The two-deposit limit counts only approved deposits."
     );
   }
   if (/(вив(е|і)д|withdraw|знят|100|гаманець)/i.test(text)) {
@@ -680,14 +679,14 @@ function supportAnswer(message) {
   }
   if (/(навчан|learning|урок|тест|quiz)/i.test(text)) {
     return answer(
-      "Навчання відкривається після підтвердженого поповнення від $500. Уроки містять коротку інформацію і тест. За правильне проходження тесту може нараховуватися внутрішня винагорода $2.50.",
-      "Learning opens after an approved deposit from $500. Lessons include short information and a quiz. Correct completion can create a $2.50 internal reward."
+      "Навчання відкривається після підтвердженого поповнення від $1,000. Уроки містять коротку інформацію і тест. За правильне проходження тесту може нараховуватися внутрішня винагорода $2.50.",
+      "Learning opens after an approved deposit from $1,000. Lessons include short information and a quiz. Correct completion can create a $2.50 internal reward."
     );
   }
   if (/(сател|satellite|запрош|referr|структур)/i.test(text)) {
     return answer(
-      "Сателіти - це запрошені користувачі. Вони стають активними після підтвердженого поповнення від $500. Активні сателіти поступово відкривають додаткові торгові позиції запрошувачу.",
-      "Satellites are invited users. They become active after an approved deposit from $500. Active satellites gradually unlock additional trading positions for the inviter."
+      "Сателіти - це запрошені користувачі. Вони стають активними після підтвердженого поповнення від $1,000. Активні сателіти поступово відкривають додаткові торгові позиції запрошувачу.",
+      "Satellites are invited users. They become active after an approved deposit from $1,000. Active satellites gradually unlock additional trading positions for the inviter."
     );
   }
   if (/(торг|trade|угод|позиці|дохід|відсот)/i.test(text)) {
@@ -808,8 +807,7 @@ function invitedSatelliteRewardTitle(deposit) {
   const amount = Number(deposit || 0);
   if (amount >= 2000) return "Винагорода запрошеному за поповнення $2,000+";
   if (amount >= 1000) return "Винагорода запрошеному за поповнення $1,000-$1,999";
-  if (amount >= ACTIVE_SATELLITE_MIN_DEPOSIT) return "Винагорода запрошеному за поповнення $500-$999";
-  return "Винагорода запрошеному: $35 / $50 / $100 за рівнем поповнення";
+  return "Винагорода запрошеному: $50 або $100 за рівнем поповнення від $1,000";
 }
 
 async function grantSatelliteRewards(satelliteId) {
@@ -859,7 +857,7 @@ function rewardDefinitions() {
       amount,
       threshold
     })),
-    { type: "reward_invited_satellite", group: "satellites", title: "Винагорода запрошеному після поповнення від $500", amount: 35, satelliteRank: 0, variableAmount: true },
+    { type: "reward_invited_satellite", group: "satellites", title: "Винагорода запрошеному після поповнення від $1,000", amount: 50, satelliteRank: 0, variableAmount: true },
     ...REFERRER_REWARDS.map((amount, index) => ({
       type: `reward_referrer_satellite_${index + 1}`,
       group: "satellites",

@@ -160,14 +160,14 @@ if (!token) location.href = "login.html";
       <img src="https://cryptologos.cc/logos/tether-usdt-logo.png" alt="USDT">
       <span>USDT TRC20</span>
     </div>
-    <p class="hint">Скопіюйте адресу гаманця або відскануйте QR-код. Мінімальна сума поповнення становить $500. Ліміт спрацьовує після двох поповнень, підтверджених адміністратором.</p>
+    <p class="hint">Скопіюйте адресу гаманця або відскануйте QR-код. Мінімальна сума поповнення становить $1,000. Ліміт спрацьовує після двох поповнень, підтверджених адміністратором.</p>
     <div class="instructions">
       <b>Як поповнити:</b>
       <ol>
         <li>У своєму криптогаманці або біржі виберіть валюту <b>USDT</b>.</li>
         <li>Обов'язково виберіть мережу <b>TRC20</b>. Інша мережа може призвести до втрати переказу.</li>
         <li>Скопіюйте адресу нижче або відскануйте QR-код.</li>
-        <li>Надішліть суму від $500, дочекайтеся підтвердження переказу у своєму гаманці.</li>
+        <li>Надішліть суму від $1,000, дочекайтеся підтвердження переказу у своєму гаманці.</li>
         <li>Після оплати введіть суму в полі нижче й натисніть “Я оплатив”. Заявка піде адміністратору на перевірку.</li>
       </ol>
     </div>
@@ -175,7 +175,7 @@ if (!token) location.href = "login.html";
     <button id="requestWalletBtn" class="request-wallet-btn" type="button" onclick="requestWallet()" hidden>Запросити гаманець</button>
     <div class="memo-note">memo не вимагається</div>
     <div class="qr"><img id="qr" alt="QR"></div>
-    <input id="amount" type="number" min="500" step="0.01" placeholder="Введіть суму від $500" />
+    <input id="amount" type="number" min="1000" step="0.01" placeholder="Введіть суму від $1,000" />
     <button class="submit-btn" onclick="deposit()">Я оплатив</button>
   </section>
 </main>
@@ -262,7 +262,7 @@ function copyWallet() {
 async function deposit() {
   if (!walletReady) return alert("Спочатку потрібно отримати персональний гаманець від адміністратора");
   const amount = Number(document.getElementById("amount").value);
-  if (!Number.isFinite(amount) || amount < 500) return alert("Мінімальна сума поповнення $500");
+  if (!Number.isFinite(amount) || amount < 1000) return alert("Мінімальна сума поповнення $1,000");
   try {
     const response = await fetch(API_URL + "/deposit", {
       method: "POST",

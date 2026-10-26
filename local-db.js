@@ -115,6 +115,21 @@ class LocalQuery {
     return this;
   }
 
+  gte(column, value) {
+    this.filters.push({ type: "gte", column, value });
+    return this;
+  }
+
+  lte(column, value) {
+    this.filters.push({ type: "lte", column, value });
+    return this;
+  }
+
+  like(column, pattern) {
+    this.filters.push({ type: "like", column, pattern: String(pattern ?? "") });
+    return this;
+  }
+
   in(column, values) {
     this.filters.push({ type: "in", column, values: Array.isArray(values) ? values : [] });
     return this;
@@ -211,6 +226,13 @@ class LocalDb {
       if (filter.type === "eq") return row[filter.column] === filter.value;
       if (filter.type === "neq") return row[filter.column] !== filter.value;
       if (filter.type === "in") return filter.values.includes(row[filter.column]);
+      if (filter.type === "gte") return compareValues(row[filter.column], filter.value) >= 0;
+      if (filter.type === "lte") return compareValues(row[filter.column], filter.value) <= 0;
+      if (filter.type === "like") {
+        const escaped = filter.pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const regex = new RegExp(`^${escaped.replace(/%/g, ".*").replace(/_/g, ".")}$`);
+        return regex.test(String(row[filter.column] ?? ""));
+      }
       return true;
     });
   }
