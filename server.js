@@ -1515,7 +1515,10 @@ app.get("/health", async (req, res) => {
   };
   if (USE_SUPABASE) {
     const { error } = await supabase.from("settings").select("id").limit(1);
-    if (error) return res.status(503).json({ ...payload, success: false, database: "unavailable" });
+    if (error) {
+      console.error("SUPABASE HEALTH CHECK FAILED:", error.code || "unknown", error.message || "unknown error");
+      return res.status(503).json({ ...payload, success: false, database: "unavailable" });
+    }
     payload.database = "connected";
   }
   return res.json(payload);
