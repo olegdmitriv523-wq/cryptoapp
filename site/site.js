@@ -1,10 +1,10 @@
 (function () {
   const LANGUAGES = [
-    ["en", "English"], ["uk", "Українська"], ["ru", "Русский"], ["kk", "Қазақша"],
+    ["en", "English"], ["ru", "Русский"], ["uk", "Українська"], ["kk", "Қазақша"],
     ["pl", "Polski"], ["ro", "Română"], ["de", "Deutsch"], ["fr", "Français"],
-    ["pt", "Português"], ["es", "Español"], ["it", "Italiano"]
+    ["pt", "Português"], ["es", "Español"], ["it", "Italiano"], ["ar", "العربية"], ["hi", "हिन्दी"]
   ];
-  const GOOGLE_CODES = { en: "en", uk: "uk", ru: "ru", kk: "kk", pl: "pl", ro: "ro", de: "de", fr: "fr", pt: "pt", es: "es", it: "it" };
+  const GOOGLE_CODES = { en: "en", uk: "uk", ru: "ru", kk: "kk", pl: "pl", ro: "ro", de: "de", fr: "fr", pt: "pt", es: "es", it: "it", ar: "ar", hi: "hi" };
   const CURRENCY = /(\$\s?[\d,.]+|[\d,.]+\s?\$|USD|USDT|TRC20|BTC|ETH|BNB|SOL|XRP|ADA|DOGE|UEC)/gi;
   const CACHE_PREFIX = "uec_site_translation_";
   const SPLIT = "[[UEC_SITE_SPLIT]]";
@@ -13,8 +13,8 @@
   let trackedNodes = [];
 
   function currentLang() {
-    const saved = localStorage.getItem("site_language") || localStorage.getItem("app_language") || "en";
-    return GOOGLE_CODES[saved] ? saved : "en";
+    const saved = localStorage.getItem("site_language") || localStorage.getItem("app_language") || "ru";
+    return GOOGLE_CODES[saved] ? saved : "ru";
   }
 
   function setLanguage(lang) {

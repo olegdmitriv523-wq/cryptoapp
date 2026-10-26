@@ -197,6 +197,7 @@ const MAX_VERIFICATION_ATTEMPTS = 5;
 const SUPABASE_URL = String(process.env.SUPABASE_URL || "").trim().replace(/\/$/, "");
 const SUPABASE_SERVICE_ROLE_KEY = String(process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
 const USE_SUPABASE = Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
+const SUPABASE_CONFIG_INCOMPLETE = Boolean(SUPABASE_URL) !== Boolean(SUPABASE_SERVICE_ROLE_KEY);
 const supabase = USE_SUPABASE
   ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false }
@@ -204,13 +205,16 @@ const supabase = USE_SUPABASE
   : createLocalDb(DATA_FILE);
 const STORAGE_BACKEND = USE_SUPABASE
   ? "supabase"
-  : (DATA_FILE.startsWith("/var/data/") ? "persistent-disk" : "writable-fallback");
+  : SUPABASE_CONFIG_INCOMPLETE
+    ? "supabase-config-incomplete"
+    : (DATA_FILE.startsWith("/var/data/") ? "persistent-disk" : "writable-fallback");
 if (USE_SUPABASE) console.log(`Using Supabase storage: ${SUPABASE_URL}`);
+if (SUPABASE_CONFIG_INCOMPLETE) console.error("SUPABASE CONFIGURATION INCOMPLETE: set both SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY");
 const TELEGRAM_ENV = {
   main: process.env.TELEGRAM_TOKEN || "",
   mirror: process.env.TELEGRAM_MIRROR_TOKEN || "",
   support: process.env.SUPPORT_TELEGRAM_TOKEN || "",
-  chatId: process.env.TELEGRAM_CHAT_ID || "337179852"
+  chatId: process.env.TELEGRAM_CHAT_ID || ""
 };
 const ADMIN_KEY = process.env.ADMIN_KEY || "";
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
@@ -271,8 +275,6 @@ const TRADE_STREAK_REWARDS = [
   [50, 75],
   [100, 150]
 ];
-const POOL_BASE = 1000347;
-const POOL_START_DAY = Date.UTC(2026, 5, 22) / 86400000;
 
 function auth(req, res, next) {
   const token = req.headers.authorization;
@@ -465,46 +467,18 @@ async function addWalletCreateSignal(user) {
   }
 }
 
-function poolRateForDay(dayNumber) {
-  const date = new Date(dayNumber * 86400000).toISOString().slice(0, 10);
-  let hash = 2166136261;
-  for (const character of date) {
-    hash ^= character.charCodeAt(0);
-    hash = Math.imul(hash, 16777619) >>> 0;
-  }
-  return 1 + (100 + (hash % 401)) / 10000;
-}
-
-function poolValueForDay(dayNumber) {
-  let value = POOL_BASE;
-  if (dayNumber > POOL_START_DAY) {
-    for (let day = POOL_START_DAY + 1; day <= dayNumber; day += 1) value *= poolRateForDay(day);
-  } else if (dayNumber < POOL_START_DAY) {
-    for (let day = POOL_START_DAY; day > dayNumber; day -= 1) value /= poolRateForDay(day);
-  }
-  return Number(value.toFixed(2));
-}
-
-function getPoolSnapshot(days = 30) {
-  const today = Math.floor(Date.now() / 86400000);
-  const series = [];
-  for (let day = today - days + 1; day <= today; day += 1) {
-    series.push({
-      date: new Date(day * 86400000).toISOString().slice(0, 10),
-      value: poolValueForDay(day)
-    });
-  }
-  return {
-    current: poolValueForDay(today),
-    nextChangeAt: new Date((today + 1) * 86400000).toISOString(),
-    dailyChangePercent: Number(((poolRateForDay(today) - 1) * 100).toFixed(2)),
-    series
-  };
+function getPoolSnapshot() {
+  // Do not present generated numbers as real assets or platform liquidity.
+  return { available: false, current: null, dailyChangePercent: null, series: [] };
 }
 
 async function addSignal(signal) {
   const { error } = await supabase.from("signals").insert([signal]);
   if (error) throw error;
+}
+
+function isUniqueViolation(error) {
+  return error?.code === "23505" || /duplicate key|unique constraint/i.test(String(error?.message || ""));
 }
 
 function cleanTelegramToken(value) {
@@ -810,6 +784,17 @@ function nextMidnightKyivMs(now = Date.now()) {
 async function grantRewardOnce(userId, type, amount, wallet) {
   const user = await findUser(userId, "id,balance");
   if (!user || !Number.isFinite(Number(amount)) || Number(amount) <= 0) return false;
+  if (USE_SUPABASE) {
+    const { data, error } = await supabase.rpc("grant_reward_once", {
+      p_user_id: user.id,
+      p_type: type,
+      p_amount: Number(amount),
+      p_wallet: wallet
+    });
+    if (error) throw error;
+    return Boolean(data?.ok);
+  }
+
   let existingQuery = supabase
     .from("signals")
     .select("id")
@@ -820,10 +805,22 @@ async function grantRewardOnce(userId, type, amount, wallet) {
   const { data: existing } = await existingQuery.maybeSingle();
   if (existing) return false;
 
+  const { data: marker, error: markerError } = await supabase
+    .from("signals")
+    .insert([{ user_id: user.id, type, amount: Number(amount), wallet, status: "rewarded" }])
+    .select("id")
+    .single();
+  if (markerError) {
+    if (isUniqueViolation(markerError)) return false;
+    throw markerError;
+  }
+
   const newBalance = Number((Number(user.balance || 0) + Number(amount)).toFixed(2));
   const { error } = await supabase.from("users").update({ balance: newBalance }).eq("id", user.id);
-  if (error) throw error;
-  await addSignal({ user_id: user.id, type, amount: Number(amount), wallet, status: "rewarded" });
+  if (error) {
+    await supabase.from("signals").delete().eq("id", marker.id);
+    throw error;
+  }
   return true;
 }
 
@@ -1010,6 +1007,11 @@ async function settleMatureTrades(userId) {
     .order("created_at", { ascending: true });
 
   for (const trade of pending || []) {
+    if (USE_SUPABASE) {
+      const { error } = await supabase.rpc("settle_trade_once", { p_trade_id: trade.id });
+      if (error) throw error;
+      continue;
+    }
     const { data: updated } = await supabase
       .from("signals")
       .update({ status: "rewarded" })
@@ -1497,10 +1499,20 @@ app.post("/profile/email/verify", authLimiter, auth, async (req, res) => {
   }
 });
 
-app.get("/health", (req, res) => res.json({
-  success: true,
-  storage: STORAGE_BACKEND
-}));
+app.get("/health", async (req, res) => {
+  const payload = {
+    success: true,
+    storage: STORAGE_BACKEND,
+    email_provider: EMAIL_PROVIDER || "not-configured",
+    telegram_configured: Boolean(TELEGRAM_ENV.main && TELEGRAM_ENV.chatId)
+  };
+  if (USE_SUPABASE) {
+    const { error } = await supabase.from("settings").select("id").limit(1);
+    if (error) return res.status(503).json({ ...payload, success: false, database: "unavailable" });
+    payload.database = "connected";
+  }
+  return res.json(payload);
+});
 
 app.get("/support/history", auth, async (req, res) => {
   try {
@@ -1648,7 +1660,7 @@ app.post("/deposit", actionLimiter, auth, async (req, res) => {
       .select("id", { count: "exact", head: true })
       .eq("user_id", user.id)
       .eq("type", "deposit")
-      .eq("status", "approved");
+      .in("status", ["pending", "approved"]);
     if (countError) throw countError;
     if ((count || 0) >= MAX_DEPOSIT_REQUESTS) {
       return res.json({ success: false, message: "Deposit limit reached" });
@@ -1731,7 +1743,12 @@ app.post("/withdraw", actionLimiter, auth, async (req, res) => {
     const feeAmount = withdrawalFeeAmount(amount);
     const netAmount = withdrawalNetAmount(amount);
     const details = withdrawalPayload(wallet, amount);
-    await addSignal({ user_id: user.id, type: "withdraw", amount: netAmount, wallet: details, status: "pending" });
+    try {
+      await addSignal({ user_id: user.id, type: "withdraw", amount: netAmount, wallet: details, status: "pending" });
+    } catch (error) {
+      if (isUniqueViolation(error)) return res.json({ success: false, message: "Withdrawal request is already pending" });
+      throw error;
+    }
     await addSignal({ user_id: user.id, type: "withdraw_wallet", amount: 0, wallet, status: "saved" });
     await sendTelegramMessage(requestTelegramText("withdraw", user, netAmount, details), ["mirror", "main"]);
     return res.json({ success: true, message: "Signal created", gross_amount: amount, fee_amount: feeAmount, net_amount: netAmount });
@@ -1793,10 +1810,33 @@ app.post("/quiz/complete", actionLimiter, auth, async (req, res) => {
       .maybeSingle();
     if (existing) return res.json({ success: false, message: "Already completed" });
 
+    if (USE_SUPABASE) {
+      const { data: result, error: rpcError } = await supabase.rpc("grant_quiz_once", {
+        p_user_id: req.userId,
+        p_quiz_id: quizId,
+        p_amount: QUIZ_REWARD_AMOUNT,
+        p_min_deposit: LEARNING_MIN_DEPOSIT
+      });
+      if (rpcError) throw rpcError;
+      if (!result?.ok) return res.json({ success: false, message: result?.message || "Already completed" });
+      return res.json({ success: true, reward: Number(result.reward), balance: Number(result.balance) });
+    }
+
     const newBalance = Number((Number(user.balance || 0) + QUIZ_REWARD_AMOUNT).toFixed(2));
+    const { data: marker, error: markerError } = await supabase
+      .from("signals")
+      .insert([{ user_id: req.userId, type, amount: QUIZ_REWARD_AMOUNT, wallet: `quiz:${quizId}`, status: "rewarded" }])
+      .select("id")
+      .single();
+    if (markerError) {
+      if (isUniqueViolation(markerError)) return res.json({ success: false, message: "Already completed" });
+      throw markerError;
+    }
     const { error } = await supabase.from("users").update({ balance: newBalance }).eq("id", req.userId);
-    if (error) throw error;
-    await addSignal({ user_id: req.userId, type, amount: QUIZ_REWARD_AMOUNT, wallet: `quiz:${quizId}`, status: "rewarded" });
+    if (error) {
+      await supabase.from("signals").delete().eq("id", marker.id);
+      throw error;
+    }
     return res.json({ success: true, reward: QUIZ_REWARD_AMOUNT, balance: newBalance });
   } catch (error) {
     console.error("QUIZ ERROR:", error);
@@ -1894,6 +1934,7 @@ app.post("/trade/execute", actionLimiter, auth, async (req, res) => {
     return res.json({ success: true, pending: true, reward, balance: status.balance, completesIn: TRADE_SETTLE_MS });
   } catch (error) {
     console.error("TRADE ERROR:", error);
+    if (isUniqueViolation(error)) return res.json({ success: false, message: "Trade pending" });
     return res.status(500).json({ success: false, message: "Server error" });
   }
 });
@@ -2043,26 +2084,43 @@ app.get("/admin/referrals", adminLimiter, adminAuth, async (req, res) => {
 });
 
 app.post("/admin/add-balance", adminLimiter, adminAuth, async (req, res) => {
-  const user = await findUser(Number(req.body.user_id), "id,balance");
-  const amount = Number(req.body.amount);
-  if (!user || !Number.isFinite(amount) || Math.abs(amount) > 1000000) return res.json({ success: false });
-  const balance = Number(user.balance || 0) + amount;
-  await supabase.from("users").update({ balance }).eq("id", user.id);
-  return res.json({ success: true, balance });
+  try {
+    const user = await findUser(Number(req.body.user_id), "id,balance");
+    const amount = Number(req.body.amount);
+    if (!user || !Number.isFinite(amount) || Math.abs(amount) > 1000000) return res.json({ success: false, message: "Invalid balance change" });
+    const balance = Number((Number(user.balance || 0) + amount).toFixed(2));
+    if (balance < 0) return res.json({ success: false, message: "Balance cannot be negative" });
+    const { error } = await supabase.from("users").update({ balance }).eq("id", user.id);
+    if (error) throw error;
+    await addSignal({ user_id: user.id, type: "admin_balance_adjustment", amount, wallet: JSON.stringify({ previous_balance: Number(user.balance || 0), new_balance: balance }), status: "approved" });
+    return res.json({ success: true, balance });
+  } catch (error) {
+    console.error("ADMIN ADD BALANCE ERROR:", error);
+    return res.status(500).json({ success: false, message: "Balance update error" });
+  }
 });
 
 app.post("/admin/set-balance", adminLimiter, adminAuth, async (req, res) => {
-  const userId = Number(req.body.user_id);
-  const amount = Number(req.body.amount);
-  if (!Number.isInteger(userId) || userId <= 0 || !Number.isFinite(amount) || amount < 0 || amount > 1000000) return res.json({ success: false });
-  await supabase.from("users").update({ balance: amount }).eq("id", userId);
-  return res.json({ success: true, balance: amount });
+  try {
+    const userId = Number(req.body.user_id);
+    const amount = Number(req.body.amount);
+    const user = await findUser(userId, "id,balance");
+    if (!user || !Number.isFinite(amount) || amount < 0 || amount > 1000000) return res.json({ success: false, message: "Invalid balance" });
+    const balance = Number(amount.toFixed(2));
+    const { error } = await supabase.from("users").update({ balance }).eq("id", userId);
+    if (error) throw error;
+    await addSignal({ user_id: userId, type: "admin_balance_adjustment", amount: Number((balance - Number(user.balance || 0)).toFixed(2)), wallet: JSON.stringify({ previous_balance: Number(user.balance || 0), new_balance: balance }), status: "approved" });
+    return res.json({ success: true, balance });
+  } catch (error) {
+    console.error("ADMIN SET BALANCE ERROR:", error);
+    return res.status(500).json({ success: false, message: "Balance update error" });
+  }
 });
 
 app.post("/admin/update-user", adminLimiter, adminAuth, async (req, res) => {
   try {
     const userId = Number(req.body.user_id);
-    const current = await findUser(userId, "id,email,referrer_id,wallet_address");
+    const current = await findUser(userId, "id,email,referrer_id,wallet_address,balance,deposit");
     if (!current) return res.json({ success: false, message: "User not found" });
 
     const fullname = cleanText(req.body.fullname, 80);
@@ -2087,6 +2145,9 @@ app.post("/admin/update-user", adminLimiter, adminAuth, async (req, res) => {
     }
     if (!Number.isFinite(balance) || balance < 0 || balance > 1000000 || !Number.isFinite(deposit) || deposit < 0 || deposit > 1000000) {
       return res.json({ success: false, message: "Invalid balance or deposit" });
+    }
+    if (deposit > balance) {
+      return res.json({ success: false, message: "Deposit cannot exceed balance" });
     }
     if (referrerText && !referrerId) {
       return res.json({ success: false, message: "Invalid referrer ID" });
@@ -2122,6 +2183,19 @@ app.post("/admin/update-user", adminLimiter, adminAuth, async (req, res) => {
     };
     const { error } = await supabase.from("users").update(updates).eq("id", userId);
     if (error) throw error;
+    await addSignal({
+      user_id: userId,
+      type: "admin_user_update",
+      amount: Number((updates.balance - Number(current.balance || 0)).toFixed(2)),
+      wallet: JSON.stringify({
+        changed_fields: ["fullname", "nickname", "country", "phone", "email", "wallet_address", "balance", "deposit", "referrer_id"],
+        previous_balance: Number(current.balance || 0),
+        new_balance: updates.balance,
+        previous_deposit: Number(current.deposit || 0),
+        new_deposit: updates.deposit
+      }),
+      status: "approved"
+    });
     await refreshSatelliteCount(current.referrer_id);
     await refreshSatelliteCount(referrerId);
     return res.json({ success: true });
@@ -2219,6 +2293,13 @@ app.post("/admin/approve", adminLimiter, adminAuth, async (req, res) => {
     const { data: signal } = await supabase.from("signals").select("id,user_id,type,amount,wallet,status").eq("id", signalId).maybeSingle();
     if (!signal || signal.status !== "pending") return res.json({ success: false, message: "Request unavailable" });
     if (signal.type === "deposit" || signal.type === "withdraw") {
+      if (USE_SUPABASE) {
+        const { data: result, error: rpcError } = await supabase.rpc("approve_financial_signal", { p_signal_id: signalId });
+        if (rpcError) throw rpcError;
+        if (!result?.ok) return res.json({ success: false, message: result?.message || "Approval unavailable" });
+        if (signal.type === "deposit") await grantSatelliteRewards(signal.user_id);
+        return res.json({ success: true, balance: Number(result.balance || 0), deposit: Number(result.deposit || 0) });
+      }
       const amount = positiveAmount(signal.amount);
       const withdrawDebitAmount = signal.type === "withdraw" ? withdrawalGrossAmount(signal) : amount;
       const user = await findUser(signal.user_id, "id,balance,deposit");

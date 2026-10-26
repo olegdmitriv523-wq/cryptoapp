@@ -21,7 +21,7 @@ const I18N = {
     learning: "Навчання криптовалютам", info: "Про проєкт", deposit: "Поповнення", withdraw: "Виведення коштів",
     profile: "Дані користувача", logout: "Вийти", balance: "Баланс", wallet: "Гаманець", userData: "Дані користувача",
     addFunds: "Поповнити", withdrawShort: "Вивести", mainBalance: "Основний баланс", operationHistory: "Історія операцій і винагород",
-    pool: "Загальний пул", dailyChange: "Добова зміна", perDay: "за добу", readLesson: "Прочитайте короткий урок і дайте правильну відповідь. Кожен тест можна пройти один раз.",
+    pool: "Модельний індикатор (не реальні активи)", dailyChange: "Добова зміна", perDay: "за добу", readLesson: "Прочитайте короткий урок і дайте правильну відповідь. Кожен тест можна пройти один раз.",
     reward10: "Винагорода становить $2.50", check: "Перевірити", mainTrade: "Основна торгівля",
     tradeButton: "Торгувати", locked: "Заблоковано", availableAll: "Доступна всім користувачам",
     project: "United Europe Crypto", market: "Ринок", copy: "Скопійовано", back: "Назад"
@@ -32,7 +32,7 @@ const I18N = {
     learning: "Обучение криптовалютам", info: "О проекте", deposit: "Пополнение", withdraw: "Вывод средств",
     profile: "Данные пользователя", logout: "Выйти", balance: "Баланс", wallet: "Кошелек", userData: "Данные пользователя",
     addFunds: "Пополнить", withdrawShort: "Вывести", mainBalance: "Основной баланс", operationHistory: "История операций и наград",
-    pool: "Общий пул", dailyChange: "Суточное изменение", perDay: "за сутки", readLesson: "Прочитайте короткий урок и дайте правильный ответ. Каждый тест можно пройти один раз.",
+    pool: "Модельный индикатор (не реальные активы)", dailyChange: "Суточное изменение", perDay: "за сутки", readLesson: "Прочитайте короткий урок и дайте правильный ответ. Каждый тест можно пройти один раз.",
     reward10: "Вознаграждение составляет $2.50", check: "Проверить", mainTrade: "Основная торговля",
     tradeButton: "Торговать", locked: "Заблокировано", availableAll: "Доступно всем пользователям",
     project: "United Europe Crypto", market: "Рынок", copy: "Скопировано", back: "Назад"
@@ -210,12 +210,12 @@ const GOOGLE_LANG_CODES = {
 };
 
 function currentLang() {
-  const saved = localStorage.getItem("app_language") || "en";
-  return I18N[saved] ? saved : "en";
+  const saved = localStorage.getItem("app_language") || "ru";
+  return I18N[saved] ? saved : "ru";
 }
 
 function tr(key) {
-  return (I18N[currentLang()] && I18N[currentLang()][key]) || I18N.uk[key] || key;
+  return (I18N[currentLang()] && I18N[currentLang()][key]) || I18N.ru[key] || key;
 }
 
 function googleTargetLang() {

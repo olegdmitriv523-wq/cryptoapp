@@ -10,13 +10,15 @@
     fr: "fr",
     pt: "pt",
     es: "es",
-    it: "it"
+    it: "it",
+    ar: "ar",
+    hi: "hi"
   };
 
   function savedLanguage() {
     try {
-      const lang = localStorage.getItem("app_language") || "en";
-      return GOOGLE_LANG_CODES[lang] ? lang : "en";
+      const lang = localStorage.getItem("app_language") || "ru";
+      return GOOGLE_LANG_CODES[lang] ? lang : "ru";
     } catch {
       return "en";
     }
@@ -37,7 +39,7 @@
   setTranslateCookie(lang);
   try {
     if (page !== "loading.html" && (lang !== "uk" || sessionStorage.getItem("language_switching") === "1")) {
-      document.documentElement.classList.add("app-language-pending");
+    document.documentElement.classList.add("app-language-pending");
     }
   } catch {
     if (page !== "loading.html" && lang !== "uk") document.documentElement.classList.add("app-language-pending");

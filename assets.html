@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="uk">
+<html lang="ru">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -46,7 +46,7 @@ body { margin:0; font-family:Arial,sans-serif; }
 
   <section class="card">
     <div class="pool-head">
-      <div><div class="title" data-i18n="pool">Загальний пул</div><div class="pool-value" id="pool">$1,000,347.00</div></div>
+      <div><div class="title" data-i18n="pool">Модельний індикатор (не реальні активи)</div><div class="pool-value" id="pool">$1,000,347.00</div></div>
       <div><div class="title" data-i18n="dailyChange">Добова зміна</div><div class="green" id="poolChange">+0%</div></div>
     </div>
     <canvas id="poolChart"></canvas>
@@ -106,6 +106,13 @@ function renderHistory(history) {
 
 function renderPool(pool) {
   lastPool = pool;
+  if (!pool?.available) {
+    document.querySelector(".pool-value").textContent = "Нет подтвержденных данных";
+    document.getElementById("poolChange").textContent = "Реальный пул не подключен";
+    document.getElementById("poolChart").style.display = "none";
+    if (poolChart) { poolChart.destroy(); poolChart = null; }
+    return;
+  }
   document.getElementById("pool").textContent = money(pool.current);
   document.getElementById("poolChange").textContent = `+${Number(pool.dailyChangePercent).toFixed(2)}% ${localText("perDay")}`;
   if (poolChart) poolChart.destroy();
