@@ -1033,7 +1033,8 @@ async function sendVerificationEmail(email, code, purpose = "registration") {
     : (purpose === "password_reset" ? "відновлення пароля" : "реєстрації");
   const subject = `Код підтвердження United Europe Crypto: ${code}`;
   const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#111"><h2>United Europe Crypto</h2><p>Ваш код для ${action}:</p><div style="font-size:34px;font-weight:700;letter-spacing:8px;margin:24px 0">${code}</div><p>Код дійсний 10 хвилин. Якщо ви не робили цей запит, просто проігноруйте лист.</p></div>`;
-  if (BREVO_API_KEY && BREVO_SENDER_EMAIL) {
+  const provider = BREVO_API_KEY && BREVO_SENDER_EMAIL ? "brevo" : (RESEND_API_KEY ? "resend" : "");
+  if (provider === "brevo") {
     await axios.post("https://api.brevo.com/v3/smtp/email", {
       sender: { name: "United Europe Crypto", email: BREVO_SENDER_EMAIL },
       to: [{ email }],
@@ -1044,7 +1045,11 @@ async function sendVerificationEmail(email, code, purpose = "registration") {
     });
     return;
   }
-  if (!RESEND_API_KEY) throw new Error("Email provider is not configured");
+  if (!RESEND_API_KEY) {
+    const error = new Error("Email provider is not configured");
+    error.code = "EMAIL_PROVIDER_NOT_CONFIGURED";
+    throw error;
+  }
   await axios.post("https://api.resend.com/emails", {
     from: EMAIL_FROM,
     to: [email],
@@ -1159,7 +1164,13 @@ async function createRegisteredUser(data, passwordHash, ip, emailVerified = fals
 }
 
 app.get("/registration/settings", (req, res) => {
-  res.json({ success: true, emailVerificationRequired: EMAIL_VERIFICATION_REQUIRED });
+  const emailProvider = BREVO_API_KEY && BREVO_SENDER_EMAIL ? "brevo" : (RESEND_API_KEY ? "resend" : "");
+  res.json({
+    success: true,
+    emailVerificationRequired: EMAIL_VERIFICATION_REQUIRED,
+    emailProviderConfigured: Boolean(emailProvider),
+    emailProvider: emailProvider || null
+  });
 });
 
 app.post("/register/start", registerLimiter, async (req, res) => {
@@ -1188,7 +1199,10 @@ app.post("/register/start", registerLimiter, async (req, res) => {
     return res.json({ success: true, pendingToken, email: data.email });
   } catch (error) {
     console.error("REGISTER START ERROR:", error.response?.data || error.message);
-    return res.status(500).json({ success: false, message: "Email send error" });
+    return res.status(500).json({
+      success: false,
+      message: error.code === "EMAIL_PROVIDER_NOT_CONFIGURED" ? "Email provider is not configured" : "Email send error"
+    });
   }
 });
 
