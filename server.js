@@ -4,6 +4,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
 const axios = require("axios");
 const crypto = require("crypto");
 const { createLocalDb } = require("./local-db");
@@ -126,7 +127,40 @@ app.get("/:file", (req, res, next) => {
 });
 
 const DEFAULT_DATA_FILE = process.env.RENDER ? "/var/data/app-data.json" : path.join(__dirname, "app-data.json");
-const DATA_FILE = process.env.DATA_FILE || DEFAULT_DATA_FILE;
+
+function writableDataPath(candidate) {
+  const target = path.resolve(candidate);
+  const directory = path.dirname(target);
+  const probe = `${target}.write-test-${process.pid}`;
+  try {
+    fs.mkdirSync(directory, { recursive: true });
+    fs.writeFileSync(probe, "ok");
+    fs.unlinkSync(probe);
+    return target;
+  } catch (error) {
+    console.error(`DATA FILE UNAVAILABLE (${target}):`, error.message);
+    try { fs.unlinkSync(probe); } catch {}
+    return "";
+  }
+}
+
+function resolveDataFile() {
+  const configured = process.env.DATA_FILE || DEFAULT_DATA_FILE;
+  const candidates = [configured];
+  if (!process.env.DATA_FILE && process.env.RENDER) {
+    candidates.push(path.join(__dirname, "app-data.json"), path.join(os.tmpdir(), "cryptoapp-app-data.json"));
+  }
+  for (const candidate of candidates) {
+    const resolved = writableDataPath(candidate);
+    if (resolved) {
+      if (resolved !== path.resolve(configured)) console.warn(`Using writable data fallback: ${resolved}`);
+      return resolved;
+    }
+  }
+  throw new Error("No writable data file path available");
+}
+
+const DATA_FILE = resolveDataFile();
 
 function readOrCreateFileSecret() {
   const secretPath = process.env.APP_SECRET_FILE || path.join(path.dirname(DATA_FILE), "app-secret.txt");
