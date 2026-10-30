@@ -85,7 +85,7 @@ body{margin:0;font-family:Arial,sans-serif}.info-page{width:min(900px,calc(100% 
     <p>Криптовалюти є високоризиковими активами. Їхня ціна може швидко змінюватися, а технічні, правові або ринкові фактори можуть призвести до втрати коштів. Інформація в додатку має навчальний та інформаційний характер і не є індивідуальною інвестиційною рекомендацією.</p>
   </section>
 </main>
-<script>if(!localStorage.getItem("token"))location.href="login.html";</script>
+<script>if(localStorage.getItem("logged_in") !== "1" && !localStorage.getItem("token"))location.href="login.html";</script>
 <script src="app-nav.js"></script>
 </body>
 </html>

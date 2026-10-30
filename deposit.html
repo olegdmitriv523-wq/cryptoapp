@@ -145,8 +145,8 @@ input {
 <body>
 <script>
 const API_URL = ["localhost", "127.0.0.1"].includes(location.hostname) ? location.origin : "https://cryptoapp-eqc5.onrender.com";
-const token = localStorage.getItem("token");
-if (!token) location.href = "login.html";
+const token = localStorage.getItem("token") || "";
+if (localStorage.getItem("logged_in") !== "1" && !token) location.href = "login.html";
 </script>
 
 <main class="page">
@@ -211,6 +211,7 @@ async function loadWallet() {
   return data;
   } catch {
     localStorage.removeItem("token");
+    localStorage.removeItem("logged_in");
     location.href = "login.html";
   }
 }
@@ -238,6 +239,7 @@ async function requestWallet() {
   } catch (error) {
     if (error.message === "auth") {
       localStorage.removeItem("token");
+      localStorage.removeItem("logged_in");
       location.href = "login.html";
       return;
     }

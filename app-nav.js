@@ -14,6 +14,8 @@ const APP_LANGUAGES = [
   ["it", "Italiano"]
 ];
 
+if (localStorage.getItem("token")) localStorage.setItem("logged_in", "1");
+
 const I18N = {
   uk: {
     navHome: "Додому", navTrade: "Торгівля", navAssets: "Активи", navRewards: "Винагороди", navLearning: "Навчання", navInfo: "Інфо",
@@ -748,9 +750,9 @@ function renderSupportMessages(messages = []) {
 
 async function loadSupportHistory() {
   const token = localStorage.getItem("token");
-  if (!token) return;
+  if (!token && localStorage.getItem("logged_in") !== "1") return;
   try {
-    const response = await fetch(supportApiUrl + "/support/history", { headers: { Authorization: token } });
+    const response = await fetch(supportApiUrl + "/support/history", { credentials: "include", headers: token ? { Authorization: token } : {} });
     const data = await response.json();
     if (data.success) renderSupportMessages(data.messages || []);
   } catch {}
@@ -760,13 +762,14 @@ async function sendSupportMessage() {
   const input = document.querySelector(".support-input");
   const text = input?.value.trim();
   const token = localStorage.getItem("token");
-  if (!text || !token) return;
+  if (!text || (!token && localStorage.getItem("logged_in") !== "1")) return;
   input.value = "";
   renderSupportMessages([{ role: "user", text, created_at: new Date().toISOString() }, { role: "bot", text: "Пишу відповідь...", created_at: new Date().toISOString() }]);
   try {
     const response = await fetch(supportApiUrl + "/support/chat", {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: token },
+      credentials: "include",
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: token } : {}) },
       body: JSON.stringify({ message: text })
     });
     const data = await response.json();
@@ -812,7 +815,7 @@ function openSupportWidget() {
 }
 
 function renderSupportButton() {
-  if (document.body.dataset.noNav === "true" || !localStorage.getItem("token")) return;
+  if (document.body.dataset.noNav === "true" || (localStorage.getItem("logged_in") !== "1" && !localStorage.getItem("token"))) return;
   if (document.querySelector(".support-fab")) return;
   const button = document.createElement("button");
   button.type = "button";

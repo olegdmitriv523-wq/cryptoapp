@@ -18,6 +18,7 @@ try {
 
 let res = await fetch(url, {
 method:"POST",
+credentials:"include",
 headers:{"Content-Type":"application/json"},
 body:JSON.stringify({email,password})
 });
@@ -28,13 +29,8 @@ console.log(data);
 
 if(data.success){
 
-// 🔥 ТЕПЕР ПРАВИЛЬНО (через token)
-if(data.token){
-localStorage.setItem("token", data.token);
-} else {
-alert("Нема токена");
-return;
-}
+localStorage.setItem("logged_in", "1");
+localStorage.removeItem("token");
 
 alert("Успіх");
 

@@ -69,9 +69,30 @@ function securityHeaders(req, res, next) {
 
 function createRateLimit({ windowMs, max, message }) {
   const hits = new Map();
-  return (req, res, next) => {
+  return async (req, res, next) => {
     const now = Date.now();
     const key = `${clientIp(req)}:${req.route?.path || req.path}`;
+
+    if (USE_SUPABASE) {
+      try {
+        const { data, error } = await supabase.rpc("consume_rate_limit", {
+          p_key: key,
+          p_window_seconds: Math.ceil(windowMs / 1000),
+          p_max: max
+        });
+        if (!error && data && typeof data.allowed === "boolean") {
+          if (!data.allowed) {
+            const retryAfter = Math.max(Number(data.retry_after || 1), 1);
+            res.setHeader("Retry-After", retryAfter);
+            return res.status(429).json({ success: false, message });
+          }
+          return next();
+        }
+      } catch (error) {
+        console.error("DISTRIBUTED RATE LIMIT ERROR:", error.message);
+      }
+    }
+
     const entry = hits.get(key) || { count: 0, resetAt: now + windowMs };
     if (entry.resetAt <= now) {
       entry.count = 0;
@@ -224,6 +245,9 @@ const TELEGRAM_ENV = {
   chatId: process.env.TELEGRAM_CHAT_ID || ""
 };
 const ADMIN_KEY = process.env.ADMIN_KEY || "";
+const ADMIN_SESSION_TTL = String(process.env.ADMIN_SESSION_TTL || "30m").trim();
+const ADMIN_SESSION_MS_RAW = Number(process.env.ADMIN_SESSION_MS || 30 * 60 * 1000);
+const ADMIN_SESSION_MS = Number.isFinite(ADMIN_SESSION_MS_RAW) && ADMIN_SESSION_MS_RAW > 0 ? ADMIN_SESSION_MS_RAW : 30 * 60 * 1000;
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const EMAIL_FROM = String(process.env.EMAIL_FROM || "").trim();
 const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
@@ -283,8 +307,64 @@ const TRADE_STREAK_REWARDS = [
   [100, 150]
 ];
 
+function parseAdminAccounts() {
+  const raw = String(process.env.ADMIN_ACCOUNTS_JSON || "").trim();
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      const entries = Array.isArray(parsed)
+        ? parsed
+        : Object.entries(parsed || {}).map(([id, value]) => ({ id, ...(typeof value === "string" ? { key: value } : value) }));
+      const accounts = entries.map(item => ({
+        id: cleanText(item?.id || item?.username, 60),
+        key: String(item?.key || ""),
+        role: cleanText(item?.role || "owner", 30)
+      })).filter(item => item.id && item.key);
+      if (accounts.length) return accounts;
+    } catch (error) {
+      console.error("ADMIN_ACCOUNTS_JSON ERROR:", error.message);
+    }
+  }
+  return ADMIN_KEY ? [{ id: "owner", key: ADMIN_KEY, role: "owner" }] : [];
+}
+
+const ADMIN_ACCOUNTS = parseAdminAccounts();
+const localAdminSessions = new Map();
+
+function secretMatches(left, right) {
+  const a = Buffer.from(String(left || ""));
+  const b = Buffer.from(String(right || ""));
+  return a.length > 0 && a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+function parseCookie(req, name) {
+  const header = String(req.headers.cookie || "");
+  const match = header.split(";").map(value => value.trim()).find(value => value.startsWith(`${name}=`));
+  return match ? decodeURIComponent(match.slice(name.length + 1)) : "";
+}
+
+function authTokenFromRequest(req) {
+  const header = String(req.headers.authorization || "").trim();
+  return header.replace(/^Bearer\s+/i, "") || parseCookie(req, "auth_token");
+}
+
+function adminTokenFromRequest(req) {
+  const header = String(req.headers.authorization || "").trim();
+  return header.replace(/^Bearer\s+/i, "") || parseCookie(req, "admin_token");
+}
+
+function setAuthCookie(res, name, token, maxAgeSeconds) {
+  const secure = IS_PRODUCTION ? "; Secure" : "";
+  res.setHeader("Set-Cookie", `${name}=${encodeURIComponent(token)}; Max-Age=${maxAgeSeconds}; Path=/; HttpOnly${secure}; SameSite=Lax`);
+}
+
+function clearAuthCookie(res, name) {
+  const secure = IS_PRODUCTION ? "; Secure" : "";
+  res.setHeader("Set-Cookie", `${name}=; Max-Age=0; Path=/; HttpOnly${secure}; SameSite=Lax`);
+}
+
 function auth(req, res, next) {
-  const token = req.headers.authorization;
+  const token = authTokenFromRequest(req);
   if (!token) return res.status(401).json({ success: false, message: "Unauthorized" });
 
   try {
@@ -297,11 +377,37 @@ function auth(req, res, next) {
   }
 }
 
-function adminAuth(req, res, next) {
-  const key = req.headers["x-admin-key"];
-  if (!ADMIN_KEY) return res.status(503).json({ success: false, message: "Admin access is not configured" });
-  if (!key || key !== ADMIN_KEY) return res.status(401).json({ success: false, message: "Unauthorized" });
-  next();
+async function adminAuth(req, res, next) {
+  if (!ADMIN_ACCOUNTS.length) return res.status(503).json({ success: false, message: "Admin access is not configured" });
+  const token = adminTokenFromRequest(req);
+  if (!token) return res.status(401).json({ success: false, message: "Unauthorized" });
+  try {
+    const payload = jwt.verify(token, SECRET);
+    if (payload.kind !== "admin" || !payload.admin_id || !payload.role || !payload.jti) throw new Error("Invalid admin session");
+    if (USE_SUPABASE) {
+      const { data, error } = await supabase
+        .from("admin_sessions")
+        .select("jti,admin_id,role,expires_at,revoked_at")
+        .eq("jti", payload.jti)
+        .eq("admin_id", payload.admin_id)
+        .is("revoked_at", null)
+        .gt("expires_at", new Date().toISOString())
+        .maybeSingle();
+      if (error || !data) throw new Error("Expired admin session");
+    } else {
+      const session = localAdminSessions.get(payload.jti);
+      if (!session || session.expiresAt <= Date.now()) throw new Error("Expired admin session");
+    }
+    req.admin = { id: String(payload.admin_id), role: String(payload.role), jti: String(payload.jti) };
+    next();
+  } catch {
+    return res.status(401).json({ success: false, message: "Unauthorized" });
+  }
+}
+
+function adminWriteAuth(req, res, next) {
+  if (!req.admin || req.admin.role === "viewer") return res.status(403).json({ success: false, message: "Insufficient admin role" });
+  return next();
 }
 
 async function findUser(id, fields = PUBLIC_USER_FIELDS) {
@@ -462,6 +568,7 @@ async function addWalletCreateSignal(user) {
     });
     return WALLET_CREATE_SIGNAL_TYPE;
   } catch (error) {
+    if (isUniqueViolation(error)) throw error;
     console.error("WALLET CREATE SIGNAL FALLBACK:", error.message || error);
     await addSignal({
       user_id: user.id,
@@ -625,7 +732,13 @@ async function ensureWalletCreateRequest(user, notifyExisting = false) {
     if (notifyExisting) await notifyWalletCreateRequest(user, "already pending");
     return { created: false, pending: true };
   }
-  await addWalletCreateSignal(user);
+  try {
+    await addWalletCreateSignal(user);
+  } catch (error) {
+    if (!isUniqueViolation(error)) throw error;
+    if (notifyExisting) await notifyWalletCreateRequest(user, "already pending");
+    return { created: false, pending: true };
+  }
   await notifyWalletCreateRequest(user);
   return { created: true, pending: true };
 }
@@ -648,14 +761,53 @@ function parseSupportPayload(value) {
 }
 
 function supportLanguage(text) {
-  return /[A-Za-z]/.test(text) && !/[А-Яа-яІіЇїЄєҐґ]/.test(text) ? "en" : "uk";
+  if (/[A-Za-z]/.test(text) && !/[А-Яа-яІіЇїЄєҐґ]/.test(text)) return "en";
+  if (/[ІіЇїЄєҐґ]/.test(text)) return "uk";
+  return "ru";
+}
+
+function russianSupportFallback(text, handoff = false) {
+  if (handoff || /(оператор|админ|человек|жив|manager|human|admin|жалоб|ошиб|не работ|завис|заявк|баланс неправ)/i.test(text)) {
+    return "Похоже, вопрос требует проверки оператором. Я передам его поддержке, и ответ появится в этом чате.";
+  }
+  if (/^(hi|hello|hey|привет|здравств|салам)\b/i.test(text)) {
+    return "Здравствуйте! Я AI-оператор CryptoStar. Могу объяснить регистрацию, пополнение, вывод, обучение, сателлитов, торговлю, вознаграждения, сайт и риски. Напишите, что именно вас интересует.";
+  }
+  if (/(что ты умеешь|чем помож|help|помоги|помощник|оператор ai|support bot)/i.test(text)) {
+    return "Я могу ответить на общие вопросы о приложении: регистрация, пополнение от $1,000, вывод от $100 заработанных средств, обучение, сателлиты, торговля, вознаграждения и сайт проекта.";
+  }
+  if (/(пополн|deposit|депозит|usdt|trc20)/i.test(text)) {
+    return "Минимальная сумма пополнения составляет $1,000. Пользователь переводит USDT в сети TRC20 на указанный кошелёк, создаёт заявку в приложении, а баланс меняется только после подтверждения администратором. Лимит составляет два подтверждённых пополнения.";
+  }
+  if (/(вывод|withdraw|снят|100|кошел)/i.test(text)) {
+    return "Вывод доступен от $100, один раз в час и только из заработанных средств. Комиссия составляет 7.5%, поэтому администратор видит сумму к выплате уже после комиссии.";
+  }
+  if (/(обуч|learning|урок|тест|quiz)/i.test(text)) {
+    return "Обучение открывается после подтверждённого пополнения от $1,000. За правильное прохождение теста может начисляться внутренняя награда $2.50.";
+  }
+  if (/(сател|satellite|приглаш|referr|структур)/i.test(text)) {
+    return "Сателлиты — это приглашённые пользователи. Они становятся активными после подтверждённого пополнения от $1,000 и открывают дополнительные торговые позиции пригласившему.";
+  }
+  if (/(торг|trade|сдел|позици|доход|процент)/i.test(text)) {
+    return "Основная торговая позиция доступна пользователям с балансом. Дополнительные позиции открываются через активных сателлитов. Сделка завершается через 10 минут.";
+  }
+  if (/(вознаграж|reward|бонус|получить)/i.test(text)) {
+    return "Вознаграждения отображаются на отдельной странице. Кнопка получения активируется после выполнения условия: обучение, активные сателлиты, торговая серия или уровень баланса.";
+  }
+  if (/(регистр|registr|код|email|почт|подтвержд)/i.test(text)) {
+    return "Регистрация проходит через страницу условий и форму создания аккаунта. Если включено подтверждение email, нужен код из письма. Проверьте папку Спам и правильность адреса.";
+  }
+  if (/(риск|гарант|прибыл|втрат|risk|profit)/i.test(text)) {
+    return "Криптовалюты связаны с высоким риском, а прибыль не гарантируется. Пользователь должен понимать возможные потери и действовать ответственно.";
+  }
+  return "Я могу ответить на общие вопросы о проекте. Уточните тему: регистрация, пополнение, вывод, обучение, сателлиты, торговля, вознаграждения, сайт или риски. Для проверки конкретного аккаунта напишите: оператор.";
 }
 
 function supportAnswer(message) {
   const text = String(message || "").toLowerCase();
   const lang = supportLanguage(text);
-  const answer = (uk, en) => ({ handled: true, text: lang === "en" ? en : uk });
-  const handoff = (uk, en) => ({ handled: false, text: lang === "en" ? en : uk });
+  const answer = (uk, en, ru) => ({ handled: true, text: lang === "en" ? en : lang === "ru" ? (ru || russianSupportFallback(text)) : uk });
+  const handoff = (uk, en, ru) => ({ handled: false, text: lang === "en" ? en : lang === "ru" ? (ru || russianSupportFallback(text, true)) : uk });
 
   if (/^(hi|hello|hey|привіт|вітаю|добрий день|доброго дня|добрий вечір|здравств|салам)\b/i.test(text)) {
     return answer(
@@ -1076,6 +1228,21 @@ async function consumePendingVerification(pendingToken, purpose, code, expectedU
   if (!/^[A-Za-z0-9_-]{32,120}$/.test(token) || !/^\d{6}$/.test(cleanCode)) {
     return { ok: false, message: "Invalid code" };
   }
+  if (USE_SUPABASE) {
+    const { data, error } = await supabase.rpc("consume_pending_verification", {
+      p_token_hash: hashSecret(token),
+      p_purpose: purpose,
+      p_code_hash: hashSecret(cleanCode),
+      p_expected_user_id: expectedUserId ? Number(expectedUserId) : null
+    });
+    if (error) throw error;
+    const record = data?.record || null;
+    return data?.ok ? { ok: true, record, payload: safeJsonObject(record?.payload) } : {
+      ok: false,
+      message: data?.message || "Invalid code"
+    };
+  }
+
   const { data: record, error } = await supabase
     .from("verifications")
     .select("id,purpose,email,user_id,payload,password_hash,code_hash,attempts,consumed_at,expires_at,ip")
@@ -1333,6 +1500,50 @@ app.post("/register/verify", registerLimiter, async (req, res) => {
   }
 });
 
+app.post("/admin/login", authLimiter, async (req, res) => {
+  try {
+    const adminId = cleanText(req.body?.username || "owner", 60);
+    const suppliedKey = String(req.body?.key || "");
+    const account = ADMIN_ACCOUNTS.find(item => item.id === adminId && secretMatches(item.key, suppliedKey));
+    if (!account) return res.status(401).json({ success: false, message: "Invalid admin credentials" });
+
+    const jti = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + ADMIN_SESSION_MS).toISOString();
+    if (USE_SUPABASE) {
+      const { error } = await supabase.from("admin_sessions").insert([{
+        jti,
+        admin_id: account.id,
+        role: account.role,
+        expires_at: expiresAt
+      }]);
+      if (error) throw error;
+    } else {
+      localAdminSessions.set(jti, { adminId: account.id, role: account.role, expiresAt: Date.parse(expiresAt) });
+    }
+    const token = jwt.sign({ kind: "admin", admin_id: account.id, role: account.role, jti }, SECRET, { expiresIn: ADMIN_SESSION_TTL });
+    setAuthCookie(res, "admin_token", token, Math.floor(ADMIN_SESSION_MS / 1000));
+    return res.json({ success: true, token, expires_at: expiresAt, admin: { id: account.id, role: account.role } });
+  } catch (error) {
+    console.error("ADMIN LOGIN ERROR:", error.message);
+    return res.status(500).json({ success: false, message: "Admin login error" });
+  }
+});
+
+app.post("/admin/logout", adminAuth, async (req, res) => {
+  try {
+    if (USE_SUPABASE) {
+      await supabase.from("admin_sessions").update({ revoked_at: new Date().toISOString() }).eq("jti", req.admin.jti);
+    } else {
+      localAdminSessions.delete(req.admin.jti);
+    }
+    clearAuthCookie(res, "admin_token");
+    return res.json({ success: true });
+  } catch (error) {
+    console.error("ADMIN LOGOUT ERROR:", error.message);
+    return res.status(500).json({ success: false });
+  }
+});
+
 app.post("/login", authLimiter, async (req, res) => {
   try {
     const email = cleanEmail(req.body.email);
@@ -1343,11 +1554,18 @@ app.post("/login", authLimiter, async (req, res) => {
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.json({ success: false });
     }
-    return res.json({ success: true, token: jwt.sign({ id: user.id }, SECRET, { expiresIn: AUTH_TOKEN_TTL }) });
+    const token = jwt.sign({ id: user.id }, SECRET, { expiresIn: AUTH_TOKEN_TTL });
+    setAuthCookie(res, "auth_token", token, 12 * 60 * 60);
+    return res.json({ success: true });
   } catch (error) {
     console.error("LOGIN ERROR:", error);
     return res.status(500).json({ success: false });
   }
+});
+
+app.post("/logout", auth, async (req, res) => {
+  clearAuthCookie(res, "auth_token");
+  return res.json({ success: true });
 });
 
 app.post("/password/reset/start", authLimiter, async (req, res) => {
@@ -1465,7 +1683,12 @@ app.post("/profile/change-request", actionLimiter, auth, async (req, res) => {
     if (!changes.fullname || !changes.nickname || !changes.country || changes.phone.length < 10 || changes.phone.length > 15) {
       return res.json({ success: false, message: "Invalid data" });
     }
-    await addSignal({ user_id: req.userId, type: "profile_update", amount: 0, wallet: JSON.stringify(changes), status: "pending" });
+    try {
+      await addSignal({ user_id: req.userId, type: "profile_update", amount: 0, wallet: JSON.stringify(changes), status: "pending" });
+    } catch (error) {
+      if (isUniqueViolation(error)) return res.json({ success: false, message: "A profile change request is already pending" });
+      throw error;
+    }
     return res.json({ success: true, message: "Request created" });
   } catch (error) {
     console.error("PROFILE REQUEST ERROR:", error);
@@ -1479,6 +1702,15 @@ app.post("/profile/email/start", authLimiter, auth, async (req, res) => {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.json({ success: false, message: "Invalid email" });
     const { data: existing } = await supabase.from("users").select("id").eq("email", email).maybeSingle();
     if (existing) return res.json({ success: false, message: "User exists" });
+    const { count: pendingCount, error: pendingError } = await supabase
+      .from("verifications")
+      .select("id", { count: "exact", head: true })
+      .eq("purpose", "email_change")
+      .eq("user_id", req.userId)
+      .is("consumed_at", null)
+      .gt("expires_at", new Date().toISOString());
+    if (pendingError) throw pendingError;
+    if ((pendingCount || 0) > 0) return res.json({ success: false, message: "An email change code is already pending" });
     const { pendingToken, code } = await createPendingVerification({
       purpose: "email_change",
       userId: req.userId,
@@ -1494,12 +1726,25 @@ app.post("/profile/email/start", authLimiter, auth, async (req, res) => {
 
 app.post("/profile/email/verify", authLimiter, auth, async (req, res) => {
   try {
+    const { count: pendingCount, error: pendingError } = await supabase
+      .from("signals")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", req.userId)
+      .eq("type", "email_update")
+      .eq("status", "pending");
+    if (pendingError) throw pendingError;
+    if ((pendingCount || 0) > 0) return res.json({ success: false, message: "An email change request is already pending" });
     const pending = await consumePendingVerification(req.body.pendingToken, "email_change", req.body.code, req.userId);
     if (!pending.ok) return res.json({ success: false, message: pending.message });
     const email = cleanEmail(pending.record.email);
     const { data: existing } = await supabase.from("users").select("id").eq("email", email).maybeSingle();
     if (existing) return res.json({ success: false, message: "User exists" });
-    await addSignal({ user_id: req.userId, type: "email_update", amount: 0, wallet: JSON.stringify({ email }), status: "pending" });
+    try {
+      await addSignal({ user_id: req.userId, type: "email_update", amount: 0, wallet: JSON.stringify({ email }), status: "pending" });
+    } catch (error) {
+      if (isUniqueViolation(error)) return res.json({ success: false, message: "An email change request is already pending" });
+      throw error;
+    }
     return res.json({ success: true, message: "Request created" });
   } catch (error) {
     return res.json({ success: false, message: "Invalid code" });
@@ -1665,18 +1910,25 @@ app.post("/deposit", actionLimiter, auth, async (req, res) => {
     if (!wallet) {
       return res.json({ success: false, message: "Personal wallet is not created yet" });
     }
-    const { count, error: countError } = await supabase
-      .from("signals")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("type", "deposit")
-      .in("status", ["pending", "approved"]);
-    if (countError) throw countError;
-    if ((count || 0) >= MAX_DEPOSIT_REQUESTS) {
-      return res.json({ success: false, message: "Deposit limit reached" });
+    if (USE_SUPABASE) {
+      const { data, error } = await supabase.rpc("create_deposit_request", {
+        p_user_id: user.id,
+        p_amount: amount,
+        p_wallet: wallet
+      });
+      if (error) throw error;
+      if (!data?.ok) return res.json({ success: false, message: data?.message || "Deposit limit reached" });
+    } else {
+      const { count, error: countError } = await supabase
+        .from("signals")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("type", "deposit")
+        .in("status", ["pending", "approved"]);
+      if (countError) throw countError;
+      if ((count || 0) >= MAX_DEPOSIT_REQUESTS) return res.json({ success: false, message: "Deposit limit reached" });
+      await addSignal({ user_id: user.id, type: "deposit", amount, wallet, status: "pending" });
     }
-
-    await addSignal({ user_id: user.id, type: "deposit", amount, wallet, status: "pending" });
     await sendTelegramMessage(requestTelegramText("deposit", user, amount, wallet), ["mirror", "main"]);
     return res.json({ success: true, message: "Signal created" });
   } catch (error) {
@@ -1975,7 +2227,7 @@ app.get("/admin/telegram/status", adminLimiter, adminAuth, async (req, res) => {
   }
 });
 
-app.post("/admin/telegram/config", adminLimiter, adminAuth, async (req, res) => {
+app.post("/admin/telegram/config", adminLimiter, adminAuth, adminWriteAuth, async (req, res) => {
   try {
     const body = req.body || {};
     const saved = {};
@@ -2013,7 +2265,7 @@ app.post("/admin/telegram/config", adminLimiter, adminAuth, async (req, res) => 
   }
 });
 
-app.post("/admin/telegram/test", adminLimiter, adminAuth, async (req, res) => {
+app.post("/admin/telegram/test", adminLimiter, adminAuth, adminWriteAuth, async (req, res) => {
   try {
     const text = cleanText(req.body?.text, 600) || "TELEGRAM TEST: CryptoStar notifications are working.";
     const result = await sendTelegramMessage(text, ["main", "mirror", "support"]);
@@ -2058,7 +2310,7 @@ app.get("/admin/support", adminLimiter, adminAuth, async (req, res) => {
   });
 });
 
-app.post("/admin/support/reply", adminLimiter, adminAuth, async (req, res) => {
+app.post("/admin/support/reply", adminLimiter, adminAuth, adminWriteAuth, async (req, res) => {
   try {
     const userId = Number(req.body.user_id);
     const message = cleanText(req.body.message, 1800);
@@ -2093,11 +2345,18 @@ app.get("/admin/referrals", adminLimiter, adminAuth, async (req, res) => {
   return res.json((data || []).map(withDisplayId));
 });
 
-app.post("/admin/add-balance", adminLimiter, adminAuth, async (req, res) => {
+app.post("/admin/add-balance", adminLimiter, adminAuth, adminWriteAuth, async (req, res) => {
   try {
-    const user = await findUser(Number(req.body.user_id), "id,balance");
+    const userId = Number(req.body.user_id);
     const amount = Number(req.body.amount);
-    if (!user || !Number.isFinite(amount) || Math.abs(amount) > 1000000) return res.json({ success: false, message: "Invalid balance change" });
+    if (!Number.isInteger(userId) || !Number.isFinite(amount) || Math.abs(amount) > 1000000) return res.json({ success: false, message: "Invalid balance change" });
+    if (USE_SUPABASE) {
+      const { data, error } = await supabase.rpc("admin_adjust_balance", { p_user_id: userId, p_amount: amount, p_mode: "add" });
+      if (error) throw error;
+      return res.json({ success: Boolean(data?.ok), balance: data?.balance, message: data?.message });
+    }
+    const user = await findUser(userId, "id,balance");
+    if (!user) return res.json({ success: false, message: "User not found" });
     const balance = Number((Number(user.balance || 0) + amount).toFixed(2));
     if (balance < 0) return res.json({ success: false, message: "Balance cannot be negative" });
     const { error } = await supabase.from("users").update({ balance }).eq("id", user.id);
@@ -2110,12 +2369,18 @@ app.post("/admin/add-balance", adminLimiter, adminAuth, async (req, res) => {
   }
 });
 
-app.post("/admin/set-balance", adminLimiter, adminAuth, async (req, res) => {
+app.post("/admin/set-balance", adminLimiter, adminAuth, adminWriteAuth, async (req, res) => {
   try {
     const userId = Number(req.body.user_id);
     const amount = Number(req.body.amount);
+    if (!Number.isInteger(userId) || !Number.isFinite(amount) || amount < 0 || amount > 1000000) return res.json({ success: false, message: "Invalid balance" });
+    if (USE_SUPABASE) {
+      const { data, error } = await supabase.rpc("admin_adjust_balance", { p_user_id: userId, p_amount: amount, p_mode: "set" });
+      if (error) throw error;
+      return res.json({ success: Boolean(data?.ok), balance: data?.balance, message: data?.message });
+    }
     const user = await findUser(userId, "id,balance");
-    if (!user || !Number.isFinite(amount) || amount < 0 || amount > 1000000) return res.json({ success: false, message: "Invalid balance" });
+    if (!user) return res.json({ success: false, message: "User not found" });
     const balance = Number(amount.toFixed(2));
     const { error } = await supabase.from("users").update({ balance }).eq("id", userId);
     if (error) throw error;
@@ -2127,7 +2392,7 @@ app.post("/admin/set-balance", adminLimiter, adminAuth, async (req, res) => {
   }
 });
 
-app.post("/admin/update-user", adminLimiter, adminAuth, async (req, res) => {
+app.post("/admin/update-user", adminLimiter, adminAuth, adminWriteAuth, async (req, res) => {
   try {
     const userId = Number(req.body.user_id);
     const current = await findUser(userId, "id,email,referrer_id,wallet_address,balance,deposit");
@@ -2180,6 +2445,23 @@ app.post("/admin/update-user", adminLimiter, adminAuth, async (req, res) => {
       if (existing) return res.json({ success: false, message: "Email already exists" });
     }
 
+    if (USE_SUPABASE) {
+      const { data, error } = await supabase.rpc("admin_update_user", {
+        p_user_id: userId,
+        p_fullname: fullname,
+        p_nickname: nickname,
+        p_country: country,
+        p_phone: phone,
+        p_email: email,
+        p_wallet_address: wallet,
+        p_balance: Number(balance.toFixed(2)),
+        p_deposit: Number(deposit.toFixed(2)),
+        p_referrer_id: referrerId || null
+      });
+      if (error) throw error;
+      return res.json({ success: Boolean(data?.ok), message: data?.message });
+    }
+
     const updates = {
       fullname,
       nickname,
@@ -2215,12 +2497,17 @@ app.post("/admin/update-user", adminLimiter, adminAuth, async (req, res) => {
   }
 });
 
-app.post("/admin/set-wallet", adminLimiter, adminAuth, async (req, res) => {
+app.post("/admin/set-wallet", adminLimiter, adminAuth, adminWriteAuth, async (req, res) => {
   try {
     const signalId = Number(req.body.id);
     const wallet = cleanWallet(req.body.wallet);
     if (!Number.isInteger(signalId) || signalId <= 0 || !isValidWallet(wallet)) {
       return res.json({ success: false, message: "Invalid wallet" });
+    }
+    if (USE_SUPABASE) {
+      const { data, error } = await supabase.rpc("admin_set_wallet", { p_signal_id: signalId, p_wallet: wallet });
+      if (error) throw error;
+      return res.json({ success: Boolean(data?.ok), message: data?.message });
     }
     const { data: signal, error: signalError } = await supabase
       .from("signals")
@@ -2250,12 +2537,17 @@ app.post("/admin/set-wallet", adminLimiter, adminAuth, async (req, res) => {
   }
 });
 
-app.post("/admin/manual-wallet", adminLimiter, adminAuth, async (req, res) => {
+app.post("/admin/manual-wallet", adminLimiter, adminAuth, adminWriteAuth, async (req, res) => {
   try {
     const userId = Number(req.body.user_id);
     const wallet = cleanWallet(req.body.wallet);
     if (!Number.isInteger(userId) || userId <= 0 || !isValidWallet(wallet)) {
       return res.json({ success: false, message: "Invalid wallet" });
+    }
+    if (USE_SUPABASE) {
+      const { data, error } = await supabase.rpc("admin_manual_wallet", { p_user_id: userId, p_wallet: wallet });
+      if (error) throw error;
+      return res.json({ success: Boolean(data?.ok), message: data?.message });
     }
     const user = await findUser(userId, "id,email");
     if (!user) return res.json({ success: false, message: "User not found" });
@@ -2297,7 +2589,7 @@ app.post("/admin/manual-wallet", adminLimiter, adminAuth, async (req, res) => {
   }
 });
 
-app.post("/admin/approve", adminLimiter, adminAuth, async (req, res) => {
+app.post("/admin/approve", adminLimiter, adminAuth, adminWriteAuth, async (req, res) => {
   try {
     const signalId = Number(req.body.id);
     const { data: signal } = await supabase.from("signals").select("id,user_id,type,amount,wallet,status").eq("id", signalId).maybeSingle();
@@ -2331,6 +2623,11 @@ app.post("/admin/approve", adminLimiter, adminAuth, async (req, res) => {
     } else if (isWalletCreateSignal(signal)) {
       return res.json({ success: false, message: "Wallet address is required" });
     } else if (signal.type === "profile_update" || signal.type === "email_update") {
+      if (USE_SUPABASE) {
+        const { data, error } = await supabase.rpc("admin_approve_profile_signal", { p_signal_id: signalId });
+        if (error) throw error;
+        return res.json({ success: Boolean(data?.ok), message: data?.message });
+      }
       const changes = safeJsonObject(signal.wallet);
       const allowed = signal.type === "email_update"
         ? { email: cleanEmail(changes.email), email_verified: true }
@@ -2360,7 +2657,19 @@ app.post("/admin/approve", adminLimiter, adminAuth, async (req, res) => {
   }
 });
 
-app.post("/admin/reject", adminLimiter, adminAuth, async (req, res) => {
+app.post("/admin/reject", adminLimiter, adminAuth, adminWriteAuth, async (req, res) => {
+  if (USE_SUPABASE) {
+    try {
+      const signalId = Number(req.body.id);
+      if (!Number.isInteger(signalId) || signalId <= 0) return res.json({ success: false });
+      const { data, error } = await supabase.rpc("admin_reject_signal", { p_signal_id: signalId });
+      if (error) throw error;
+      return res.json({ success: Boolean(data?.ok), message: data?.message });
+    } catch (error) {
+      console.error("ADMIN REJECT ERROR:", error);
+      return res.status(500).json({ success: false, message: "Reject error" });
+    }
+  }
   const signalId = Number(req.body.id);
   if (!Number.isInteger(signalId) || signalId <= 0) return res.json({ success: false });
   const { data: signal } = await supabase
@@ -2380,7 +2689,7 @@ app.post("/admin/reject", adminLimiter, adminAuth, async (req, res) => {
   return res.json({ success: true });
 });
 
-app.post("/admin/delete-signal", adminLimiter, adminAuth, async (req, res) => {
+app.post("/admin/delete-signal", adminLimiter, adminAuth, adminWriteAuth, async (req, res) => {
   try {
     const signalId = Number(req.body.id);
     if (!Number.isInteger(signalId) || signalId <= 0) return res.json({ success: false, message: "Invalid signal" });
@@ -2393,10 +2702,15 @@ app.post("/admin/delete-signal", adminLimiter, adminAuth, async (req, res) => {
   }
 });
 
-app.post("/admin/delete-user", adminLimiter, adminAuth, async (req, res) => {
+app.post("/admin/delete-user", adminLimiter, adminAuth, adminWriteAuth, async (req, res) => {
   try {
     const userId = Number(req.body.user_id);
     if (!Number.isInteger(userId) || userId <= 0) return res.json({ success: false, message: "Invalid user" });
+    if (USE_SUPABASE) {
+      const { data, error } = await supabase.rpc("admin_delete_user", { p_user_id: userId });
+      if (error) throw error;
+      return res.json({ success: Boolean(data?.ok), message: data?.message });
+    }
     const user = await findUser(userId, "id,referrer_id");
     if (!user) return res.json({ success: false, message: "User not found" });
     const { error: referralsError } = await supabase.from("users").update({ referrer_id: null }).eq("referrer_id", userId);

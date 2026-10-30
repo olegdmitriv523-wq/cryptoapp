@@ -193,8 +193,8 @@ body {
 <body>
 <script>
 const API_URL = ["localhost", "127.0.0.1"].includes(location.hostname) ? location.origin : "https://cryptoapp-eqc5.onrender.com";
-const token = localStorage.getItem("token");
-if (!token) location.href = "login.html";
+const token = localStorage.getItem("token") || "";
+if (localStorage.getItem("logged_in") !== "1" && !token) location.href = "login.html";
 </script>
 
 <main class="home-page">
@@ -234,7 +234,7 @@ const localText = key => window.appTranslate ? window.appTranslate.tr(key) : ({ 
 
 async function loadUser() {
   try {
-    const res = await fetch(API_URL + "/me", { headers: { Authorization: token } });
+    const res = await fetch(API_URL + "/me", { credentials: "include", headers: token ? { Authorization: token } : {} });
     if (res.status === 401) throw new Error("auth");
     const user = await res.json();
 
@@ -251,6 +251,7 @@ async function loadUser() {
     window.appTranslate?.translatePage();
   } catch {
     localStorage.removeItem("token");
+    localStorage.removeItem("logged_in");
     location.href = "login.html";
   }
 }
@@ -280,7 +281,12 @@ async function loadCoins() {
 
 function goDeposit(){ location.href = "deposit.html"; }
 function goWithdraw(){ location.href = "withdraw.html"; }
-function logout(){ localStorage.removeItem("token"); location.href = "login.html"; }
+async function logout(){
+  try { await fetch(API_URL + "/logout", { method: "POST", credentials: "include", headers: token ? { Authorization: token } : {} }); } catch {}
+  localStorage.removeItem("token");
+  localStorage.removeItem("logged_in");
+  location.href = "login.html";
+}
 
 async function copyInviteLink() {
   const input = document.getElementById("inviteLink");

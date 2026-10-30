@@ -114,8 +114,8 @@ line-height:1.35;
 const API_URL = "https://cryptoapp-eqc5.onrender.com";
 
 // 🔐 якщо вже залогінений
-let token = localStorage.getItem("token");
-if(token){
+let loggedIn = localStorage.getItem("logged_in") === "1" || Boolean(localStorage.getItem("token"));
+if(loggedIn){
 location.href = "index.html";
 }
 
@@ -136,6 +136,7 @@ try {
 
 let res = await fetch(API_URL + "/login", {
 method:"POST",
+credentials:"include",
 headers:{"Content-Type":"application/json"},
 body:JSON.stringify({email,password})
 });
@@ -144,8 +145,8 @@ let data = await res.json();
 
 if(data.success){
 
-// 🔥 зберігаємо токен
-localStorage.setItem("token", data.token);
+localStorage.setItem("logged_in", "1");
+localStorage.removeItem("token");
 
 // 🔥 редірект
 location.href = "index.html";

@@ -42,10 +42,10 @@ body{margin:0;font-family:Arial,sans-serif}.page{width:min(680px,calc(100% - 28p
 </main>
 <script>
 const API_URL=["localhost","127.0.0.1"].includes(location.hostname)?location.origin:"https://cryptoapp-eqc5.onrender.com";
-const token=localStorage.getItem("token");
-if(!token)location.href="login.html";
+const token=localStorage.getItem("token") || "";
+if(localStorage.getItem("logged_in") !== "1" && !token)location.href="login.html";
 let emailPendingToken="";
-const api=(path,options={})=>fetch(API_URL+path,{...options,headers:{"Content-Type":"application/json",Authorization:token,...(options.headers||{})}});
+const api=(path,options={})=>fetch(API_URL+path,{...options,credentials:"include",headers:{"Content-Type":"application/json",...(token?{Authorization:token}:{}),...(options.headers||{})}});
 const displayUserId=value=>"1568"+String(value||0).padStart(4,"0").slice(-4);
 
 async function loadProfile(){

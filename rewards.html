@@ -13,8 +13,8 @@ body{margin:0;font-family:Arial,sans-serif}.rewards-page{width:min(960px,calc(10
 <body>
 <script>
 const API_URL = ["localhost", "127.0.0.1"].includes(location.hostname) ? location.origin : "https://cryptoapp-eqc5.onrender.com";
-const token = localStorage.getItem("token");
-if (!token) location.href = "login.html";
+const token = localStorage.getItem("token") || "";
+if (localStorage.getItem("logged_in") !== "1" && !token) location.href = "login.html";
 </script>
 
 <main class="rewards-page">

@@ -27,7 +27,7 @@ body { margin:0; min-height:100vh; display:grid; place-items:center; background:
   <div class="status" id="status">Завантаження CryptoStar...</div>
 </main>
 <script>
-const destination = localStorage.getItem("token") ? "index.html" : "login.html";
+const destination = (localStorage.getItem("logged_in") === "1" || localStorage.getItem("token")) ? "index.html" : "login.html";
 async function waitForServer() {
   try {
     const response = await fetch("/health", {cache:"no-store"});

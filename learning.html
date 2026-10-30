@@ -82,8 +82,8 @@ label { display:block; margin:8px 0; padding:9px; border-radius:7px; background:
 </main>
 <script>
 const API_URL = ["localhost", "127.0.0.1"].includes(location.hostname) ? location.origin : "https://cryptoapp-eqc5.onrender.com";
-const token = localStorage.getItem("token");
-if (!token) location.href = "login.html";
+const token = localStorage.getItem("token") || "";
+if (localStorage.getItem("logged_in") !== "1" && !token) location.href = "login.html";
 
 function markCompleted(id) {
   const card = document.querySelector(`[data-id="${id}"]`);

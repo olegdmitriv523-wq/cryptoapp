@@ -56,11 +56,13 @@ h1 { text-align:center; }
   <h1>Адмінпанель</h1>
   <section class="card access" id="adminAccess">
     <h2>Вхід адміністратора</h2>
+    <input id="adminUserInput" type="text" autocomplete="username" placeholder="Ім'я адміністратора" value="owner">
     <input id="adminKeyInput" type="password" autocomplete="current-password" placeholder="Код доступу">
     <button type="button" onclick="loginAdmin()">Увійти</button>
     <div class="empty" id="accessMessage"></div>
   </section>
   <div id="adminContent" hidden>
+    <div class="controls" style="justify-content:flex-end"><button type="button" onclick="logoutAdmin()">Вийти з адмінки</button></div>
     <div class="tabs">
       <button class="active" data-tab="users">Користувачі</button>
       <button data-tab="signals">Типові сигнали</button>
@@ -87,14 +89,15 @@ h1 { text-align:center; }
 </main>
 <script>
 const API_URL = ["localhost", "127.0.0.1"].includes(location.hostname) ? location.origin : "https://cryptoapp-eqc5.onrender.com";
-let adminKey = sessionStorage.getItem("admin_key") || "";
+let adminToken = sessionStorage.getItem("admin_token") || "";
 let allUsers = [];
 let allSignals = [];
 let allReferrals = [];
 let allSupport = [];
 const adminFetch = (path, options = {}) => fetch(API_URL + path, {
   ...options,
-  headers: { ...(options.headers || {}), "X-Admin-Key": adminKey }
+  credentials: "include",
+  headers: { ...(options.headers || {}), ...(adminToken ? { Authorization: adminToken } : {}) }
 });
 const escapeHtml = value => String(value ?? "-").replace(/[&<>'"]/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[char]));
 const money = value => Number(value || 0).toFixed(2);
@@ -104,18 +107,35 @@ const searchable = values => values.map(value => String(value ?? "").toLowerCase
 const matchesSearch = text => !searchText() || text.includes(searchText());
 
 async function loginAdmin() {
-  adminKey = document.getElementById("adminKeyInput").value.trim();
-  const response = await adminFetch("/admin/users");
-  if (!response.ok) {
+  const username = document.getElementById("adminUserInput").value.trim() || "owner";
+  const key = document.getElementById("adminKeyInput").value;
+  const response = await fetch(API_URL + "/admin/login", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, key })
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || !result.success || !result.token) {
     document.getElementById("accessMessage").textContent = "Невірний код або ADMIN_KEY не налаштований на Render.";
     window.appTranslate?.translatePage();
     return;
   }
-  sessionStorage.setItem("admin_key", adminKey);
+  adminToken = result.token;
+  sessionStorage.setItem("admin_token", adminToken);
+  document.getElementById("adminKeyInput").value = "";
   document.getElementById("adminAccess").hidden = true;
   document.getElementById("adminContent").hidden = false;
   await refresh();
   window.appTranslate?.translatePage();
+}
+
+async function logoutAdmin() {
+  try { await adminFetch("/admin/logout", { method: "POST" }); } catch {}
+  adminToken = "";
+  sessionStorage.removeItem("admin_token");
+  document.getElementById("adminAccess").hidden = false;
+  document.getElementById("adminContent").hidden = true;
 }
 
 document.querySelectorAll("[data-tab]").forEach(button => button.addEventListener("click", () => {
@@ -496,16 +516,23 @@ async function refresh() {
     await loadSignals();
   }
   catch (error) {
-    const message = error.message === "admin-auth" ? "Невірний код адміністратора або ADMIN_KEY не налаштований на Render." : "Не вдалося завантажити дані";
+    if (error.message === "admin-auth") {
+      adminToken = "";
+      sessionStorage.removeItem("admin_token");
+      document.getElementById("adminAccess").hidden = false;
+      document.getElementById("adminContent").hidden = true;
+    }
+    const message = error.message === "admin-auth" ? "Сесія адміністратора завершилася. Увійдіть повторно." : "Не вдалося завантажити дані";
     document.querySelectorAll(".section").forEach(section => section.innerHTML = `<div class="empty">${message}</div>`);
     window.appTranslate?.translatePage();
   }
 }
-if (adminKey) {
-  document.getElementById("adminKeyInput").value = adminKey;
-  loginAdmin();
+if (adminToken) {
+  document.getElementById("adminAccess").hidden = true;
+  document.getElementById("adminContent").hidden = false;
+  refresh();
 }
-setInterval(() => { if (adminKey) refresh(); }, 15000);
+setInterval(() => { if (adminToken) refresh(); }, 15000);
 </script>
 <script src="app-nav.js"></script>
 </body>

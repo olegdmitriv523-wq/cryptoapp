@@ -74,8 +74,8 @@ padding:10px;
 const API_URL = "https://cryptoapp-eqc5.onrender.com";
 
 // 🔐 AUTH CHECK
-let token = localStorage.getItem("token");
-if(!token){
+let token = localStorage.getItem("token") || "";
+if(localStorage.getItem("logged_in") !== "1" && !token){
 window.location.href = "login.html";
 }
 
@@ -130,9 +130,8 @@ async function loadUser(){
 try{
 
 let res = await fetch(API_URL + "/me", {
-headers: {
-Authorization: token
-}
+credentials: "include",
+headers: token ? { Authorization: token } : {}
 });
 
 if(!res.ok){
@@ -150,6 +149,7 @@ balance = parseFloat(user.balance) || 0;
 }catch(e){
 
 localStorage.removeItem("token");
+localStorage.removeItem("logged_in");
 window.location.href = "login.html";
 
 }
