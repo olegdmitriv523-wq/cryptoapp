@@ -18,6 +18,8 @@ create unique index if not exists signals_pending_profile_unique
   where status = 'pending' and type in ('profile_update', 'email_update');
 
 drop index if exists public.idx_signals_user_id;
+alter table public.users drop constraint if exists users_email_unique;
+drop index if exists public.idx_users_email;
 
 create table if not exists public.rate_limit_buckets (
   key text primary key,
