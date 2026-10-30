@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "United Europe Crypto",
-  "short_name": "United Europe Crypto",
+  "name": "CryptoStar",
+  "short_name": "CryptoStar",
   "description": "Cryptocurrency learning, assets and trading",
   "start_url": "/loading.html?source=pwa",
   "scope": "/",

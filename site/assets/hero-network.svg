@@ -31,8 +31,8 @@
   </g>
   <g transform="translate(315 210)">
     <rect width="270" height="190" rx="34" fill="#0f172a" stroke="#f5c451" stroke-opacity=".34"/>
-    <text x="135" y="76" text-anchor="middle" font-family="Arial, sans-serif" font-size="56" font-weight="900" fill="url(#gold)">UEC</text>
-    <text x="135" y="116" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="700" fill="#dbeafe">United Europe Crypto</text>
+    <text x="135" y="76" text-anchor="middle" font-family="Arial, sans-serif" font-size="56" font-weight="900" fill="url(#gold)">CS</text>
+    <text x="135" y="116" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="700" fill="#dbeafe">CryptoStar</text>
     <text x="135" y="148" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" fill="#93c5fd">learning • signals • structure</text>
   </g>
 </svg>

@@ -1,6 +1,6 @@
 const APP_LANGUAGES = [
-  ["uk", "Українська"],
   ["ru", "Русский"],
+  ["uk", "Українська"],
   ["kk", "Қазақша"],
   ["pl", "Polski"],
   ["ro", "Română"],
@@ -24,7 +24,7 @@ const I18N = {
     pool: "Модельний індикатор (не реальні активи)", dailyChange: "Добова зміна", perDay: "за добу", readLesson: "Прочитайте короткий урок і дайте правильну відповідь. Кожен тест можна пройти один раз.",
     reward10: "Винагорода становить $2.50", check: "Перевірити", mainTrade: "Основна торгівля",
     tradeButton: "Торгувати", locked: "Заблоковано", availableAll: "Доступна всім користувачам",
-    project: "United Europe Crypto", market: "Ринок", copy: "Скопійовано", back: "Назад"
+    project: "CryptoStar", market: "Ринок", copy: "Скопійовано", back: "Назад"
   },
   ru: {
     navHome: "Домой", navTrade: "Торговля", navAssets: "Активы", navRewards: "Награды", navLearning: "Обучение", navInfo: "Инфо",
@@ -35,7 +35,7 @@ const I18N = {
     pool: "Модельный индикатор (не реальные активы)", dailyChange: "Суточное изменение", perDay: "за сутки", readLesson: "Прочитайте короткий урок и дайте правильный ответ. Каждый тест можно пройти один раз.",
     reward10: "Вознаграждение составляет $2.50", check: "Проверить", mainTrade: "Основная торговля",
     tradeButton: "Торговать", locked: "Заблокировано", availableAll: "Доступно всем пользователям",
-    project: "United Europe Crypto", market: "Рынок", copy: "Скопировано", back: "Назад"
+    project: "CryptoStar", market: "Рынок", copy: "Скопировано", back: "Назад"
   },
   kk: {
     navHome: "Басты бет", navTrade: "Сауда", navAssets: "Активтер", navRewards: "Сыйақылар", navLearning: "Оқу", navInfo: "Ақпарат",
@@ -46,7 +46,7 @@ const I18N = {
     pool: "Жалпы пул", dailyChange: "Күндік өзгеріс", perDay: "тәулігіне", readLesson: "Қысқа сабақты оқып, дұрыс жауап беріңіз. Әр тестті бір рет өтуге болады.",
     reward10: "Сыйақы $2.50", check: "Тексеру", mainTrade: "Негізгі сауда",
     tradeButton: "Саудалау", locked: "Бұғатталған", availableAll: "Барлық пайдаланушыларға қолжетімді",
-    project: "United Europe Crypto", market: "Нарық", copy: "Көшірілді", back: "Артқа"
+    project: "CryptoStar", market: "Нарық", copy: "Көшірілді", back: "Артқа"
   },
   pl: {
     navHome: "Start", navTrade: "Handel", navAssets: "Aktywa", navRewards: "Nagrody", navLearning: "Nauka", navInfo: "Info",
@@ -57,7 +57,7 @@ const I18N = {
     pool: "Pula ogólna", dailyChange: "Zmiana dzienna", perDay: "dziennie", readLesson: "Przeczytaj krótki materiał i wybierz poprawną odpowiedź. Każdy test można ukończyć raz.",
     reward10: "Nagroda wynosi $2.50", check: "Sprawdź", mainTrade: "Handel główny",
     tradeButton: "Handluj", locked: "Zablokowane", availableAll: "Dostępne dla wszystkich użytkowników",
-    project: "United Europe Crypto", market: "Rynek", copy: "Skopiowano", back: "Wstecz"
+    project: "CryptoStar", market: "Rynek", copy: "Skopiowano", back: "Wstecz"
   },
   ro: {
     navHome: "Acasă", navTrade: "Tranzacții", navAssets: "Active", navRewards: "Recompense", navLearning: "Învățare", navInfo: "Info",
@@ -68,7 +68,7 @@ const I18N = {
     pool: "Fond total", dailyChange: "Schimbare zilnică", perDay: "pe zi", readLesson: "Citește lecția scurtă și alege răspunsul corect. Fiecare test poate fi făcut o singură dată.",
     reward10: "Recompensa este de $2.50", check: "Verifică", mainTrade: "Tranzacție principală",
     tradeButton: "Tranzacționează", locked: "Blocat", availableAll: "Disponibil tuturor utilizatorilor",
-    project: "United Europe Crypto", market: "Piață", copy: "Copiat", back: "Înapoi"
+    project: "CryptoStar", market: "Piață", copy: "Copiat", back: "Înapoi"
   },
   en: {
     navHome: "Home", navTrade: "Trade", navAssets: "Assets", navRewards: "Rewards", navLearning: "Learning", navInfo: "Info",
@@ -79,7 +79,7 @@ const I18N = {
     pool: "Total pool", dailyChange: "Daily change", perDay: "per day", readLesson: "Read the short lesson and choose the correct answer. Each test can be completed once.",
     reward10: "The reward is $2.50", check: "Check", mainTrade: "Main trading",
     tradeButton: "Trade", locked: "Locked", availableAll: "Available to all users",
-    project: "United Europe Crypto", market: "Market", copy: "Copied", back: "Back"
+    project: "CryptoStar", market: "Market", copy: "Copied", back: "Back"
   },
   ar: {
     navHome: "الرئيسية", navTrade: "التداول", navAssets: "الأصول", navRewards: "المكافآت", navLearning: "التعلم", navInfo: "معلومات",
@@ -90,7 +90,7 @@ const I18N = {
     pool: "المجمع الكلي", dailyChange: "التغير اليومي", perDay: "في اليوم", readLesson: "اقرأ الدرس القصير واختر الإجابة الصحيحة. يمكن إكمال كل اختبار مرة واحدة.",
     reward10: "المكافأة هي $2.50", check: "تحقق", mainTrade: "التداول الرئيسي",
     tradeButton: "تداول", locked: "مغلق", availableAll: "متاح لجميع المستخدمين",
-    project: "United Europe Crypto", market: "السوق", copy: "تم النسخ", back: "رجوع"
+    project: "CryptoStar", market: "السوق", copy: "تم النسخ", back: "رجوع"
   },
   hi: {
     navHome: "होम", navTrade: "ट्रेड", navAssets: "एसेट्स", navRewards: "रिवॉर्ड्स", navLearning: "सीखना", navInfo: "जानकारी",
@@ -101,7 +101,7 @@ const I18N = {
     pool: "कुल पूल", dailyChange: "दैनिक बदलाव", perDay: "प्रति दिन", readLesson: "छोटा पाठ पढ़ें और सही उत्तर चुनें. हर टेस्ट केवल एक बार पूरा किया जा सकता है.",
     reward10: "रिवॉर्ड $2.50 है", check: "जांचें", mainTrade: "मुख्य ट्रेडिंग",
     tradeButton: "ट्रेड करें", locked: "लॉक", availableAll: "सभी उपयोगकर्ताओं के लिए उपलब्ध",
-    project: "United Europe Crypto", market: "मार्केट", copy: "कॉपी हो गया", back: "वापस"
+    project: "CryptoStar", market: "मार्केट", copy: "कॉपी हो गया", back: "वापस"
   },
   de: {
     navHome: "Start", navTrade: "Handel", navAssets: "Aktiva", navRewards: "Prämien", navLearning: "Lernen", navInfo: "Info",
@@ -112,7 +112,7 @@ const I18N = {
     pool: "Gesamtpool", dailyChange: "Tagesänderung", perDay: "pro Tag", readLesson: "Lesen Sie die kurze Lektion und wählen Sie die richtige Antwort. Jeder Test kann einmal abgeschlossen werden.",
     reward10: "Die Belohnung beträgt $2.50", check: "Prüfen", mainTrade: "Haupthandel",
     tradeButton: "Handeln", locked: "Gesperrt", availableAll: "Für alle Benutzer verfügbar",
-    project: "United Europe Crypto", market: "Markt", copy: "Kopiert", back: "Zurück"
+    project: "CryptoStar", market: "Markt", copy: "Kopiert", back: "Zurück"
   },
   fr: {
     navHome: "Accueil", navTrade: "Trading", navAssets: "Actifs", navRewards: "Récompenses", navLearning: "Formation", navInfo: "Infos",
@@ -123,7 +123,7 @@ const I18N = {
     pool: "Pool total", dailyChange: "Variation quotidienne", perDay: "par jour", readLesson: "Lisez la courte leçon et choisissez la bonne réponse. Chaque test ne peut être terminé qu'une fois.",
     reward10: "La récompense est de $2.50", check: "Vérifier", mainTrade: "Trading principal",
     tradeButton: "Trader", locked: "Verrouillé", availableAll: "Disponible pour tous les utilisateurs",
-    project: "United Europe Crypto", market: "Marché", copy: "Copié", back: "Retour"
+    project: "CryptoStar", market: "Marché", copy: "Copié", back: "Retour"
   },
   pt: {
     navHome: "Início", navTrade: "Negociação", navAssets: "Ativos", navRewards: "Recompensas", navLearning: "Aprendizado", navInfo: "Info",
@@ -134,7 +134,7 @@ const I18N = {
     pool: "Pool total", dailyChange: "Mudança diária", perDay: "por dia", readLesson: "Leia a lição curta e escolha a resposta correta. Cada teste pode ser concluído uma vez.",
     reward10: "A recompensa é de $2.50", check: "Verificar", mainTrade: "Negociação principal",
     tradeButton: "Negociar", locked: "Bloqueado", availableAll: "Disponível para todos os usuários",
-    project: "United Europe Crypto", market: "Mercado", copy: "Copiado", back: "Voltar"
+    project: "CryptoStar", market: "Mercado", copy: "Copiado", back: "Voltar"
   },
   es: {
     navHome: "Inicio", navTrade: "Trading", navAssets: "Activos", navRewards: "Recompensas", navLearning: "Aprendizaje", navInfo: "Info",
@@ -145,7 +145,7 @@ const I18N = {
     pool: "Pool total", dailyChange: "Cambio diario", perDay: "por día", readLesson: "Lee la lección corta y elige la respuesta correcta. Cada prueba se puede completar una vez.",
     reward10: "La recompensa es de $2.50", check: "Comprobar", mainTrade: "Trading principal",
     tradeButton: "Operar", locked: "Bloqueado", availableAll: "Disponible para todos los usuarios",
-    project: "United Europe Crypto", market: "Mercado", copy: "Copiado", back: "Atrás"
+    project: "CryptoStar", market: "Mercado", copy: "Copiado", back: "Atrás"
   },
   it: {
     navHome: "Home", navTrade: "Trading", navAssets: "Asset", navRewards: "Ricompense", navLearning: "Formazione", navInfo: "Info",
@@ -156,7 +156,7 @@ const I18N = {
     pool: "Pool totale", dailyChange: "Variazione giornaliera", perDay: "al giorno", readLesson: "Leggi la breve lezione e scegli la risposta corretta. Ogni test può essere completato una sola volta.",
     reward10: "La ricompensa è di $2.50", check: "Controlla", mainTrade: "Trading principale",
     tradeButton: "Fai trading", locked: "Bloccato", availableAll: "Disponibile per tutti gli utenti",
-    project: "United Europe Crypto", market: "Mercato", copy: "Copiato", back: "Indietro"
+    project: "CryptoStar", market: "Mercato", copy: "Copiato", back: "Indietro"
   }
 };
 
@@ -275,7 +275,7 @@ function showLanguageLoading() {
   if (!overlay) {
     overlay = document.createElement("div");
     overlay.className = "language-loading";
-    overlay.innerHTML = `<div><img src="logo.png" alt="United Europe Crypto"><span>Translating...</span></div>`;
+    overlay.innerHTML = `<div><img src="logo.png" alt="CryptoStar"><span>Translating...</span></div>`;
     document.body.append(overlay);
   }
   overlay.classList.add("visible");
@@ -287,12 +287,12 @@ function hideLanguageLoading() {
   document.querySelector(".language-loading")?.classList.remove("visible");
 }
 
-function showAppLoading(message = "United Europe Crypto") {
+function showAppLoading(message = "CryptoStar") {
   let overlay = document.querySelector(".language-loading");
   if (!overlay) {
     overlay = document.createElement("div");
     overlay.className = "language-loading";
-    overlay.innerHTML = `<div><img src="logo.png" alt="United Europe Crypto"><span></span></div>`;
+    overlay.innerHTML = `<div><img src="logo.png" alt="CryptoStar"><span></span></div>`;
     document.body.append(overlay);
   }
   overlay.querySelector("span").textContent = message;
@@ -325,8 +325,8 @@ let translationRefreshPauseUntil = 0;
 let machineTranslationReady = true;
 let machineTranslationRunning = false;
 let machineTranslationFallbackUsed = false;
-const TRANSLATION_SPLIT = "[[UEC_SPLIT_42]]";
-const TRANSLATION_CACHE_PREFIX = "uec_translation_cache_";
+const TRANSLATION_SPLIT = "[[CRYPTOSTAR_SPLIT_42]]";
+const TRANSLATION_CACHE_PREFIX = "cryptostar_translation_cache_";
 
 function shouldTranslateText(text) {
   const value = String(text || "").replace(/\s+/g, " ").trim();
@@ -404,11 +404,11 @@ async function machineTranslatePage(root = document.body) {
     protectCurrencyText(root);
     const cache = translationCache(lang);
     const textNodes = translatableTextNodes(root).map(node => {
-      if (!node.__uecOriginalText || shouldTranslateText(node.nodeValue)) node.__uecOriginalText = node.__uecOriginalText || node.nodeValue;
-      return { node, original: node.__uecOriginalText };
+      if (!node.__cryptostarOriginalText || shouldTranslateText(node.nodeValue)) node.__cryptostarOriginalText = node.__cryptostarOriginalText || node.nodeValue;
+      return { node, original: node.__cryptostarOriginalText };
     }).filter(item => shouldTranslateText(item.original));
     const attrs = translatableAttributes(root).map(item => {
-      const key = `data-uec-original-${item.name.replace(/[^a-z]/g, "-")}`;
+      const key = `data-cryptostar-original-${item.name.replace(/[^a-z]/g, "-")}`;
       const original = item.element.getAttribute(key) || item.value;
       item.element.setAttribute(key, original);
       return { ...item, original };
@@ -671,7 +671,7 @@ function showInstallInstructions(options = {}) {
         "Переконайтеся, що сторінка відкрита саме в Safari.",
         "У нижній панелі Safari натисніть кнопку «Поділитися» - це квадрат зі стрілкою вгору.",
         "У меню, яке відкриється, прокрутіть список нижче і натисніть «На початковий екран» або «Add to Home Screen».",
-        "На екрані з назвою United Europe Crypto натисніть «Додати» у правому верхньому куті.",
+        "На екрані з назвою CryptoStar натисніть «Додати» у правому верхньому куті.",
         "Поверніться на головний екран iPhone: там з'явиться ярлик додатку."
       ]
       : [
@@ -842,7 +842,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ["mobile-web-app-capable", "yes"],
     ["apple-mobile-web-app-capable", "yes"],
     ["apple-mobile-web-app-status-bar-style", "black-translucent"],
-    ["apple-mobile-web-app-title", "United Europe Crypto"]
+    ["apple-mobile-web-app-title", "CryptoStar"]
   ].forEach(([name, content]) => {
     if (!document.head.querySelector(`meta[name="${name}"]`)) {
       const meta = document.createElement("meta");
@@ -859,7 +859,7 @@ document.addEventListener("DOMContentLoaded", () => {
   brand.className = "site-brand";
   brand.innerHTML = `
     <button type="button" aria-label="${tr("home")}">
-      <img src="logo.png" alt="United Europe Crypto">
+      <img src="logo.png" alt="CryptoStar">
     </button>
   `;
   brand.querySelector("button").addEventListener("click", () => location.href = "index.html");
@@ -871,9 +871,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const link = event.target.closest("a[href]");
     if (!link || link.target || link.href.startsWith("javascript:") || link.origin !== location.origin) return;
     if (link.pathname === location.pathname && link.search === location.search) return;
-    showAppLoading("United Europe Crypto");
+    showAppLoading("CryptoStar");
   });
-  window.addEventListener("beforeunload", () => showAppLoading("United Europe Crypto"));
+  window.addEventListener("beforeunload", () => showAppLoading("CryptoStar"));
 
   if (document.body.dataset.noNav !== "true") {
     const items = [

@@ -1,4 +1,4 @@
-# Аудит United Europe Crypto
+# Аудит CryptoStar
 
 Дата проверки: 2026-10-26
 

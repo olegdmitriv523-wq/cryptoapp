@@ -5,9 +5,9 @@
     ["pt", "Português"], ["es", "Español"], ["it", "Italiano"], ["ar", "العربية"], ["hi", "हिन्दी"]
   ];
   const GOOGLE_CODES = { en: "en", uk: "uk", ru: "ru", kk: "kk", pl: "pl", ro: "ro", de: "de", fr: "fr", pt: "pt", es: "es", it: "it", ar: "ar", hi: "hi" };
-  const CURRENCY = /(\$\s?[\d,.]+|[\d,.]+\s?\$|USD|USDT|TRC20|BTC|ETH|BNB|SOL|XRP|ADA|DOGE|UEC)/gi;
-  const CACHE_PREFIX = "uec_site_translation_";
-  const SPLIT = "[[UEC_SITE_SPLIT]]";
+  const CURRENCY = /(\$\s?[\d,.]+|[\d,.]+\s?\$|USD|USDT|TRC20|BTC|ETH|BNB|SOL|XRP|ADA|DOGE)/gi;
+  const CACHE_PREFIX = "cryptostar_site_translation_";
+  const SPLIT = "[[CRYPTOSTAR_SITE_SPLIT]]";
   const select = document.getElementById("languageSelect");
   const overlay = document.getElementById("translateScreen");
   let trackedNodes = [];
@@ -34,7 +34,7 @@
   function protect(text) {
     const values = [];
     const safe = text.replace(CURRENCY, match => {
-      const key = `__UEC_${values.length}__`;
+      const key = `__CRYPTOSTAR_${values.length}__`;
       values.push(match);
       return key;
     });
@@ -42,14 +42,14 @@
   }
 
   function restore(text, values) {
-    return values.reduce((result, value, index) => result.replaceAll(`__UEC_${index}__`, value), text);
+    return values.reduce((result, value, index) => result.replaceAll(`__CRYPTOSTAR_${index}__`, value), text);
   }
 
   function shouldTranslate(value) {
     const text = String(value || "").replace(/\s+/g, " ").trim();
     if (text.length < 2) return false;
     if (/^[\d\s.,:+/%$€£¥#xX-]+$/.test(text)) return false;
-    if (/^(USD|USDT|TRC20|BTC|ETH|BNB|SOL|XRP|ADA|DOGE|UEC)$/i.test(text)) return false;
+    if (/^(USD|USDT|TRC20|BTC|ETH|BNB|SOL|XRP|ADA|DOGE)$/i.test(text)) return false;
     return /[A-Za-z]/.test(text);
   }
 

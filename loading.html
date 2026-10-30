@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#0b0f1a">
-<title>United Europe Crypto</title>
+<title>CryptoStar</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="logo.png">
 <link rel="apple-touch-icon" href="logo.png">
@@ -21,10 +21,10 @@ body { margin:0; min-height:100vh; display:grid; place-items:center; background:
 </head>
 <body>
 <main class="loader">
-  <img src="logo.png" alt="United Europe Crypto">
-  <h1>United Europe Crypto</h1>
+  <img src="logo.png" alt="CryptoStar">
+  <h1>CryptoStar</h1>
   <div class="bar" aria-label="Завантаження"><span></span></div>
-  <div class="status" id="status">Завантаження United Europe Crypto...</div>
+  <div class="status" id="status">Завантаження CryptoStar...</div>
 </main>
 <script>
 const destination = localStorage.getItem("token") ? "index.html" : "login.html";
@@ -33,7 +33,7 @@ async function waitForServer() {
     const response = await fetch("/health", {cache:"no-store"});
     if (response.ok) return location.replace(destination);
   } catch {}
-  document.getElementById("status").textContent = "United Europe Crypto запускається. Зачекайте...";
+  document.getElementById("status").textContent = "CryptoStar запускається. Зачекайте...";
   setTimeout(waitForServer, 2500);
 }
 waitForServer();

@@ -659,8 +659,8 @@ function supportAnswer(message) {
 
   if (/^(hi|hello|hey|привіт|вітаю|добрий день|доброго дня|добрий вечір|здравств|салам)\b/i.test(text)) {
     return answer(
-      "Вітаю! Я AI оператор United Europe Crypto. Можу пояснити реєстрацію, поповнення, вивід, навчання, сателітів, торгівлю, винагороди, сайт проекту та ризики. Напишіть коротко, що саме цікавить.",
-      "Hello! I am the United Europe Crypto AI operator. I can explain registration, deposits, withdrawals, learning, satellites, trading, rewards, the project website and risks. Tell me what you want to know."
+      "Вітаю! Я AI оператор CryptoStar. Можу пояснити реєстрацію, поповнення, вивід, навчання, сателітів, торгівлю, винагороди, сайт проекту та ризики. Напишіть коротко, що саме цікавить.",
+      "Hello! I am the CryptoStar AI operator. I can explain registration, deposits, withdrawals, learning, satellites, trading, rewards, the project website and risks. Tell me what you want to know."
     );
   }
   if (/(що ти вмієш|чим допоможеш|help|допоможи|помічник|оператор ai|ai оператор|support bot|підтримка може)/i.test(text)) {
@@ -675,10 +675,10 @@ function supportAnswer(message) {
       "Start with three steps: 1) read the terms; 2) create an account and keep your email/password safe; 3) after login, check Info, Assets, Deposit and Learning. Learning opens after an approved deposit from $1,000."
     );
   }
-  if (/(що це|проєкт|проект|about|platform|платформа|united europe crypto|uec)/i.test(text)) {
+  if (/(що це|проєкт|проект|about|platform|платформа|cryptostar)/i.test(text)) {
     return answer(
-      "United Europe Crypto - це платформа для навчання, внутрішнього обліку активів, заявок на поповнення/вивід, винагород, сателітної структури та моделювання торгової активності. Важливо: криптовалюти ризикові, прибуток не гарантується.",
-      "United Europe Crypto is a platform for learning, internal asset accounting, deposit/withdrawal requests, rewards, satellite structure and modeled trading activity. Important: crypto is risky and profit is not guaranteed."
+      "CryptoStar - це платформа для навчання, внутрішнього обліку активів, заявок на поповнення/вивід, винагород, сателітної структури та моделювання торгової активності. Важливо: криптовалюти ризикові, прибуток не гарантується.",
+      "CryptoStar is a platform for learning, internal asset accounting, deposit/withdrawal requests, rewards, satellite structure and modeled trading activity. Important: crypto is risky and profit is not guaranteed."
     );
   }
   if (/(дякую|спасиб|thanks|thank you|ок|окей|добре|зрозуміло)/i.test(text)) {
@@ -1099,12 +1099,12 @@ async function sendVerificationEmail(email, code, purpose = "registration") {
   const action = purpose === "email_change"
     ? "зміни електронної пошти"
     : (purpose === "password_reset" ? "відновлення пароля" : "реєстрації");
-  const subject = `Код підтвердження United Europe Crypto: ${code}`;
-  const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#111"><h2>United Europe Crypto</h2><p>Ваш код для ${action}:</p><div style="font-size:34px;font-weight:700;letter-spacing:8px;margin:24px 0">${code}</div><p>Код дійсний 10 хвилин. Якщо ви не робили цей запит, просто проігноруйте лист.</p></div>`;
+  const subject = `Код підтвердження CryptoStar: ${code}`;
+  const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#111"><h2>CryptoStar</h2><p>Ваш код для ${action}:</p><div style="font-size:34px;font-weight:700;letter-spacing:8px;margin:24px 0">${code}</div><p>Код дійсний 10 хвилин. Якщо ви не робили цей запит, просто проігноруйте лист.</p></div>`;
   const provider = EMAIL_PROVIDER;
   if (provider === "brevo") {
     const request = () => axios.post("https://api.brevo.com/v3/smtp/email", {
-      sender: { name: "United Europe Crypto", email: BREVO_FROM_ADDRESS },
+      sender: { name: "CryptoStar", email: BREVO_FROM_ADDRESS },
       to: [{ email }],
       subject,
       htmlContent: html
@@ -1995,7 +1995,7 @@ app.post("/admin/telegram/config", adminLimiter, adminAuth, async (req, res) => 
 
     let test = null;
     if (body.send_test) {
-      test = await sendTelegramMessage("TELEGRAM TEST: United Europe Crypto notifications are configured.", ["main", "mirror", "support"]);
+      test = await sendTelegramMessage("TELEGRAM TEST: CryptoStar notifications are configured.", ["main", "mirror", "support"]);
     }
     const config = await telegramConfig();
     return res.json({
@@ -2015,7 +2015,7 @@ app.post("/admin/telegram/config", adminLimiter, adminAuth, async (req, res) => 
 
 app.post("/admin/telegram/test", adminLimiter, adminAuth, async (req, res) => {
   try {
-    const text = cleanText(req.body?.text, 600) || "TELEGRAM TEST: United Europe Crypto notifications are working.";
+    const text = cleanText(req.body?.text, 600) || "TELEGRAM TEST: CryptoStar notifications are working.";
     const result = await sendTelegramMessage(text, ["main", "mirror", "support"]);
     return res.json({ success: Boolean(result.success), telegram: result });
   } catch (error) {

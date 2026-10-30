@@ -20,7 +20,7 @@
       const lang = localStorage.getItem("app_language") || "ru";
       return GOOGLE_LANG_CODES[lang] ? lang : "ru";
     } catch {
-      return "en";
+    return "ru";
     }
   }
 
