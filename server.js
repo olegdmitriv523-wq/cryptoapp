@@ -657,21 +657,31 @@ async function sendTelegramMessage(text, roles = ["main"]) {
   const uniqueTokens = [...new Set(roles.map(role => config.tokens[role]).filter(Boolean))];
   if (!uniqueTokens.length) {
     console.error("TELEGRAM NOT CONFIGURED:", roles.join(","));
-    return { success: false, configured: false };
+    return { success: false, configured: false, errors: [{ description: "Telegram bot token is not configured" }] };
   }
   const results = await Promise.allSettled(uniqueTokens.map(token => axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
     chat_id: config.chatId,
     text
   })));
   const sent = results.some(result => result.status === "fulfilled" && result.value?.data?.ok !== false);
+  const errors = [];
   results.forEach((result, index) => {
     if (result.status === "rejected") {
       const tokenLabel = `${uniqueTokens[index].slice(0, 8)}...`;
       const details = result.reason?.response?.data || result.reason?.message || result.reason;
       console.error("TELEGRAM SEND ERROR:", tokenLabel, details);
+      errors.push({
+        error_code: details?.error_code || result.reason?.response?.status || null,
+        description: details?.description || result.reason?.message || "Telegram request failed"
+      });
+    } else if (result.value?.data?.ok === false) {
+      errors.push({
+        error_code: result.value.data.error_code || null,
+        description: result.value.data.description || "Telegram rejected the message"
+      });
     }
   });
-  return { success: sent, configured: true };
+  return { success: sent, configured: true, errors };
 }
 
 function requestTelegramText(type, user, amount, wallet) {
@@ -1929,8 +1939,13 @@ app.post("/deposit", actionLimiter, auth, async (req, res) => {
       if ((count || 0) >= MAX_DEPOSIT_REQUESTS) return res.json({ success: false, message: "Deposit limit reached" });
       await addSignal({ user_id: user.id, type: "deposit", amount, wallet, status: "pending" });
     }
-    await sendTelegramMessage(requestTelegramText("deposit", user, amount, wallet), ["mirror", "main"]);
-    return res.json({ success: true, message: "Signal created" });
+    const telegram = await sendTelegramMessage(requestTelegramText("deposit", user, amount, wallet), ["mirror", "main"]);
+    return res.json({
+      success: true,
+      message: "Signal created",
+      telegram_sent: Boolean(telegram.success),
+      notification_warning: telegram.success ? null : "Telegram notification was not delivered"
+    });
   } catch (error) {
     console.error("DEPOSIT ERROR:", error);
     return res.status(500).json({ success: false });

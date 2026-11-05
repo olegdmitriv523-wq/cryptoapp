@@ -273,7 +273,9 @@ async function deposit() {
     });
     const data = await response.json();
     if (data.success) {
-      alert("Заявку на поповнення передано адміністратору. Баланс зміниться після підтвердження.");
+      alert(data.telegram_sent === false
+        ? "Your deposit request was saved, but the Telegram notification was not delivered."
+        : "Your deposit request was sent to the administrator. The balance will change after approval.");
       location.href = "index.html";
     } else {
       alert(data.message || "Помилка поповнення");
