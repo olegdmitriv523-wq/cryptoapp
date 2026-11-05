@@ -644,11 +644,11 @@ async function telegramConfig() {
   ]);
   return {
     tokens: {
-      main: cleanTelegramToken(main) || TELEGRAM_ENV.main,
-      mirror: cleanTelegramToken(mirror) || TELEGRAM_ENV.mirror,
-      support: cleanTelegramToken(support) || TELEGRAM_ENV.support
+      main: TELEGRAM_ENV.main || cleanTelegramToken(main),
+      mirror: TELEGRAM_ENV.mirror || cleanTelegramToken(mirror),
+      support: TELEGRAM_ENV.support || cleanTelegramToken(support)
     },
-    chatId: cleanTelegramChatId(chatId) || TELEGRAM_ENV.chatId
+    chatId: TELEGRAM_ENV.chatId || cleanTelegramChatId(chatId)
   };
 }
 
