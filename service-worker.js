@@ -1,4 +1,4 @@
-const CACHE_NAME = "cryptostar-v44";
+const CACHE_NAME = "cryptostar-v45-en-splash";
 const APP_SHELL = [
   "/loading.html",
   "/site/index.html",

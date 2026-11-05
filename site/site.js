@@ -13,8 +13,13 @@
   let trackedNodes = [];
 
   function currentLang() {
-    const saved = localStorage.getItem("site_language") || localStorage.getItem("app_language") || "ru";
-    return GOOGLE_CODES[saved] ? saved : "ru";
+    if (localStorage.getItem("cryptostar_language_default_v1") !== "1") {
+      if (!localStorage.getItem("site_language") || localStorage.getItem("site_language") === "ru") localStorage.setItem("site_language", "en");
+      if (!localStorage.getItem("app_language") || localStorage.getItem("app_language") === "ru") localStorage.setItem("app_language", "en");
+      localStorage.setItem("cryptostar_language_default_v1", "1");
+    }
+    const saved = localStorage.getItem("site_language") || localStorage.getItem("app_language") || "en";
+    return GOOGLE_CODES[saved] ? saved : "en";
   }
 
   function setLanguage(lang) {

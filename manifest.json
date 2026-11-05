@@ -3,6 +3,8 @@
   "name": "CryptoStar",
   "short_name": "CryptoStar",
   "description": "Cryptocurrency learning, assets and trading",
+  "lang": "en",
+  "dir": "ltr",
   "start_url": "/loading.html?source=pwa",
   "scope": "/",
   "display": "standalone",

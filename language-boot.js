@@ -17,10 +17,14 @@
 
   function savedLanguage() {
     try {
-      const lang = localStorage.getItem("app_language") || "ru";
-      return GOOGLE_LANG_CODES[lang] ? lang : "ru";
+      if (localStorage.getItem("cryptostar_language_default_v1") !== "1") {
+        if (!localStorage.getItem("app_language") || localStorage.getItem("app_language") === "ru") localStorage.setItem("app_language", "en");
+        localStorage.setItem("cryptostar_language_default_v1", "1");
+      }
+      const lang = localStorage.getItem("app_language") || "en";
+      return GOOGLE_LANG_CODES[lang] ? lang : "en";
     } catch {
-    return "ru";
+    return "en";
     }
   }
 

@@ -1,10 +1,10 @@
 const APP_LANGUAGES = [
+  ["en", "English"],
   ["ru", "Русский"],
   ["uk", "Українська"],
   ["kk", "Қазақша"],
   ["pl", "Polski"],
   ["ro", "Română"],
-  ["en", "English"],
   ["ar", "العربية"],
   ["hi", "हिन्दी"],
   ["de", "Deutsch"],
@@ -13,6 +13,13 @@ const APP_LANGUAGES = [
   ["es", "Español"],
   ["it", "Italiano"]
 ];
+
+try {
+  if (localStorage.getItem("cryptostar_language_default_v1") !== "1") {
+    if (!localStorage.getItem("app_language") || localStorage.getItem("app_language") === "ru") localStorage.setItem("app_language", "en");
+    localStorage.setItem("cryptostar_language_default_v1", "1");
+  }
+} catch {}
 
 if (localStorage.getItem("token")) localStorage.setItem("logged_in", "1");
 
@@ -212,8 +219,8 @@ const GOOGLE_LANG_CODES = {
 };
 
 function currentLang() {
-  const saved = localStorage.getItem("app_language") || "ru";
-  return I18N[saved] ? saved : "ru";
+  const saved = localStorage.getItem("app_language") || "en";
+  return I18N[saved] ? saved : "en";
 }
 
 function tr(key) {
