@@ -152,6 +152,10 @@ const PUBLIC_FILES = new Set([
 ]);
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "loading.html")));
 app.get("/landing.html", (req, res) => res.redirect(302, "/site"));
+app.get("/logo.png", (req, res) => res.sendFile(path.join(__dirname, "logo.png"), {
+  maxAge: IS_PRODUCTION ? "7d" : 0,
+  immutable: IS_PRODUCTION
+}));
 app.get("/:file", (req, res, next) => {
   if (!PUBLIC_FILES.has(req.params.file)) return next();
   return res.sendFile(path.join(__dirname, req.params.file));

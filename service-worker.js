@@ -1,4 +1,4 @@
-const CACHE_NAME = "cryptostar-v46-responsive-i18n";
+const CACHE_NAME = "cryptostar-v47-fast-start-logo";
 const APP_SHELL = [
   "/loading.html",
   "/site/index.html",
