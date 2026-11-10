@@ -44,7 +44,15 @@ const I18N = {
     pool: "Модельный индикатор (не реальные активы)", dailyChange: "Суточное изменение", perDay: "за сутки", readLesson: "Прочитайте короткий урок и дайте правильный ответ. Каждый тест можно пройти один раз.",
     reward10: "Вознаграждение составляет $2.50", check: "Проверить", mainTrade: "Основная торговля",
     tradeButton: "Торговать", locked: "Заблокировано", availableAll: "Доступно всем пользователям",
-    project: "CryptoStar", market: "Рынок", copy: "Скопировано", back: "Назад"
+    project: "CryptoStar", market: "Рынок", copy: "Скопировано", back: "Назад",
+    walletPending: "Запрос на создание персонального кошелька уже отправлен. Дождитесь, пока администратор укажет адрес.",
+    walletMissing: "Персональный кошелек еще не создан. Отправьте запрос администратору.",
+    requestWallet: "Запросить кошелек", waitingAdmin: "Ожидает администратора", sending: "Отправляем...",
+    requestSent: "Запрос отправлен администратору", requestAlreadySent: "Запрос уже отправлен администратору",
+    walletSaved: "Кошелек сохранен", savedWallet: "Сохраненный кошелек", withdrawSaved: "Вывести на сохраненный кошелек",
+    depositTelegramWarning: "Заявка на пополнение сохранена, но уведомление в Telegram не доставлено.",
+    depositSent: "Заявка на пополнение отправлена администратору. Баланс изменится после подтверждения.",
+    support: "Поддержка"
   },
   kk: {
     navHome: "Басты бет", navTrade: "Сауда", navAssets: "Активтер", navRewards: "Сыйақылар", navLearning: "Оқу", navInfo: "Ақпарат",
@@ -88,7 +96,15 @@ const I18N = {
     pool: "Total pool", dailyChange: "Daily change", perDay: "per day", readLesson: "Read the short lesson and choose the correct answer. Each test can be completed once.",
     reward10: "The reward is $2.50", check: "Check", mainTrade: "Main trading",
     tradeButton: "Trade", locked: "Locked", availableAll: "Available to all users",
-    project: "CryptoStar", market: "Market", copy: "Copied", back: "Back"
+    project: "CryptoStar", market: "Market", copy: "Copied", back: "Back",
+    walletPending: "The personal wallet request has already been sent. Wait for the administrator to add the address.",
+    walletMissing: "The personal wallet has not been created yet. Send a request to the administrator.",
+    requestWallet: "Request wallet", waitingAdmin: "Waiting for administrator", sending: "Sending...",
+    requestSent: "The request was sent to the administrator", requestAlreadySent: "The request has already been sent to the administrator",
+    walletSaved: "Wallet saved", savedWallet: "Saved wallet", withdrawSaved: "Withdraw to saved wallet",
+    depositTelegramWarning: "Your deposit request was saved, but the Telegram notification was not delivered.",
+    depositSent: "Your deposit request was sent to the administrator. The balance will change after approval.",
+    support: "Support"
   },
   ar: {
     navHome: "الرئيسية", navTrade: "التداول", navAssets: "الأصول", navRewards: "المكافآت", navLearning: "التعلم", navInfo: "معلومات",
@@ -197,7 +213,18 @@ const TEXT_KEYS = {
   "Торгувати": "tradeButton",
   "Заблоковано": "locked",
   "Доступна всім користувачам": "availableAll",
-  "Назад": "back"
+  "Назад": "back",
+  "Запит на створення персонального гаманця вже відправлено. Дочекайтеся, поки адміністратор впише адресу.": "walletPending",
+  "Персональний гаманець ще не створено. Відправте запит адміністратору.": "walletMissing",
+  "Запросити гаманець": "requestWallet",
+  "Очікує адміністратора": "waitingAdmin",
+  "Відправляємо...": "sending",
+  "Запит відправлено адміністратору": "requestSent",
+  "Запит уже відправлено адміністратору": "requestAlreadySent",
+  "Гаманець збережено": "walletSaved",
+  "Збережений гаманець": "savedWallet",
+  "Вивести на збережений гаманець": "withdrawSaved",
+  "Підтримка": "support"
 };
 
 const CURRENCY_PATTERN = /(\$\s?[\d,.]+|[\d,.]+\s?\$|(?:\d+\s*)?(?:долар|долара|доларів|долари|дол\.|USD|USDT|TRC20)\b)/giu;
@@ -224,7 +251,8 @@ function currentLang() {
 }
 
 function tr(key) {
-  return (I18N[currentLang()] && I18N[currentLang()][key]) || I18N.ru[key] || key;
+  const lang = currentLang();
+  return (I18N[lang] && I18N[lang][key]) || (lang === "en" ? I18N.en[key] : I18N.ru[key]) || I18N.en[key] || key;
 }
 
 function googleTargetLang() {
@@ -397,12 +425,18 @@ async function translateBatch(texts, lang) {
   if (!texts.length) return [];
   const joined = texts.join(`\n${TRANSLATION_SPLIT}\n`);
   const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=uk&tl=${encodeURIComponent(googleTargetLang())}&dt=t&q=${encodeURIComponent(joined)}`;
-  const response = await fetch(url, { cache: "force-cache" });
-  if (!response.ok) throw new Error("translation failed");
-  const data = await response.json();
-  const translated = (data?.[0] || []).map(part => part?.[0] || "").join("");
-  const parts = translated.split(TRANSLATION_SPLIT).map(part => part.trim());
-  return texts.map((text, index) => parts[index] || text);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 4500);
+  try {
+    const response = await fetch(url, { cache: "force-cache", signal: controller.signal });
+    if (!response.ok) throw new Error("translation failed");
+    const data = await response.json();
+    const translated = (data?.[0] || []).map(part => part?.[0] || "").join("");
+    const parts = translated.split(TRANSLATION_SPLIT).map(part => part.trim());
+    return texts.map((text, index) => parts[index] || text);
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function machineTranslatePage(root = document.body) {
@@ -561,7 +595,8 @@ function loadFullPageTranslator() {
   machineTranslatePage(document.body).then(success => {
     if (!success) loadGoogleTranslatorFallback();
   });
-  [400, 1400, 3200, 6200].forEach(delay => setTimeout(() => machineTranslatePage(document.body), delay));
+  // One delayed pass catches content loaded by the page without repeatedly blocking the UI.
+  setTimeout(() => machineTranslatePage(document.body), 1200);
 }
 
 function observeCurrencyChanges() {
@@ -827,9 +862,17 @@ function renderSupportButton() {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "support-fab";
-  button.textContent = "Підтримка";
+  button.textContent = tr("support");
   button.addEventListener("click", openSupportWidget);
   document.body.append(button);
+  document.addEventListener("focusin", event => {
+    if (event.target.matches("input, textarea, select, button")) button.classList.add("is-hidden");
+  });
+  document.addEventListener("focusout", event => {
+    if (event.target.matches("input, textarea, select")) setTimeout(() => {
+      if (!document.activeElement?.matches("input, textarea, select")) button.classList.remove("is-hidden");
+    }, 120);
+  });
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -914,7 +957,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setTimeout(() => window.appTranslate?.translatePage(), 3200);
   window.dispatchEvent(new CustomEvent("app-language-ready"));
   if (currentLang() === "uk") hideLanguageLoading();
-  if (currentLang() !== "uk") setTimeout(hideLanguageLoading, 5600);
+  if (currentLang() !== "uk") setTimeout(hideLanguageLoading, 4800);
 });
 
 window.appTranslate = {

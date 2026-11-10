@@ -11,6 +11,7 @@
   const select = document.getElementById("languageSelect");
   const overlay = document.getElementById("translateScreen");
   let trackedNodes = [];
+  let translationRun = 0;
 
   function currentLang() {
     if (localStorage.getItem("cryptostar_language_default_v1") !== "1") {
@@ -85,15 +86,22 @@
     const protectedItems = items.map(protect);
     const joined = protectedItems.map(item => item.safe).join(`\n${SPLIT}\n`);
     const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${encodeURIComponent(GOOGLE_CODES[lang])}&dt=t&q=${encodeURIComponent(joined)}`;
-    const response = await fetch(url, { cache: "force-cache" });
-    if (!response.ok) throw new Error("translation failed");
-    const data = await response.json();
-    const translated = (data?.[0] || []).map(part => part?.[0] || "").join("");
-    const parts = translated.split(SPLIT).map(part => part.trim());
-    return items.map((original, index) => restore(parts[index] || original, protectedItems[index].values));
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4500);
+    try {
+      const response = await fetch(url, { cache: "force-cache", signal: controller.signal });
+      if (!response.ok) throw new Error("translation failed");
+      const data = await response.json();
+      const translated = (data?.[0] || []).map(part => part?.[0] || "").join("");
+      const parts = translated.split(SPLIT).map(part => part.trim());
+      return items.map((original, index) => restore(parts[index] || original, protectedItems[index].values));
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   async function applyLanguage(lang) {
+    const run = ++translationRun;
     setLanguage(lang);
     select.value = lang;
     if (lang === "en") {
@@ -109,16 +117,18 @@
       for (let i = 0; i < missing.length; i += 24) {
         const chunk = missing.slice(i, i + 24);
         const translated = await translateBatch(chunk, lang);
+      if (run !== translationRun) return;
         chunk.forEach((text, index) => { store[text] = translated[index] || text; });
       }
       saveCache(lang, store);
       nodes.forEach(({ node, original }) => {
+        if (run !== translationRun) return;
         if (store[original]) node.nodeValue = store[original];
       });
     } catch {
-      alert("Translation is temporarily unavailable. Please try again.");
+      // The default page is already English, so a failed optional translation must not block the page.
     } finally {
-      overlay.classList.remove("visible");
+      if (run === translationRun) overlay.classList.remove("visible");
     }
   }
 

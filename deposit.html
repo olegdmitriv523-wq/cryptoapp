@@ -198,7 +198,7 @@ async function loadWallet() {
     document.querySelector(".submit-btn").disabled = true;
     requestButton.hidden = false;
     requestButton.disabled = Boolean(data.wallet_request_pending);
-    requestButton.textContent = data.wallet_request_pending ? "Очікує адміністратора" : "Запросити гаманець";
+     requestButton.textContent = data.wallet_request_pending ? (window.appTranslate?.tr("waitingAdmin") || "Очікує адміністратора") : (window.appTranslate?.tr("requestWallet") || "Запросити гаманець");
     window.appTranslate?.translatePage();
     return data;
   }
@@ -232,10 +232,10 @@ async function requestWalletThroughConfig() {
 async function requestWallet() {
   const button = document.getElementById("requestWalletBtn");
   button.disabled = true;
-  button.textContent = "Відправляємо...";
+   button.textContent = window.appTranslate?.tr("sending") || "Відправляємо...";
   try {
     const configResult = await requestWalletThroughConfig();
-    alert(configResult.message === "Wallet request is already pending" ? "Запит уже відправлено адміністратору" : "Запит відправлено адміністратору");
+     alert(configResult.message === "Wallet request is already pending" ? (window.appTranslate?.tr("requestAlreadySent") || "Запит уже відправлено адміністратору") : (window.appTranslate?.tr("requestSent") || "Запит відправлено адміністратору"));
   } catch (error) {
     if (error.message === "auth") {
       localStorage.removeItem("token");
@@ -245,7 +245,7 @@ async function requestWallet() {
     }
     const walletState = await loadWallet().catch(() => null);
     if (walletState?.wallet_request_pending) {
-      alert("Запит уже відправлено адміністратору");
+       alert(window.appTranslate?.tr("requestAlreadySent") || "Запит уже відправлено адміністратору");
       return;
     }
     alert("Не вдалося відправити запит. Оновіть сторінку і спробуйте ще раз.");
@@ -273,9 +273,9 @@ async function deposit() {
     });
     const data = await response.json();
     if (data.success) {
-      alert(data.telegram_sent === false
-        ? "Your deposit request was saved, but the Telegram notification was not delivered."
-        : "Your deposit request was sent to the administrator. The balance will change after approval.");
+       alert(data.telegram_sent === false
+         ? (window.appTranslate?.tr("depositTelegramWarning") || "Your deposit request was saved, but the Telegram notification was not delivered.")
+         : (window.appTranslate?.tr("depositSent") || "Your deposit request was sent to the administrator. The balance will change after approval."));
       location.href = "index.html";
     } else {
       alert(data.message || "Помилка поповнення");
