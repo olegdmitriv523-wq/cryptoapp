@@ -273,7 +273,6 @@ const EMAIL_PROVIDER = BREVO_API_KEY && BREVO_FROM_ADDRESS
 
 const PUBLIC_USER_FIELDS = "id,fullname,nickname,country,email,phone,balance,deposit,satellites,wallet_address,referrer_id";
 const DISPLAY_ID_PREFIX = "1568";
-const DEPOSIT_WALLET_ADDRESS = process.env.DEPOSIT_WALLET_ADDRESS || "TTL8GGSkoAne5QRdkizLbGnmaBKv3EPoiy";
 const DEPOSIT_ASSET = "USDT";
 const DEPOSIT_NETWORK = "TRC20";
 const WALLET_CREATE_SIGNAL_TYPE = "wallet_create";
@@ -593,6 +592,16 @@ function getPoolSnapshot() {
 async function addSignal(signal) {
   const { error } = await supabase.from("signals").insert([signal]);
   if (error) throw error;
+}
+
+async function assignDepositWallet(userId) {
+  if (!USE_SUPABASE) {
+    return { ok: false, message: "Deposit wallet pool is not configured" };
+  }
+
+  const { data, error } = await supabase.rpc("assign_deposit_wallet", { p_user_id: userId });
+  if (error) throw error;
+  return Array.isArray(data) ? data[0] : data;
 }
 
 function isUniqueViolation(error) {
@@ -1406,11 +1415,30 @@ async function createRegisteredUser(data, passwordHash, ip, emailVerified = fals
     return { success: false, message: "Insert error" };
   }
 
+  let walletAssignment;
+  try {
+    walletAssignment = await assignDepositWallet(user.id);
+  } catch (assignmentError) {
+    console.error("REGISTER WALLET ASSIGNMENT ERROR:", assignmentError);
+    await supabase.from("users").delete().eq("id", user.id);
+    return { success: false, message: "Wallet assignment error" };
+  }
+
+  if (!walletAssignment?.ok || !walletAssignment.wallet) {
+    await supabase.from("users").delete().eq("id", user.id);
+    return {
+      success: false,
+      message: walletAssignment?.message || "No free deposit wallet"
+    };
+  }
+
+  user.wallet_address = walletAssignment.wallet;
+
   await addSignal({
     user_id: user.id,
     type: "register",
     amount: 0,
-    wallet: user.wallet_address || "wallet_request_required",
+    wallet: user.wallet_address,
     status: "done"
   });
   await refreshSatelliteCount(data.referrerId);
@@ -1427,7 +1455,7 @@ async function createRegisteredUser(data, passwordHash, ip, emailVerified = fals
       `Referrer: ${user.referrer_id ? formatUserId(user.referrer_id) : "-"}`,
       `Deposit asset: ${DEPOSIT_ASSET}`,
       `Deposit network: ${DEPOSIT_NETWORK}`,
-      `Deposit wallet: ${DEPOSIT_WALLET_ADDRESS}`,
+      `Deposit wallet: ${user.wallet_address}`,
       "Secret phrase: not sent for security",
       `Email verified: ${emailVerified ? "yes" : "temporarily skipped"}`,
       `Starting balance: $0`
