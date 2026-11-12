@@ -3,6 +3,12 @@
     ["en", "English"], ["ru", "Русский"], ["uk", "Українська"], ["es", "Español"]
   ];
   const GOOGLE_CODES = { en: "en", uk: "uk", ru: "ru", es: "es" };
+  const PAGE_TITLES = {
+    en: "CryptoStar | Public Website",
+    ru: "CryptoStar | Публичный сайт",
+    uk: "CryptoStar | Публічний сайт",
+    es: "CryptoStar | Sitio público"
+  };
   const CURRENCY = /(\$\s?[\d,.]+|[\d,.]+\s?\$|USD|USDT|TRC20|BTC|ETH|BNB|SOL|XRP|ADA|DOGE)/gi;
   const CACHE_PREFIX = "cryptostar_site_translation_";
   const SPLIT = "[[CRYPTOSTAR_SITE_SPLIT]]";
@@ -25,6 +31,8 @@
     localStorage.setItem("site_language", lang);
     localStorage.setItem("app_language", lang);
     document.documentElement.lang = lang;
+    document.title = PAGE_TITLES[lang] || PAGE_TITLES.en;
+    select.setAttribute("aria-label", ({ en: "Language", ru: "Язык", uk: "Мова", es: "Idioma" })[lang] || "Language");
   }
 
   function cache(lang) {
@@ -72,6 +80,21 @@
     return nodes;
   }
 
+  function translatableAttributes() {
+    const items = [];
+    document.querySelectorAll("[placeholder], [title], [aria-label], img[alt]").forEach(element => {
+      if (element.closest(".notranslate,[translate='no'],.translate-screen")) return;
+      ["placeholder", "title", "aria-label", "alt"].forEach(name => {
+        const value = element.getAttribute(name);
+        const key = `data-cryptostar-site-original-${name}`;
+        const original = element.getAttribute(key) || value;
+        if (original) element.setAttribute(key, original);
+        if (shouldTranslate(original)) items.push({ element, name, original });
+      });
+    });
+    return items;
+  }
+
   function collectTrackedNodes() {
     const known = new Set(trackedNodes.map(item => item.node));
     for (const node of textNodes()) {
@@ -110,7 +133,8 @@
     try {
       const store = cache(lang);
       const nodes = collectTrackedNodes();
-      const originals = [...new Set(nodes.map(item => item.original))];
+      const attributes = translatableAttributes();
+      const originals = [...new Set([...nodes.map(item => item.original), ...attributes.map(item => item.original)])];
       const missing = originals.filter(text => !store[text]);
       for (let i = 0; i < missing.length; i += 24) {
         const chunk = missing.slice(i, i + 24);
@@ -122,6 +146,10 @@
       nodes.forEach(({ node, original }) => {
         if (run !== translationRun) return;
         if (store[original]) node.nodeValue = store[original];
+      });
+      attributes.forEach(({ element, name, original }) => {
+        if (run !== translationRun) return;
+        if (store[original]) element.setAttribute(name, store[original]);
       });
     } catch {
       // The default page is already English, so a failed optional translation must not block the page.
@@ -135,6 +163,10 @@
     select.addEventListener("change", () => applyLanguage(select.value));
     collectTrackedNodes();
     applyLanguage(currentLang());
+    const observer = new MutationObserver(() => {
+      if (currentLang() !== "en") applyLanguage(currentLang());
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("/service-worker.js").catch(() => {});
   }
 

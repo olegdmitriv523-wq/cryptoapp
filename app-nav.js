@@ -32,7 +32,7 @@ const I18N = {
     walletSaved: "Гаманець збережено", savedWallet: "Збережений гаманець", withdrawSaved: "Вивести на збережений гаманець",
     depositTelegramWarning: "Заявку на поповнення збережено, але сповіщення в Telegram не доставлено.",
     depositSent: "Заявку на поповнення відправлено адміністратору. Баланс зміниться після підтвердження.",
-    support: "Підтримка"
+    support: "Підтримка", languageLabel: "Мова"
   },
   ru: {
     navHome: "Домой", navTrade: "Торговля", navAssets: "Активы", navRewards: "Награды", navLearning: "Обучение", navInfo: "Инфо",
@@ -51,7 +51,7 @@ const I18N = {
     walletSaved: "Кошелек сохранен", savedWallet: "Сохраненный кошелек", withdrawSaved: "Вывести на сохраненный кошелек",
     depositTelegramWarning: "Заявка на пополнение сохранена, но уведомление в Telegram не доставлено.",
     depositSent: "Заявка на пополнение отправлена администратору. Баланс изменится после подтверждения.",
-    support: "Поддержка"
+    support: "Поддержка", languageLabel: "Язык"
   },
   en: {
     navHome: "Home", navTrade: "Trade", navAssets: "Assets", navRewards: "Rewards", navLearning: "Learning", navInfo: "Info",
@@ -70,7 +70,7 @@ const I18N = {
     walletSaved: "Wallet saved", savedWallet: "Saved wallet", withdrawSaved: "Withdraw to saved wallet",
     depositTelegramWarning: "Your deposit request was saved, but the Telegram notification was not delivered.",
     depositSent: "Your deposit request was sent to the administrator. The balance will change after approval.",
-    support: "Support"
+    support: "Support", languageLabel: "Language"
   },
   es: {
     navHome: "Inicio", navTrade: "Trading", navAssets: "Activos", navRewards: "Recompensas", navLearning: "Aprendizaje", navInfo: "Info",
@@ -89,7 +89,7 @@ const I18N = {
     walletSaved: "Billetera guardada", savedWallet: "Billetera guardada", withdrawSaved: "Retirar a la billetera guardada",
     depositTelegramWarning: "La solicitud de depósito se guardó, pero no se entregó la notificación de Telegram.",
     depositSent: "La solicitud de depósito fue enviada al administrador. El saldo cambiará después de la aprobación.",
-    support: "Soporte"
+    support: "Soporte", languageLabel: "Idioma"
   },
 };
 
@@ -149,6 +149,28 @@ function currentLang() {
   return I18N[saved] ? saved : "en";
 }
 
+const PAGE_TITLES = {
+  "index.html": { uk: "CryptoStar", ru: "CryptoStar", en: "CryptoStar", es: "CryptoStar" },
+  "deposit.html": { uk: "Поповнення", ru: "Пополнение", en: "Deposit", es: "Depósito" },
+  "withdraw.html": { uk: "Виведення коштів", ru: "Вывод средств", en: "Withdraw funds", es: "Retiro de fondos" },
+  "assets.html": { uk: "Активи", ru: "Активы", en: "Assets", es: "Activos" },
+  "trade.html": { uk: "Торгівля", ru: "Торговля", en: "Trading", es: "Trading" },
+  "learning.html": { uk: "Навчання криптовалютам", ru: "Обучение криптовалютам", en: "Crypto learning", es: "Aprendizaje de criptomonedas" },
+  "rewards.html": { uk: "Винагороди", ru: "Награды", en: "Rewards", es: "Recompensas" },
+  "profile.html": { uk: "Дані користувача", ru: "Данные пользователя", en: "User data", es: "Datos del usuario" },
+  "info.html": { uk: "Про проєкт", ru: "О проекте", en: "About the project", es: "Sobre el proyecto" },
+  "terms.html": { uk: "Умови користування", ru: "Условия использования", en: "Terms of use", es: "Condiciones de uso" },
+  "login.html": { uk: "Вхід", ru: "Вход", en: "Login", es: "Iniciar sesión" },
+  "register.html": { uk: "Реєстрація", ru: "Регистрация", en: "Registration", es: "Registro" },
+  "admin.html": { uk: "Адмінпанель", ru: "Панель администратора", en: "Admin panel", es: "Panel de administración" }
+};
+
+function translateDocumentTitle() {
+  const file = location.pathname.split("/").pop() || "index.html";
+  const title = PAGE_TITLES[file]?.[currentLang()];
+  if (title) document.title = `CryptoStar | ${title}`;
+}
+
 function tr(key) {
   const lang = currentLang();
   return (I18N[lang] && I18N[lang][key]) || (lang === "en" ? I18N.en[key] : I18N.ru[key]) || I18N.en[key] || key;
@@ -162,6 +184,7 @@ function applyTranslations(root = document.body) {
   const lang = currentLang();
   document.documentElement.lang = lang;
   document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
+  translateDocumentTitle();
   protectCurrencyText(root);
 
   root.querySelectorAll("[data-i18n]").forEach(element => {
@@ -192,7 +215,7 @@ function applyTranslations(root = document.body) {
 function renderLanguageSelector() {
   const select = document.createElement("select");
   select.className = "language-select";
-  select.setAttribute("aria-label", "Language");
+  select.setAttribute("aria-label", tr("languageLabel"));
   select.innerHTML = APP_LANGUAGES.map(([code, label]) => `<option value="${code}">${label}</option>`).join("");
   select.value = currentLang();
   select.addEventListener("change", () => {
@@ -272,7 +295,7 @@ function shouldTranslateText(text) {
   const hasCurrency = CURRENCY_PATTERN.test(value);
   CURRENCY_PATTERN.lastIndex = 0;
   if (hasCurrency) return false;
-  return /[А-Яа-яІіЇїЄєҐґ]/.test(value);
+  return /[А-Яа-яЁёІіЇїЄєҐґ]/.test(value);
 }
 
 function translationCache(lang) {
@@ -322,7 +345,7 @@ function translatableAttributes(root = document.body) {
 async function translateBatch(texts, lang) {
   if (!texts.length) return [];
   const joined = texts.join(`\n${TRANSLATION_SPLIT}\n`);
-  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=uk&tl=${encodeURIComponent(googleTargetLang())}&dt=t&q=${encodeURIComponent(joined)}`;
+  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(googleTargetLang())}&dt=t&q=${encodeURIComponent(joined)}`;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 4500);
   try {
@@ -395,7 +418,12 @@ async function machineTranslatePage(root = document.body) {
 }
 
 function scheduleFullPageTranslation(delay = 700) {
-  return false;
+  if (currentLang() === "uk") return false;
+  clearTimeout(translationRefreshTimer);
+  translationRefreshTimer = setTimeout(() => {
+    machineTranslatePage(document.body);
+  }, Math.min(Math.max(Number(delay) || 0, 0), 250));
+  return true;
 }
 
 function protectCurrencyText(root = document.body) {
@@ -475,7 +503,41 @@ function loadFullPageTranslator() {
 }
 
 function observeCurrencyChanges() {
-  return false;
+  if (currentLang() === "uk" || window.__cryptostarTranslationObserver) return false;
+  let timer = null;
+  let paused = false;
+  const observer = new MutationObserver(mutations => {
+    if (paused || machineTranslationRunning) return;
+    if (!mutations.some(mutation => mutation.addedNodes.length)) return;
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      paused = true;
+      try { await machineTranslatePage(document.body); } finally {
+        setTimeout(() => { paused = false; }, 120);
+      }
+    }, 100);
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+  window.__cryptostarTranslationObserver = observer;
+  return true;
+}
+
+function installTranslatedAlerts() {
+  if (window.__cryptostarTranslatedAlerts) return;
+  const nativeAlert = window.alert.bind(window);
+  window.alert = message => {
+    const text = String(message ?? "");
+    if (currentLang() === "uk" || !shouldTranslateText(text)) return nativeAlert(message);
+    const lang = currentLang();
+    const store = translationCache(lang);
+    if (store[text]) return nativeAlert(store[text]);
+    translateBatch([text], lang).then(([translated]) => {
+      store[text] = translated || text;
+      saveTranslationCache(lang, store);
+      nativeAlert(store[text]);
+    }).catch(() => nativeAlert(message));
+  };
+  window.__cryptostarTranslatedAlerts = true;
 }
 
 function renderInstallButton() {
@@ -818,6 +880,7 @@ document.addEventListener("DOMContentLoaded", () => {
   applyTranslations();
   observeCurrencyChanges();
   loadFullPageTranslator();
+  installTranslatedAlerts();
   scheduleFullPageTranslation(1400);
   setTimeout(() => window.appTranslate?.translatePage(), 3200);
   window.dispatchEvent(new CustomEvent("app-language-ready"));
