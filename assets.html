@@ -92,8 +92,8 @@ function renderHistory(history) {
     const outgoing = item.type === "withdraw";
     const amountClass = outgoing ? "red" : "green";
     const sign = outgoing ? "-" : "+";
-    const title = item.type.startsWith("reward_satellite_balance_10_")
-      ? "10% від балансу активного сателіта"
+    const title = item.type.startsWith("reward_satellite_deposit_10_") || item.type.startsWith("reward_satellite_balance_10_")
+      ? "10% від підтвердженого депозиту активного сателіта"
       : (typeLabels[item.type] || item.type);
     return `<div class="history-item">
        <div><b>${escapeHtml(title)}</b><div class="history-meta">${new Date(item.created_at).toLocaleString("uk-UA")} · ${escapeHtml(item.status)}</div></div>

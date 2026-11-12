@@ -22,7 +22,7 @@ const I18N = {
     profile: "Дані користувача", logout: "Вийти", balance: "Баланс", wallet: "Гаманець", userData: "Дані користувача",
     addFunds: "Поповнити", withdrawShort: "Вивести", mainBalance: "Основний баланс", operationHistory: "Історія операцій і винагород",
     pool: "Модельний індикатор (не реальні активи)", dailyChange: "Добова зміна", perDay: "за добу", readLesson: "Прочитайте короткий урок і дайте правильну відповідь. Кожен тест можна пройти один раз.",
-    reward10: "Винагорода становить $2.50", check: "Перевірити", mainTrade: "Основна торгівля",
+    reward10: "Винагорода становить $1", check: "Перевірити", mainTrade: "Основна торгівля",
     tradeButton: "Торгувати", locked: "Заблоковано", availableAll: "Доступна всім користувачам",
     project: "CryptoStar", market: "Ринок", copy: "Скопійовано", back: "Назад",
     walletPending: "Запит на створення персонального гаманця вже відправлено. Дочекайтеся, поки адміністратор укаже адресу.",
@@ -41,7 +41,7 @@ const I18N = {
     profile: "Данные пользователя", logout: "Выйти", balance: "Баланс", wallet: "Кошелек", userData: "Данные пользователя",
     addFunds: "Пополнить", withdrawShort: "Вывести", mainBalance: "Основной баланс", operationHistory: "История операций и наград",
     pool: "Модельный индикатор (не реальные активы)", dailyChange: "Суточное изменение", perDay: "за сутки", readLesson: "Прочитайте короткий урок и дайте правильный ответ. Каждый тест можно пройти один раз.",
-    reward10: "Вознаграждение составляет $2.50", check: "Проверить", mainTrade: "Основная торговля",
+    reward10: "Вознаграждение составляет $1", check: "Проверить", mainTrade: "Основная торговля",
     tradeButton: "Торговать", locked: "Заблокировано", availableAll: "Доступно всем пользователям",
     project: "CryptoStar", market: "Рынок", copy: "Скопировано", back: "Назад",
     walletPending: "Запрос на создание персонального кошелька уже отправлен. Дождитесь, пока администратор укажет адрес.",
@@ -60,7 +60,7 @@ const I18N = {
     profile: "User data", logout: "Log out", balance: "Balance", wallet: "Wallet", userData: "User data",
     addFunds: "Deposit", withdrawShort: "Withdraw", mainBalance: "Main balance", operationHistory: "Operations and rewards history",
     pool: "Total pool", dailyChange: "Daily change", perDay: "per day", readLesson: "Read the short lesson and choose the correct answer. Each test can be completed once.",
-    reward10: "The reward is $2.50", check: "Check", mainTrade: "Main trading",
+    reward10: "The reward is $1", check: "Check", mainTrade: "Main trading",
     tradeButton: "Trade", locked: "Locked", availableAll: "Available to all users",
     project: "CryptoStar", market: "Market", copy: "Copied", back: "Back",
     walletPending: "The personal wallet request has already been sent. Wait for the administrator to add the address.",
@@ -79,7 +79,7 @@ const I18N = {
     profile: "Datos del usuario", logout: "Salir", balance: "Saldo", wallet: "Billetera", userData: "Datos del usuario",
     addFunds: "Depositar", withdrawShort: "Retirar", mainBalance: "Saldo principal", operationHistory: "Historial de operaciones y recompensas",
     pool: "Pool total", dailyChange: "Cambio diario", perDay: "por día", readLesson: "Lee la lección corta y elige la respuesta correcta. Cada prueba se puede completar una vez.",
-    reward10: "La recompensa es de $2.50", check: "Comprobar", mainTrade: "Trading principal",
+    reward10: "La recompensa es de $1", check: "Comprobar", mainTrade: "Trading principal",
     tradeButton: "Operar", locked: "Bloqueado", availableAll: "Disponible para todos los usuarios",
     project: "CryptoStar", market: "Mercado", copy: "Copiado", back: "Atrás",
     walletPending: "La solicitud de billetera personal ya fue enviada. Espera a que el administrador añada la dirección.",
@@ -113,8 +113,8 @@ const TEXT_KEYS = {
   "Історія операцій і винагород": "operationHistory",
   "Загальний пул": "pool",
   "Добова зміна": "dailyChange",
-  "Винагорода становить 2.5 долара": "reward10",
-  "Винагорода становить $2.50": "reward10",
+  "Винагорода становить 1 долар": "reward10",
+  "Винагорода становить $1": "reward10",
   "Перевірити": "check",
   "Основна торгівля": "mainTrade",
   "Ринок": "market",
@@ -137,7 +137,7 @@ const TEXT_KEYS = {
 
 const CURRENCY_PATTERN = /(\$\s?[\d,.]+|[\d,.]+\s?\$|(?:\d+\s*)?(?:долар|долара|доларів|долари|дол\.|USD|USDT|TRC20)\b)/giu;
 
-const GOOGLE_LANG_CODES = {
+const TRANSLATION_LANG_CODES = {
   uk: "uk",
   ru: "ru",
   en: "en",
@@ -176,8 +176,8 @@ function tr(key) {
   return (I18N[lang] && I18N[lang][key]) || (lang === "en" ? I18N.en[key] : I18N.ru[key]) || I18N.en[key] || key;
 }
 
-function googleTargetLang() {
-  return GOOGLE_LANG_CODES[currentLang()] || "uk";
+function translationTargetLang() {
+  return TRANSLATION_LANG_CODES[currentLang()] || "uk";
 }
 
 function applyTranslations(root = document.body) {
@@ -257,32 +257,8 @@ function showAppLoading(message = "CryptoStar") {
   overlay.classList.add("visible");
 }
 
-function waitForGoogleTranslation() {
-  const startedAt = Date.now();
-  const timer = setInterval(() => {
-    const translated = document.documentElement.className.includes("translated-") || document.body.className.includes("translated-");
-    if (translated || Date.now() - startedAt > 5200) {
-      clearInterval(timer);
-      hideLanguageLoading();
-    }
-  }, 180);
-}
-
-function triggerGoogleTranslate() {
-  if (currentLang() === "uk") return true;
-  const combo = document.querySelector(".goog-te-combo");
-  if (!combo) return false;
-  const target = googleTargetLang();
-  if (combo.value !== target) combo.value = target;
-  combo.dispatchEvent(new Event("change"));
-  return true;
-}
-
 let translationRefreshTimer = null;
-let translationRefreshPauseUntil = 0;
-let machineTranslationReady = true;
 let machineTranslationRunning = false;
-let machineTranslationFallbackUsed = false;
 const TRANSLATION_SPLIT = "[[CRYPTOSTAR_SPLIT_42]]";
 const TRANSLATION_CACHE_PREFIX = "cryptostar_translation_cache_";
 
@@ -316,7 +292,7 @@ function translatableTextNodes(root = document.body) {
       const parent = node.parentElement;
       if (!parent) return NodeFilter.FILTER_REJECT;
       if (["SCRIPT", "STYLE", "TEXTAREA", "OPTION", "SELECT"].includes(parent.tagName)) return NodeFilter.FILTER_REJECT;
-      if (parent.closest(".notranslate,[translate='no'],#google_translate_element,.goog-te-banner-frame,.language-select")) return NodeFilter.FILTER_REJECT;
+      if (parent.closest(".notranslate,[translate='no'],.language-select")) return NodeFilter.FILTER_REJECT;
       return NodeFilter.FILTER_ACCEPT;
     }
   });
@@ -329,7 +305,7 @@ function translatableAttributes(root = document.body) {
   const elements = [...root.querySelectorAll("[placeholder], [title], [aria-label], img[alt]")];
   const attrs = [];
   for (const element of elements) {
-    if (element.closest(".notranslate,[translate='no'],#google_translate_element,.language-select")) continue;
+    if (element.closest(".notranslate,[translate='no'],.language-select")) continue;
     for (const name of ["placeholder", "title", "aria-label", "alt"]) {
       const value = element.getAttribute(name);
       if (shouldTranslateText(value)) attrs.push({ element, name, value });
@@ -341,7 +317,7 @@ function translatableAttributes(root = document.body) {
 async function translateBatch(texts, lang) {
   if (!texts.length) return [];
   const joined = texts.join(`\n${TRANSLATION_SPLIT}\n`);
-  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(googleTargetLang())}&dt=t&q=${encodeURIComponent(joined)}`;
+  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(translationTargetLang())}&dt=t&q=${encodeURIComponent(joined)}`;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 4500);
   try {
@@ -398,14 +374,8 @@ async function machineTranslatePage(root = document.body) {
     }
     applyTranslations(root);
     protectCurrencyText(root);
-    machineTranslationReady = true;
     return true;
   } catch {
-    machineTranslationReady = false;
-    if (!machineTranslationFallbackUsed) {
-      machineTranslationFallbackUsed = true;
-      loadGoogleTranslatorFallback();
-    }
     return false;
   } finally {
     machineTranslationRunning = false;
@@ -455,47 +425,6 @@ function protectCurrencyText(root = document.body) {
     if (lastIndex < text.length) fragment.append(document.createTextNode(text.slice(lastIndex)));
     node.parentNode.replaceChild(fragment, node);
   });
-}
-
-function setTranslateCookie(lang) {
-  const value = lang === "uk" ? "/uk/uk" : `/uk/${GOOGLE_LANG_CODES[lang] || "uk"}`;
-  document.cookie = `googtrans=${value};path=/;max-age=31536000;SameSite=Lax`;
-  const host = location.hostname.split(".").slice(-2).join(".");
-  if (host && host.includes(".")) {
-    document.cookie = `googtrans=${value};path=/;domain=.${host};max-age=31536000;SameSite=Lax`;
-  }
-}
-
-function loadGoogleTranslatorFallback() {
-  const lang = currentLang();
-  setTranslateCookie(lang);
-  if (lang === "uk") return;
-  if (document.getElementById("google_translate_element")) return;
-
-  const holder = document.createElement("div");
-  holder.id = "google_translate_element";
-  holder.style.cssText = "position:absolute;left:-9999px;top:-9999px;height:0;overflow:hidden;";
-  document.body.append(holder);
-
-  window.googleTranslateElementInit = () => {
-    new google.translate.TranslateElement({
-      pageLanguage: "uk",
-      includedLanguages: APP_LANGUAGES.map(([code]) => GOOGLE_LANG_CODES[code]).filter(Boolean).join(","),
-      autoDisplay: false
-    }, "google_translate_element");
-    [250, 1200, 2600, 4600].forEach(delay => setTimeout(triggerGoogleTranslate, delay));
-    waitForGoogleTranslation();
-  };
-
-  const script = document.createElement("script");
-  script.src = "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
-  script.async = true;
-  script.onerror = hideLanguageLoading;
-  document.head.append(script);
-}
-
-function loadFullPageTranslator() {
-  hideLanguageLoading();
 }
 
 function observeCurrencyChanges() {
@@ -875,7 +804,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   applyTranslations();
   observeCurrencyChanges();
-  loadFullPageTranslator();
   installTranslatedAlerts();
   scheduleFullPageTranslation(1400);
   setTimeout(() => window.appTranslate?.translatePage(), 3200);

@@ -1,5 +1,5 @@
 (function () {
-  const GOOGLE_LANG_CODES = {
+  const SUPPORTED_LANGUAGES = {
     uk: "uk",
     ru: "ru",
     en: "en",
@@ -13,7 +13,7 @@
         localStorage.setItem("cryptostar_language_default_v1", "1");
       }
       const lang = localStorage.getItem("app_language") || "en";
-      return GOOGLE_LANG_CODES[lang] ? lang : "en";
+      return SUPPORTED_LANGUAGES[lang] ? lang : "en";
     } catch {
     return "en";
     }

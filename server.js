@@ -279,7 +279,7 @@ const WALLET_CREATE_SIGNAL_TYPE = "wallet_create";
 const WALLET_CREATE_FALLBACK_TYPE = "withdraw_wallet";
 const WALLET_CREATE_FALLBACK_KIND = "wallet_create_request";
 const QUIZ_ANSWERS = { 1: "b", 2: "c", 3: "a", 4: "b", 5: "c" };
-const LEARNING_MIN_DEPOSIT = 1000;
+const LEARNING_MIN_DEPOSIT = 250;
 const ACTIVE_SATELLITE_MIN_DEPOSIT = 250;
 const MIN_DEPOSIT_AMOUNT = 250;
 const MIN_WITHDRAW_AMOUNT = 100;
@@ -300,7 +300,7 @@ const BALANCE_REWARDS = [
   [50000, 2500],
   [100000, 5000]
 ];
-const QUIZ_REWARD_AMOUNT = 2.5;
+const QUIZ_REWARD_AMOUNT = 1;
 const TRADE_STREAK_REWARDS = [
   [10, 10],
   [30, 50],
@@ -804,10 +804,10 @@ function russianSupportFallback(text, handoff = false) {
     return "Вывод доступен от $100, один раз в час и только из заработанных средств. Комиссия составляет 7.5%, поэтому администратор видит сумму к выплате уже после комиссии.";
   }
   if (/(обуч|learning|урок|тест|quiz)/i.test(text)) {
-    return "Обучение открывается после подтверждённого пополнения от $1,000. За правильное прохождение теста может начисляться внутренняя награда $2.50.";
+    return "Обучение открывается после подтверждённого пополнения от $250. За правильное прохождение теста может начисляться внутренняя награда $1.";
   }
   if (/(сател|satellite|приглаш|referr|структур)/i.test(text)) {
-    return "Сателлиты — это приглашённые пользователи. Они становятся активными после подтверждённого пополнения от $250. Пригласивший может получить 10% от текущего баланса каждого активного сателлита отдельной кнопкой.";
+    return "Сателлиты — это приглашённые пользователи. Они становятся активными после подтверждённого пополнения от $250. Пригласивший может получить 10% от подтверждённого депозита каждого активного сателлита отдельной кнопкой.";
   }
   if (/(торг|trade|сдел|позици|доход|процент)/i.test(text)) {
     return "Основная торговая позиция доступна пользователям с балансом. Дополнительные позиции открываются через активных сателлитов. Сделка завершается через 10 минут.";
@@ -844,8 +844,8 @@ function supportAnswer(message) {
   }
   if (/(як почати|з чого почати|start|почати|новач|перший раз|що робити)/i.test(text)) {
     return answer(
-      "Почніть із трьох кроків: 1) прочитайте умови користування; 2) зареєструйте акаунт і збережіть email/пароль; 3) після входу перегляньте Інфо, Активи, Поповнення та Навчання. Навчання відкривається після підтвердженого поповнення від $1,000.",
-      "Start with three steps: 1) read the terms; 2) create an account and keep your email/password safe; 3) after login, check Info, Assets, Deposit and Learning. Learning opens after an approved deposit from $1,000."
+      "Почніть із трьох кроків: 1) прочитайте умови користування; 2) зареєструйте акаунт і збережіть email/пароль; 3) після входу перегляньте Інфо, Активи, Поповнення та Навчання. Навчання відкривається після підтвердженого поповнення від $250.",
+      "Start with three steps: 1) read the terms; 2) create an account and keep your email/password safe; 3) after login, check Info, Assets, Deposit and Learning. Learning opens after an approved deposit from $250."
     );
   }
   if (/(що це|проєкт|проект|about|platform|платформа|cryptostar)/i.test(text)) {
@@ -892,14 +892,14 @@ function supportAnswer(message) {
   }
   if (/(навчан|learning|урок|тест|quiz)/i.test(text)) {
     return answer(
-      "Навчання відкривається після підтвердженого поповнення від $1,000. Уроки містять коротку інформацію і тест. За правильне проходження тесту може нараховуватися внутрішня винагорода $2.50.",
-      "Learning opens after an approved deposit from $1,000. Lessons include short information and a quiz. Correct completion can create a $2.50 internal reward."
+      "Навчання відкривається після підтвердженого поповнення від $250. Уроки містять коротку інформацію і тест. За правильне проходження тесту може нараховуватися внутрішня винагорода $1.",
+      "Learning opens after an approved deposit from $250. Lessons include short information and a quiz. Correct completion can create a $1 internal reward."
     );
   }
   if (/(сател|satellite|запрош|referr|структур)/i.test(text)) {
     return answer(
-      "Сателіти - це запрошені користувачі. Вони стають активними після підтвердженого поповнення від $250. Запрошувач може отримати 10% від поточного балансу кожного активного сателіта окремою кнопкою.",
-      "Satellites are invited users. They become active after an approved deposit from $250. The inviter can claim 10% of each active satellite's current balance with a separate button."
+      "Сателіти - це запрошені користувачі. Вони стають активними після підтвердженого поповнення від $250. Запрошувач може отримати 10% від підтвердженого депозиту кожного активного сателіта окремою кнопкою.",
+      "Satellites are invited users. They become active after an approved deposit from $250. The inviter can claim 10% of each active satellite's confirmed deposit with a separate button."
     );
   }
   if (/(торг|trade|угод|позиці|дохід|відсот)/i.test(text)) {
@@ -1048,7 +1048,7 @@ function invitedSatelliteRewardTitle(deposit) {
 async function activeSatelliteRows(userId) {
   const { data, error } = await supabase
     .from("users")
-    .select("id,nickname,balance,deposit")
+    .select("id,nickname,deposit")
     .eq("referrer_id", userId)
     .gte("deposit", ACTIVE_SATELLITE_MIN_DEPOSIT)
     .order("id", { ascending: true });
@@ -1056,8 +1056,8 @@ async function activeSatelliteRows(userId) {
   return data || [];
 }
 
-function satelliteBalanceReward(satellite) {
-  return Number((Math.max(0, Number(satellite?.balance || 0)) * SATELLITE_REWARD_RATE).toFixed(2));
+function satelliteDepositReward(satellite) {
+  return Number((Math.max(0, Number(satellite?.deposit || 0)) * SATELLITE_REWARD_RATE).toFixed(2));
 }
 
 function rewardDefinitions(activeSatellites = []) {
@@ -1069,14 +1069,13 @@ function rewardDefinitions(activeSatellites = []) {
       amount,
       threshold
     })),
-    { type: "reward_invited_satellite", group: "satellites", title: "Винагорода запрошеному після поповнення від $2,000", amount: 100, variableAmount: true },
+    { type: "reward_invited_satellite", group: "satellites", title: "Винагорода запрошеному після поповнення від $2,000", amount: 100 },
     ...activeSatellites.map(satellite => ({
-      type: `reward_satellite_balance_10_${satellite.id}`,
+      type: `reward_satellite_deposit_10_${satellite.id}`,
       group: "satellites",
-      title: `10% від балансу сателіта ${formatUserId(satellite.id)}`,
-      amount: satelliteBalanceReward(satellite),
+      title: `10% від підтвердженого депозиту сателіта ${formatUserId(satellite.id)}`,
+      amount: satelliteDepositReward(satellite),
       satelliteId: satellite.id,
-      satelliteBalance: Number(satellite.balance || 0),
       satelliteDeposit: Number(satellite.deposit || 0)
     })),
     ...TRADE_STREAK_REWARDS.map(([days, amount]) => ({
@@ -1126,22 +1125,27 @@ async function rewardProgress(userId) {
       amount = invitedSatelliteRewardAmount(deposit) || amount;
       title = invitedSatelliteRewardTitle(deposit);
     } else if (reward.group === "satellites") {
-      progress = Number(reward.satelliteBalance || 0);
-      target = Number(reward.satelliteBalance || 0);
+      progress = Number(reward.satelliteDeposit || 0);
+      target = Number(reward.satelliteDeposit || 0);
       eligible = Number(reward.satelliteDeposit || 0) >= ACTIVE_SATELLITE_MIN_DEPOSIT && amount > 0;
     } else if (reward.group === "trade") {
       progress = tradeStreak;
       target = reward.streakDays;
       eligible = tradeStreak >= reward.streakDays;
     }
+    const legacySatelliteType = reward.type.startsWith("reward_satellite_deposit_10_")
+      ? reward.type.replace("reward_satellite_deposit_10_", "reward_satellite_balance_10_")
+      : "";
+    const wasClaimed = claimed.has(reward.type) || (legacySatelliteType && claimed.has(legacySatelliteType));
+    const claimedAmount = claimedAmounts[reward.type] || claimedAmounts[legacySatelliteType] || 0;
     return {
       ...reward,
       title,
-      amount: claimed.has(reward.type) && claimedAmounts[reward.type] > 0 ? claimedAmounts[reward.type] : amount,
+      amount: wasClaimed && claimedAmount > 0 ? claimedAmount : amount,
       progress,
       target,
       eligible,
-      claimed: claimed.has(reward.type)
+      claimed: Boolean(wasClaimed)
     };
   });
 }
