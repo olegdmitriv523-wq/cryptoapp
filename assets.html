@@ -71,12 +71,7 @@ const typeLabels = {
   trade_satellite_1:"Торгівля із сателітом 1", trade_satellite_2:"Торгівля із сателітом 2",
   trade_satellite_3:"Торгівля із сателітом 3", trade_satellite_4:"Торгівля із сателітом 4",
   trade_satellite_5:"Торгівля із сателітом 5",
-  reward_invited_satellite:"Винагорода запрошеному",
-  reward_referrer_satellite_1:"Винагорода за 1-го сателіта",
-  reward_referrer_satellite_2:"Винагорода за 2-го сателіта",
-  reward_referrer_satellite_3:"Винагорода за 3-го сателіта",
-  reward_referrer_satellite_4:"Винагорода за 4-го сателіта",
-  reward_referrer_satellite_5:"Винагорода за 5-го сателіта",
+  reward_invited_satellite:"Винагорода запрошеному за поповнення від $2,000",
   reward_trade_streak_10:"Винагорода за 10 днів торгівлі",
   reward_trade_streak_30:"Винагорода за 30 днів торгівлі",
   reward_trade_streak_50:"Винагорода за 50 днів торгівлі",
@@ -97,8 +92,11 @@ function renderHistory(history) {
     const outgoing = item.type === "withdraw";
     const amountClass = outgoing ? "red" : "green";
     const sign = outgoing ? "-" : "+";
+    const title = item.type.startsWith("reward_satellite_balance_10_")
+      ? "10% від балансу активного сателіта"
+      : (typeLabels[item.type] || item.type);
     return `<div class="history-item">
-      <div><b>${escapeHtml(typeLabels[item.type] || item.type)}</b><div class="history-meta">${new Date(item.created_at).toLocaleString("uk-UA")} · ${escapeHtml(item.status)}</div></div>
+       <div><b>${escapeHtml(title)}</b><div class="history-meta">${new Date(item.created_at).toLocaleString("uk-UA")} · ${escapeHtml(item.status)}</div></div>
       <strong class="${amountClass}">${sign}${money(item.amount)}</strong>
     </div>`;
   }).join("");

@@ -280,19 +280,17 @@ const WALLET_CREATE_FALLBACK_TYPE = "withdraw_wallet";
 const WALLET_CREATE_FALLBACK_KIND = "wallet_create_request";
 const QUIZ_ANSWERS = { 1: "b", 2: "c", 3: "a", 4: "b", 5: "c" };
 const LEARNING_MIN_DEPOSIT = 1000;
-const ACTIVE_SATELLITE_MIN_DEPOSIT = 1000;
-const MIN_DEPOSIT_AMOUNT = 1000;
-const MAX_DEPOSIT_REQUESTS = 2;
+const ACTIVE_SATELLITE_MIN_DEPOSIT = 250;
+const MIN_DEPOSIT_AMOUNT = 250;
 const MIN_WITHDRAW_AMOUNT = 100;
 const WITHDRAW_FEE_RATE = 0.075;
 const WITHDRAW_COOLDOWN_MS = 60 * 60 * 1000;
 const TRADE_RATES = [0.01, 0.01, 0.0025, 0.005, 0.0075, 0.015];
 const TRADE_SETTLE_MS = 10 * 60 * 1000;
-const REFERRER_REWARDS = [50, 75, 100, 100, 150];
 const INVITED_SATELLITE_REWARDS = [
-  [2000, 100],
-  [1000, 50]
+  [2000, 100]
 ];
+const SATELLITE_REWARD_RATE = 0.10;
 const BALANCE_REWARDS = [
   [1000, 50],
   [2500, 100],
@@ -797,10 +795,10 @@ function russianSupportFallback(text, handoff = false) {
     return "Здравствуйте! Я AI-оператор CryptoStar. Могу объяснить регистрацию, пополнение, вывод, обучение, сателлитов, торговлю, вознаграждения, сайт и риски. Напишите, что именно вас интересует.";
   }
   if (/(что ты умеешь|чем помож|help|помоги|помощник|оператор ai|support bot)/i.test(text)) {
-    return "Я могу ответить на общие вопросы о приложении: регистрация, пополнение от $1,000, вывод от $100 заработанных средств, обучение, сателлиты, торговля, вознаграждения и сайт проекта.";
+    return "Я могу ответить на общие вопросы о приложении: регистрация, пополнение от $250, вывод от $100 заработанных средств, обучение, сателлиты, торговля, вознаграждения и сайт проекта.";
   }
   if (/(пополн|deposit|депозит|usdt|trc20)/i.test(text)) {
-    return "Минимальная сумма пополнения составляет $1,000. Пользователь переводит USDT в сети TRC20 на указанный кошелёк, создаёт заявку в приложении, а баланс меняется только после подтверждения администратором. Лимит составляет два подтверждённых пополнения.";
+    return "Минимальная сумма пополнения составляет $250. Пользователь переводит USDT в сети TRC20 на указанный кошелёк, создаёт заявку в приложении, а баланс меняется только после подтверждения администратором. Количество пополнений не ограничено.";
   }
   if (/(вывод|withdraw|снят|100|кошел)/i.test(text)) {
     return "Вывод доступен от $100, один раз в час и только из заработанных средств. Комиссия составляет 7.5%, поэтому администратор видит сумму к выплате уже после комиссии.";
@@ -809,7 +807,7 @@ function russianSupportFallback(text, handoff = false) {
     return "Обучение открывается после подтверждённого пополнения от $1,000. За правильное прохождение теста может начисляться внутренняя награда $2.50.";
   }
   if (/(сател|satellite|приглаш|referr|структур)/i.test(text)) {
-    return "Сателлиты — это приглашённые пользователи. Они становятся активными после подтверждённого пополнения от $1,000 и открывают дополнительные торговые позиции пригласившему.";
+    return "Сателлиты — это приглашённые пользователи. Они становятся активными после подтверждённого пополнения от $250. Пригласивший может получить 10% от текущего баланса каждого активного сателлита отдельной кнопкой.";
   }
   if (/(торг|trade|сдел|позици|доход|процент)/i.test(text)) {
     return "Основная торговая позиция доступна пользователям с балансом. Дополнительные позиции открываются через активных сателлитов. Сделка завершается через 10 минут.";
@@ -840,8 +838,8 @@ function supportAnswer(message) {
   }
   if (/(що ти вмієш|чим допоможеш|help|допоможи|помічник|оператор ai|ai оператор|support bot|підтримка може)/i.test(text)) {
     return answer(
-      "Я можу швидко відповісти на загальні питання по додатку: як зареєструватися, як поповнити від $1,000, як вивести від $100 із заробленого, як працює навчання, сателіти, торгівля, винагороди та де знайти сайт проекту. Якщо питання стосується конкретної помилки або вашої заявки, я передам його підтримці.",
-      "I can answer general app questions: registration, deposits from $1,000, withdrawals from $100 earned funds, learning, satellites, trading, rewards and the project website. If the question is about a specific error or request, I will pass it to support."
+      "Я можу швидко відповісти на загальні питання по додатку: як зареєструватися, як поповнити від $250, як вивести від $100 із заробленого, як працює навчання, сателіти, торгівля, винагороди та де знайти сайт проекту. Якщо питання стосується конкретної помилки або вашої заявки, я передам його підтримці.",
+      "I can answer general app questions: registration, deposits from $250, withdrawals from $100 earned funds, learning, satellites, trading, rewards and the project website. If the question is about a specific error or request, I will pass it to support."
     );
   }
   if (/(як почати|з чого почати|start|почати|новач|перший раз|що робити)/i.test(text)) {
@@ -882,8 +880,8 @@ function supportAnswer(message) {
   }
   if (/(поповн|deposit|депозит|usdt|trc20|500)/i.test(text)) {
     return answer(
-      "Мінімальна сума поповнення становить $1,000. Користувач переказує USDT у мережі TRC20 на вказаний гаманець, створює заявку в додатку, а баланс змінюється тільки після підтвердження адміністратором. Ліміт два поповнення рахується лише після підтверджених поповнень.",
-      "The minimum deposit is $1,000. Send USDT via TRC20 to the shown wallet, create a request in the app, and the balance changes only after admin approval. The two-deposit limit counts only approved deposits."
+      "Мінімальна сума поповнення становить $250. Користувач переказує USDT у мережі TRC20 на вказаний гаманець, створює заявку в додатку, а баланс змінюється тільки після підтвердження адміністратором. Кількість поповнень не обмежена.",
+      "The minimum deposit is $250. Send USDT via TRC20 to the shown wallet, create a request in the app, and the balance changes only after admin approval. There is no limit on the number of deposits."
     );
   }
   if (/(вив(е|і)д|withdraw|знят|100|гаманець)/i.test(text)) {
@@ -900,8 +898,8 @@ function supportAnswer(message) {
   }
   if (/(сател|satellite|запрош|referr|структур)/i.test(text)) {
     return answer(
-      "Сателіти - це запрошені користувачі. Вони стають активними після підтвердженого поповнення від $1,000. Активні сателіти поступово відкривають додаткові торгові позиції запрошувачу.",
-      "Satellites are invited users. They become active after an approved deposit from $1,000. Active satellites gradually unlock additional trading positions for the inviter."
+      "Сателіти - це запрошені користувачі. Вони стають активними після підтвердженого поповнення від $250. Запрошувач може отримати 10% від поточного балансу кожного активного сателіта окремою кнопкою.",
+      "Satellites are invited users. They become active after an approved deposit from $250. The inviter can claim 10% of each active satellite's current balance with a separate button."
     );
   }
   if (/(торг|trade|угод|позиці|дохід|відсот)/i.test(text)) {
@@ -1044,49 +1042,25 @@ function invitedSatelliteRewardAmount(deposit) {
 function invitedSatelliteRewardTitle(deposit) {
   const amount = Number(deposit || 0);
   if (amount >= 2000) return "Винагорода запрошеному за поповнення $2,000+";
-  if (amount >= 1000) return "Винагорода запрошеному за поповнення $1,000-$1,999";
-  return "Винагорода запрошеному: $50 або $100 за рівнем поповнення від $1,000";
+  return "Винагорода запрошеному недоступна до поповнення $2,000";
 }
 
-async function grantSatelliteRewards(satelliteId) {
-  const satellite = await findUser(satelliteId, "id,referrer_id,deposit");
-  if (!satellite || Number(satellite.deposit || 0) < ACTIVE_SATELLITE_MIN_DEPOSIT) return;
-
-  if (satellite.referrer_id) {
-    const invitedReward = invitedSatelliteRewardAmount(satellite.deposit);
-    if (invitedReward > 0) {
-      await grantRewardOnce(satellite.id, "reward_invited_satellite", invitedReward, `satellite:${satellite.id}`);
-    }
-
-    const { data: activeSatellites } = await supabase
-      .from("users")
-      .select("id,deposit")
-      .eq("referrer_id", satellite.referrer_id)
-      .gte("deposit", ACTIVE_SATELLITE_MIN_DEPOSIT)
-      .order("id", { ascending: true })
-      .limit(5);
-    for (const [index, activeSatellite] of (activeSatellites || []).entries()) {
-      if (index >= REFERRER_REWARDS.length) break;
-      await grantRewardOnce(
-        satellite.referrer_id,
-        `reward_referrer_satellite_${index + 1}`,
-        REFERRER_REWARDS[index],
-        `satellite:${activeSatellite.id}`
-      );
-    }
-  }
+async function activeSatelliteRows(userId) {
+  const { data, error } = await supabase
+    .from("users")
+    .select("id,nickname,balance,deposit")
+    .eq("referrer_id", userId)
+    .gte("deposit", ACTIVE_SATELLITE_MIN_DEPOSIT)
+    .order("id", { ascending: true });
+  if (error) throw error;
+  return data || [];
 }
 
-async function grantTradeStreakRewards(userId) {
-  const streak = await getTradeStreak(userId);
-  for (const [daysRequired, reward] of TRADE_STREAK_REWARDS) {
-    if (streak >= daysRequired) {
-      await grantRewardOnce(userId, `reward_trade_streak_${daysRequired}`, reward, `trade_streak:${daysRequired}`);
-    }
-  }
+function satelliteBalanceReward(satellite) {
+  return Number((Math.max(0, Number(satellite?.balance || 0)) * SATELLITE_REWARD_RATE).toFixed(2));
 }
 
-function rewardDefinitions() {
+function rewardDefinitions(activeSatellites = []) {
   return [
     ...BALANCE_REWARDS.map(([threshold, amount]) => ({
       type: `reward_balance_${threshold}`,
@@ -1095,13 +1069,15 @@ function rewardDefinitions() {
       amount,
       threshold
     })),
-    { type: "reward_invited_satellite", group: "satellites", title: "Винагорода запрошеному після поповнення від $1,000", amount: 50, satelliteRank: 0, variableAmount: true },
-    ...REFERRER_REWARDS.map((amount, index) => ({
-      type: `reward_referrer_satellite_${index + 1}`,
+    { type: "reward_invited_satellite", group: "satellites", title: "Винагорода запрошеному після поповнення від $2,000", amount: 100, variableAmount: true },
+    ...activeSatellites.map(satellite => ({
+      type: `reward_satellite_balance_10_${satellite.id}`,
       group: "satellites",
-      title: `${index + 1}-й активний сателіт`,
-      amount,
-      satelliteRank: index + 1
+      title: `10% від балансу сателіта ${formatUserId(satellite.id)}`,
+      amount: satelliteBalanceReward(satellite),
+      satelliteId: satellite.id,
+      satelliteBalance: Number(satellite.balance || 0),
+      satelliteDeposit: Number(satellite.deposit || 0)
     })),
     ...TRADE_STREAK_REWARDS.map(([days, amount]) => ({
       type: `reward_trade_streak_${days}`,
@@ -1113,21 +1089,12 @@ function rewardDefinitions() {
   ];
 }
 
-async function activeSatelliteCount(userId) {
-  const { count } = await supabase
-    .from("users")
-    .select("id", { count: "exact", head: true })
-    .eq("referrer_id", userId)
-    .gte("deposit", ACTIVE_SATELLITE_MIN_DEPOSIT);
-  return count || 0;
-}
-
 async function rewardProgress(userId) {
   await settleMatureTrades(userId);
   const user = await findUser(userId, "id,balance,deposit,referrer_id");
   if (!user) return null;
-  const [satellites, tradeStreak, claimedRows] = await Promise.all([
-    activeSatelliteCount(userId),
+  const [activeSatellites, tradeStreak, claimedRows] = await Promise.all([
+    activeSatelliteRows(userId),
     getTradeStreak(userId),
     supabase
       .from("signals")
@@ -1140,7 +1107,9 @@ async function rewardProgress(userId) {
   const claimedAmounts = Object.fromEntries((claimedRows.data || []).map(row => [row.type, Number(row.amount || 0)]));
   const balance = Number(user.balance || 0);
   const deposit = Number(user.deposit || 0);
-  return rewardDefinitions().map(reward => {
+  return rewardDefinitions(activeSatellites)
+    .filter(reward => reward.type !== "reward_invited_satellite" || (user.referrer_id && invitedSatelliteRewardAmount(deposit) > 0))
+    .map(reward => {
     let eligible = false;
     let progress = 0;
     let target = 1;
@@ -1152,14 +1121,14 @@ async function rewardProgress(userId) {
       eligible = balance >= reward.threshold;
     } else if (reward.type === "reward_invited_satellite") {
       progress = deposit;
-      target = ACTIVE_SATELLITE_MIN_DEPOSIT;
-      eligible = Boolean(user.referrer_id) && deposit >= ACTIVE_SATELLITE_MIN_DEPOSIT;
+      target = 2000;
+      eligible = Boolean(user.referrer_id) && invitedSatelliteRewardAmount(deposit) > 0;
       amount = invitedSatelliteRewardAmount(deposit) || amount;
       title = invitedSatelliteRewardTitle(deposit);
     } else if (reward.group === "satellites") {
-      progress = satellites;
-      target = reward.satelliteRank;
-      eligible = satellites >= reward.satelliteRank;
+      progress = Number(reward.satelliteBalance || 0);
+      target = Number(reward.satelliteBalance || 0);
+      eligible = Number(reward.satelliteDeposit || 0) >= ACTIVE_SATELLITE_MIN_DEPOSIT && amount > 0;
     } else if (reward.group === "trade") {
       progress = tradeStreak;
       target = reward.streakDays;
@@ -1961,14 +1930,6 @@ app.post("/deposit", actionLimiter, auth, async (req, res) => {
       if (error) throw error;
       if (!data?.ok) return res.json({ success: false, message: data?.message || "Deposit limit reached" });
     } else {
-      const { count, error: countError } = await supabase
-        .from("signals")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .eq("type", "deposit")
-        .in("status", ["pending", "approved"]);
-      if (countError) throw countError;
-      if ((count || 0) >= MAX_DEPOSIT_REQUESTS) return res.json({ success: false, message: "Deposit limit reached" });
       await addSignal({ user_id: user.id, type: "deposit", amount, wallet, status: "pending" });
     }
     const telegram = await sendTelegramMessage(requestTelegramText("deposit", user, amount, wallet), ["mirror", "main"]);
@@ -2646,7 +2607,6 @@ app.post("/admin/approve", adminLimiter, adminAuth, adminWriteAuth, async (req, 
         const { data: result, error: rpcError } = await supabase.rpc("approve_financial_signal", { p_signal_id: signalId });
         if (rpcError) throw rpcError;
         if (!result?.ok) return res.json({ success: false, message: result?.message || "Approval unavailable" });
-        if (signal.type === "deposit") await grantSatelliteRewards(signal.user_id);
         return res.json({ success: true, balance: Number(result.balance || 0), deposit: Number(result.deposit || 0) });
       }
       const amount = positiveAmount(signal.amount);
@@ -2694,9 +2654,6 @@ app.post("/admin/approve", adminLimiter, adminAuth, adminWriteAuth, async (req, 
       if (error) throw error;
     }
     await supabase.from("signals").update({ status: "approved" }).eq("id", signalId);
-    if (signal.type === "deposit") {
-      await grantSatelliteRewards(signal.user_id);
-    }
     return res.json({ success: true });
   } catch (error) {
     console.error("ADMIN APPROVE ERROR:", error);

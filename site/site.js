@@ -1,10 +1,8 @@
 (function () {
   const LANGUAGES = [
-    ["en", "English"], ["ru", "Русский"], ["uk", "Українська"], ["kk", "Қазақша"],
-    ["pl", "Polski"], ["ro", "Română"], ["de", "Deutsch"], ["fr", "Français"],
-    ["pt", "Português"], ["es", "Español"], ["it", "Italiano"], ["ar", "العربية"], ["hi", "हिन्दी"]
+    ["en", "English"], ["ru", "Русский"], ["uk", "Українська"], ["es", "Español"]
   ];
-  const GOOGLE_CODES = { en: "en", uk: "uk", ru: "ru", kk: "kk", pl: "pl", ro: "ro", de: "de", fr: "fr", pt: "pt", es: "es", it: "it", ar: "ar", hi: "hi" };
+  const GOOGLE_CODES = { en: "en", uk: "uk", ru: "ru", es: "es" };
   const CURRENCY = /(\$\s?[\d,.]+|[\d,.]+\s?\$|USD|USDT|TRC20|BTC|ETH|BNB|SOL|XRP|ADA|DOGE)/gi;
   const CACHE_PREFIX = "cryptostar_site_translation_";
   const SPLIT = "[[CRYPTOSTAR_SITE_SPLIT]]";

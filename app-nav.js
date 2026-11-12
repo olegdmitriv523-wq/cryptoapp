@@ -2,16 +2,7 @@ const APP_LANGUAGES = [
   ["en", "English"],
   ["ru", "Русский"],
   ["uk", "Українська"],
-  ["kk", "Қазақша"],
-  ["pl", "Polski"],
-  ["ro", "Română"],
-  ["ar", "العربية"],
-  ["hi", "हिन्दी"],
-  ["de", "Deutsch"],
-  ["fr", "Français"],
-  ["pt", "Português"],
-  ["es", "Español"],
-  ["it", "Italiano"]
+  ["es", "Español"]
 ];
 
 try {
@@ -33,7 +24,15 @@ const I18N = {
     pool: "Модельний індикатор (не реальні активи)", dailyChange: "Добова зміна", perDay: "за добу", readLesson: "Прочитайте короткий урок і дайте правильну відповідь. Кожен тест можна пройти один раз.",
     reward10: "Винагорода становить $2.50", check: "Перевірити", mainTrade: "Основна торгівля",
     tradeButton: "Торгувати", locked: "Заблоковано", availableAll: "Доступна всім користувачам",
-    project: "CryptoStar", market: "Ринок", copy: "Скопійовано", back: "Назад"
+    project: "CryptoStar", market: "Ринок", copy: "Скопійовано", back: "Назад",
+    walletPending: "Запит на створення персонального гаманця вже відправлено. Дочекайтеся, поки адміністратор укаже адресу.",
+    walletMissing: "Персональний гаманець ще не створено. Відправте запит адміністратору.",
+    requestWallet: "Запросити гаманець", waitingAdmin: "Очікує адміністратора", sending: "Відправляємо...",
+    requestSent: "Запит відправлено адміністратору", requestAlreadySent: "Запит уже відправлено адміністратору",
+    walletSaved: "Гаманець збережено", savedWallet: "Збережений гаманець", withdrawSaved: "Вивести на збережений гаманець",
+    depositTelegramWarning: "Заявку на поповнення збережено, але сповіщення в Telegram не доставлено.",
+    depositSent: "Заявку на поповнення відправлено адміністратору. Баланс зміниться після підтвердження.",
+    support: "Підтримка"
   },
   ru: {
     navHome: "Домой", navTrade: "Торговля", navAssets: "Активы", navRewards: "Награды", navLearning: "Обучение", navInfo: "Инфо",
@@ -54,39 +53,6 @@ const I18N = {
     depositSent: "Заявка на пополнение отправлена администратору. Баланс изменится после подтверждения.",
     support: "Поддержка"
   },
-  kk: {
-    navHome: "Басты бет", navTrade: "Сауда", navAssets: "Активтер", navRewards: "Сыйақылар", navLearning: "Оқу", navInfo: "Ақпарат",
-    install: "Қолданбаны басты экранға орнату", installTitle: "Қолданбаны орнату", installClose: "Түсінікті", installIos: "iPhone-да Бөлісу түймесін, содан кейін Басты экранға қосу түймесін басыңыз.", installAndroid: "Android-та браузер мәзірінен Орнату немесе Басты экранға қосу түймесін басыңыз.", home: "Басты бет", trade: "Сауда", assets: "Активтер",
-    learning: "Криптовалюта бойынша оқу", info: "Жоба туралы", deposit: "Толықтыру", withdraw: "Шығару",
-    profile: "Пайдаланушы деректері", logout: "Шығу", balance: "Баланс", wallet: "Әмиян", userData: "Пайдаланушы деректері",
-    addFunds: "Толықтыру", withdrawShort: "Шығару", mainBalance: "Негізгі баланс", operationHistory: "Операциялар мен сыйақылар тарихы",
-    pool: "Жалпы пул", dailyChange: "Күндік өзгеріс", perDay: "тәулігіне", readLesson: "Қысқа сабақты оқып, дұрыс жауап беріңіз. Әр тестті бір рет өтуге болады.",
-    reward10: "Сыйақы $2.50", check: "Тексеру", mainTrade: "Негізгі сауда",
-    tradeButton: "Саудалау", locked: "Бұғатталған", availableAll: "Барлық пайдаланушыларға қолжетімді",
-    project: "CryptoStar", market: "Нарық", copy: "Көшірілді", back: "Артқа"
-  },
-  pl: {
-    navHome: "Start", navTrade: "Handel", navAssets: "Aktywa", navRewards: "Nagrody", navLearning: "Nauka", navInfo: "Info",
-    install: "Zainstaluj aplikację na ekranie głównym", installTitle: "Instalacja aplikacji", installClose: "Rozumiem", installIos: "Na iPhonie kliknij Udostępnij, a potem Do ekranu początkowego.", installAndroid: "Na Androidzie kliknij Zainstaluj lub Dodaj do ekranu głównego w menu przeglądarki.", home: "Start", trade: "Handel", assets: "Aktywa",
-    learning: "Nauka kryptowalut", info: "O projekcie", deposit: "Wpłata", withdraw: "Wypłata",
-    profile: "Dane użytkownika", logout: "Wyloguj", balance: "Saldo", wallet: "Portfel", userData: "Dane użytkownika",
-    addFunds: "Wpłać", withdrawShort: "Wypłać", mainBalance: "Saldo główne", operationHistory: "Historia operacji i nagród",
-    pool: "Pula ogólna", dailyChange: "Zmiana dzienna", perDay: "dziennie", readLesson: "Przeczytaj krótki materiał i wybierz poprawną odpowiedź. Każdy test można ukończyć raz.",
-    reward10: "Nagroda wynosi $2.50", check: "Sprawdź", mainTrade: "Handel główny",
-    tradeButton: "Handluj", locked: "Zablokowane", availableAll: "Dostępne dla wszystkich użytkowników",
-    project: "CryptoStar", market: "Rynek", copy: "Skopiowano", back: "Wstecz"
-  },
-  ro: {
-    navHome: "Acasă", navTrade: "Tranzacții", navAssets: "Active", navRewards: "Recompense", navLearning: "Învățare", navInfo: "Info",
-    install: "Instalează aplicația pe ecranul principal", installTitle: "Instalarea aplicației", installClose: "Am înțeles", installIos: "Pe iPhone apăsați Partajare, apoi Adăugați la ecranul principal.", installAndroid: "Pe Android apăsați Instalare sau Adăugați la ecranul principal din meniul browserului.", home: "Acasă", trade: "Tranzacții", assets: "Active",
-    learning: "Învățare despre criptomonede", info: "Despre proiect", deposit: "Depunere", withdraw: "Retragere",
-    profile: "Date utilizator", logout: "Ieșire", balance: "Sold", wallet: "Portofel", userData: "Date utilizator",
-    addFunds: "Depune", withdrawShort: "Retrage", mainBalance: "Sold principal", operationHistory: "Istoricul operațiunilor și recompenselor",
-    pool: "Fond total", dailyChange: "Schimbare zilnică", perDay: "pe zi", readLesson: "Citește lecția scurtă și alege răspunsul corect. Fiecare test poate fi făcut o singură dată.",
-    reward10: "Recompensa este de $2.50", check: "Verifică", mainTrade: "Tranzacție principală",
-    tradeButton: "Tranzacționează", locked: "Blocat", availableAll: "Disponibil tuturor utilizatorilor",
-    project: "CryptoStar", market: "Piață", copy: "Copiat", back: "Înapoi"
-  },
   en: {
     navHome: "Home", navTrade: "Trade", navAssets: "Assets", navRewards: "Rewards", navLearning: "Learning", navInfo: "Info",
     install: "Install the app on the home screen", installTitle: "Install the app", installClose: "Got it", installIos: "On iPhone, tap Share, then Add to Home Screen.", installAndroid: "On Android, tap Install or Add to Home screen in the browser menu.", home: "Home", trade: "Trading", assets: "Assets",
@@ -106,61 +72,6 @@ const I18N = {
     depositSent: "Your deposit request was sent to the administrator. The balance will change after approval.",
     support: "Support"
   },
-  ar: {
-    navHome: "الرئيسية", navTrade: "التداول", navAssets: "الأصول", navRewards: "المكافآت", navLearning: "التعلم", navInfo: "معلومات",
-    install: "ثبّت التطبيق على الشاشة الرئيسية", installTitle: "تثبيت التطبيق", installClose: "حسنا", installIos: "على iPhone اضغط مشاركة ثم إضافة إلى الشاشة الرئيسية.", installAndroid: "على Android اضغط تثبيت أو إضافة إلى الشاشة الرئيسية من قائمة المتصفح.", home: "الرئيسية", trade: "التداول", assets: "الأصول",
-    learning: "تعلم العملات الرقمية", info: "حول المشروع", deposit: "الإيداع", withdraw: "السحب",
-    profile: "بيانات المستخدم", logout: "تسجيل الخروج", balance: "الرصيد", wallet: "المحفظة", userData: "بيانات المستخدم",
-    addFunds: "إيداع", withdrawShort: "سحب", mainBalance: "الرصيد الرئيسي", operationHistory: "سجل العمليات والمكافآت",
-    pool: "المجمع الكلي", dailyChange: "التغير اليومي", perDay: "في اليوم", readLesson: "اقرأ الدرس القصير واختر الإجابة الصحيحة. يمكن إكمال كل اختبار مرة واحدة.",
-    reward10: "المكافأة هي $2.50", check: "تحقق", mainTrade: "التداول الرئيسي",
-    tradeButton: "تداول", locked: "مغلق", availableAll: "متاح لجميع المستخدمين",
-    project: "CryptoStar", market: "السوق", copy: "تم النسخ", back: "رجوع"
-  },
-  hi: {
-    navHome: "होम", navTrade: "ट्रेड", navAssets: "एसेट्स", navRewards: "रिवॉर्ड्स", navLearning: "सीखना", navInfo: "जानकारी",
-    install: "ऐप को होम स्क्रीन पर इंस्टॉल करें", installTitle: "ऐप इंस्टॉल करें", installClose: "ठीक है", installIos: "iPhone पर Share दबाएं, फिर Add to Home Screen चुनें.", installAndroid: "Android पर ब्राउज़र मेनू में Install या Add to Home screen दबाएं.", home: "होम", trade: "ट्रेडिंग", assets: "एसेट्स",
-    learning: "क्रिप्टोकरेंसी सीखना", info: "प्रोजेक्ट के बारे में", deposit: "जमा", withdraw: "निकासी",
-    profile: "उपयोगकर्ता डेटा", logout: "लॉग आउट", balance: "बैलेंस", wallet: "वॉलेट", userData: "उपयोगकर्ता डेटा",
-    addFunds: "जमा करें", withdrawShort: "निकालें", mainBalance: "मुख्य बैलेंस", operationHistory: "ऑपरेशन और रिवॉर्ड इतिहास",
-    pool: "कुल पूल", dailyChange: "दैनिक बदलाव", perDay: "प्रति दिन", readLesson: "छोटा पाठ पढ़ें और सही उत्तर चुनें. हर टेस्ट केवल एक बार पूरा किया जा सकता है.",
-    reward10: "रिवॉर्ड $2.50 है", check: "जांचें", mainTrade: "मुख्य ट्रेडिंग",
-    tradeButton: "ट्रेड करें", locked: "लॉक", availableAll: "सभी उपयोगकर्ताओं के लिए उपलब्ध",
-    project: "CryptoStar", market: "मार्केट", copy: "कॉपी हो गया", back: "वापस"
-  },
-  de: {
-    navHome: "Start", navTrade: "Handel", navAssets: "Aktiva", navRewards: "Prämien", navLearning: "Lernen", navInfo: "Info",
-    install: "App zum Startbildschirm hinzufügen", installTitle: "App installieren", installClose: "Verstanden", installIos: "Tippen Sie auf dem iPhone auf Teilen und dann auf Zum Home-Bildschirm.", installAndroid: "Tippen Sie auf Android im Browsermenü auf Installieren oder Zum Startbildschirm hinzufügen.", home: "Start", trade: "Handel", assets: "Aktiva",
-    learning: "Kryptowährungen lernen", info: "Über das Projekt", deposit: "Einzahlung", withdraw: "Auszahlung",
-    profile: "Benutzerdaten", logout: "Abmelden", balance: "Saldo", wallet: "Wallet", userData: "Benutzerdaten",
-    addFunds: "Einzahlen", withdrawShort: "Auszahlen", mainBalance: "Hauptsaldo", operationHistory: "Verlauf von Vorgängen und Belohnungen",
-    pool: "Gesamtpool", dailyChange: "Tagesänderung", perDay: "pro Tag", readLesson: "Lesen Sie die kurze Lektion und wählen Sie die richtige Antwort. Jeder Test kann einmal abgeschlossen werden.",
-    reward10: "Die Belohnung beträgt $2.50", check: "Prüfen", mainTrade: "Haupthandel",
-    tradeButton: "Handeln", locked: "Gesperrt", availableAll: "Für alle Benutzer verfügbar",
-    project: "CryptoStar", market: "Markt", copy: "Kopiert", back: "Zurück"
-  },
-  fr: {
-    navHome: "Accueil", navTrade: "Trading", navAssets: "Actifs", navRewards: "Récompenses", navLearning: "Formation", navInfo: "Infos",
-    install: "Installer l'application sur l'écran d'accueil", installTitle: "Installer l'application", installClose: "Compris", installIos: "Sur iPhone, touchez Partager, puis Sur l'écran d'accueil.", installAndroid: "Sur Android, touchez Installer ou Ajouter à l'écran d'accueil dans le menu du navigateur.", home: "Accueil", trade: "Trading", assets: "Actifs",
-    learning: "Formation crypto", info: "À propos du projet", deposit: "Dépôt", withdraw: "Retrait",
-    profile: "Données utilisateur", logout: "Déconnexion", balance: "Solde", wallet: "Portefeuille", userData: "Données utilisateur",
-    addFunds: "Déposer", withdrawShort: "Retirer", mainBalance: "Solde principal", operationHistory: "Historique des opérations et récompenses",
-    pool: "Pool total", dailyChange: "Variation quotidienne", perDay: "par jour", readLesson: "Lisez la courte leçon et choisissez la bonne réponse. Chaque test ne peut être terminé qu'une fois.",
-    reward10: "La récompense est de $2.50", check: "Vérifier", mainTrade: "Trading principal",
-    tradeButton: "Trader", locked: "Verrouillé", availableAll: "Disponible pour tous les utilisateurs",
-    project: "CryptoStar", market: "Marché", copy: "Copié", back: "Retour"
-  },
-  pt: {
-    navHome: "Início", navTrade: "Negociação", navAssets: "Ativos", navRewards: "Recompensas", navLearning: "Aprendizado", navInfo: "Info",
-    install: "Instalar o app na tela inicial", installTitle: "Instalar o app", installClose: "Entendi", installIos: "No iPhone, toque em Compartilhar e depois Adicionar à Tela de Início.", installAndroid: "No Android, toque em Instalar ou Adicionar à tela inicial no menu do navegador.", home: "Início", trade: "Negociação", assets: "Ativos",
-    learning: "Aprendizado sobre criptomoedas", info: "Sobre o projeto", deposit: "Depósito", withdraw: "Retirada",
-    profile: "Dados do usuário", logout: "Sair", balance: "Saldo", wallet: "Carteira", userData: "Dados do usuário",
-    addFunds: "Depositar", withdrawShort: "Retirar", mainBalance: "Saldo principal", operationHistory: "Histórico de operações e recompensas",
-    pool: "Pool total", dailyChange: "Mudança diária", perDay: "por dia", readLesson: "Leia a lição curta e escolha a resposta correta. Cada teste pode ser concluído uma vez.",
-    reward10: "A recompensa é de $2.50", check: "Verificar", mainTrade: "Negociação principal",
-    tradeButton: "Negociar", locked: "Bloqueado", availableAll: "Disponível para todos os usuários",
-    project: "CryptoStar", market: "Mercado", copy: "Copiado", back: "Voltar"
-  },
   es: {
     navHome: "Inicio", navTrade: "Trading", navAssets: "Activos", navRewards: "Recompensas", navLearning: "Aprendizaje", navInfo: "Info",
     install: "Instalar la app en la pantalla principal", installTitle: "Instalar la app", installClose: "Entendido", installIos: "En iPhone, toca Compartir y luego Añadir a pantalla de inicio.", installAndroid: "En Android, toca Instalar o Añadir a pantalla de inicio en el menú del navegador.", home: "Inicio", trade: "Trading", assets: "Activos",
@@ -170,19 +81,16 @@ const I18N = {
     pool: "Pool total", dailyChange: "Cambio diario", perDay: "por día", readLesson: "Lee la lección corta y elige la respuesta correcta. Cada prueba se puede completar una vez.",
     reward10: "La recompensa es de $2.50", check: "Comprobar", mainTrade: "Trading principal",
     tradeButton: "Operar", locked: "Bloqueado", availableAll: "Disponible para todos los usuarios",
-    project: "CryptoStar", market: "Mercado", copy: "Copiado", back: "Atrás"
+    project: "CryptoStar", market: "Mercado", copy: "Copiado", back: "Atrás",
+    walletPending: "La solicitud de billetera personal ya fue enviada. Espera a que el administrador añada la dirección.",
+    walletMissing: "La billetera personal aún no fue creada. Envía una solicitud al administrador.",
+    requestWallet: "Solicitar billetera", waitingAdmin: "Esperando al administrador", sending: "Enviando...",
+    requestSent: "La solicitud fue enviada al administrador", requestAlreadySent: "La solicitud ya fue enviada al administrador",
+    walletSaved: "Billetera guardada", savedWallet: "Billetera guardada", withdrawSaved: "Retirar a la billetera guardada",
+    depositTelegramWarning: "La solicitud de depósito se guardó, pero no se entregó la notificación de Telegram.",
+    depositSent: "La solicitud de depósito fue enviada al administrador. El saldo cambiará después de la aprobación.",
+    support: "Soporte"
   },
-  it: {
-    navHome: "Home", navTrade: "Trading", navAssets: "Asset", navRewards: "Ricompense", navLearning: "Formazione", navInfo: "Info",
-    install: "Installa l'app sulla schermata principale", installTitle: "Installa l'app", installClose: "Capito", installIos: "Su iPhone tocca Condividi, poi Aggiungi alla schermata Home.", installAndroid: "Su Android tocca Installa o Aggiungi alla schermata Home nel menu del browser.", home: "Home", trade: "Trading", assets: "Asset",
-    learning: "Formazione sulle criptovalute", info: "Informazioni sul progetto", deposit: "Deposito", withdraw: "Prelievo",
-    profile: "Dati utente", logout: "Esci", balance: "Saldo", wallet: "Wallet", userData: "Dati utente",
-    addFunds: "Deposita", withdrawShort: "Preleva", mainBalance: "Saldo principale", operationHistory: "Storico operazioni e ricompense",
-    pool: "Pool totale", dailyChange: "Variazione giornaliera", perDay: "al giorno", readLesson: "Leggi la breve lezione e scegli la risposta corretta. Ogni test può essere completato una sola volta.",
-    reward10: "La ricompensa è di $2.50", check: "Controlla", mainTrade: "Trading principale",
-    tradeButton: "Fai trading", locked: "Bloccato", availableAll: "Disponibile per tutti gli utenti",
-    project: "CryptoStar", market: "Mercato", copy: "Copiato", back: "Indietro"
-  }
 };
 
 const TEXT_KEYS = {
@@ -232,17 +140,8 @@ const CURRENCY_PATTERN = /(\$\s?[\d,.]+|[\d,.]+\s?\$|(?:\d+\s*)?(?:долар|д
 const GOOGLE_LANG_CODES = {
   uk: "uk",
   ru: "ru",
-  kk: "kk",
-  pl: "pl",
-  ro: "ro",
   en: "en",
-  ar: "ar",
-  hi: "hi",
-  de: "de",
-  fr: "fr",
-  pt: "pt",
-  es: "es",
-  it: "it"
+  es: "es"
 };
 
 function currentLang() {
@@ -300,7 +199,6 @@ function renderLanguageSelector() {
     showLanguageLoading();
     localStorage.setItem("app_language", select.value);
     sessionStorage.setItem("language_switching", "1");
-    setTranslateCookie(select.value);
     setTimeout(() => location.reload(), 80);
   });
   return select;
@@ -312,7 +210,7 @@ function showLanguageLoading() {
   if (!overlay) {
     overlay = document.createElement("div");
     overlay.className = "language-loading";
-    overlay.innerHTML = `<div><img src="logo.png" alt="CryptoStar"><span>Translating...</span></div>`;
+    overlay.innerHTML = `<div><img src="logo.png" alt="CryptoStar"><span>Loading...</span></div>`;
     document.body.append(overlay);
   }
   overlay.classList.add("visible");
@@ -497,22 +395,7 @@ async function machineTranslatePage(root = document.body) {
 }
 
 function scheduleFullPageTranslation(delay = 700) {
-  if (currentLang() === "uk") return;
-  if (Date.now() < translationRefreshPauseUntil) return;
-  clearTimeout(translationRefreshTimer);
-  translationRefreshTimer = setTimeout(() => {
-    translationRefreshPauseUntil = Date.now() + 2400;
-    protectCurrencyText(document.body);
-    machineTranslatePage(document.body).then(success => {
-      if (success) return;
-      if (!triggerGoogleTranslate()) {
-        setTimeout(triggerGoogleTranslate, 900);
-      }
-    });
-    if (!machineTranslationReady && !triggerGoogleTranslate()) {
-      setTimeout(triggerGoogleTranslate, 900);
-    }
-  }, delay);
+  return false;
 }
 
 function protectCurrencyText(root = document.body) {
@@ -588,29 +471,11 @@ function loadGoogleTranslatorFallback() {
 }
 
 function loadFullPageTranslator() {
-  const lang = currentLang();
-  setTranslateCookie(lang);
-  if (lang === "uk") return;
-  showLanguageLoading();
-  machineTranslatePage(document.body).then(success => {
-    if (!success) loadGoogleTranslatorFallback();
-  });
-  // One delayed pass catches content loaded by the page without repeatedly blocking the UI.
-  setTimeout(() => machineTranslatePage(document.body), 1200);
+  hideLanguageLoading();
 }
 
 function observeCurrencyChanges() {
-  let pending = false;
-  const observer = new MutationObserver(() => {
-    if (pending) return;
-    pending = true;
-    requestAnimationFrame(() => {
-      pending = false;
-      protectCurrencyText(document.body);
-      scheduleFullPageTranslation();
-    });
-  });
-  observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+  return false;
 }
 
 function renderInstallButton() {
@@ -956,8 +821,7 @@ document.addEventListener("DOMContentLoaded", () => {
   scheduleFullPageTranslation(1400);
   setTimeout(() => window.appTranslate?.translatePage(), 3200);
   window.dispatchEvent(new CustomEvent("app-language-ready"));
-  if (currentLang() === "uk") hideLanguageLoading();
-  if (currentLang() !== "uk") setTimeout(hideLanguageLoading, 4800);
+  hideLanguageLoading();
 });
 
 window.appTranslate = {
